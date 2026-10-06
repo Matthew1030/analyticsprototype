@@ -1,0 +1,10 @@
+{
+  "seed": 20261006,
+  "endMonth": "2026-09",
+  "months": 24,
+  "warmupMonths": 20,
+  "preliminaryMonths": 1,
+  "claimsPerMonth": 3000,
+  "lastRefreshUtc": "2026-10-05T06:00:00Z",
+  "availabilityBusinessDay": 10
+}

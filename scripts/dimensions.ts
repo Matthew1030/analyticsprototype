@@ -1,0 +1,141 @@
+// Static dimension members. All names are fictional placeholders.
+
+export const CLIENT = { key: 0, name: 'Sample Health System' };
+
+export interface FacilityDef {
+  key: number;
+  name: string;
+  type: 'Critical Access' | 'Community';
+  beds: number;
+}
+
+export const FACILITIES: FacilityDef[] = [
+  { key: 0, name: 'Hospital A', type: 'Community', beds: 210 },
+  { key: 1, name: 'Hospital B', type: 'Community', beds: 165 },
+  { key: 2, name: 'Hospital C', type: 'Community', beds: 130 },
+  { key: 3, name: 'Hospital D', type: 'Community', beds: 98 },
+  { key: 4, name: 'Hospital E', type: 'Community', beds: 76 },
+  { key: 5, name: 'Hospital F', type: 'Community', beds: 58 },
+  { key: 6, name: 'Hospital G', type: 'Critical Access', beds: 25 },
+  { key: 7, name: 'Hospital H', type: 'Critical Access', beds: 25 },
+  { key: 8, name: 'Hospital I', type: 'Critical Access', beds: 22 },
+  { key: 9, name: 'Hospital J', type: 'Critical Access', beds: 18 },
+];
+
+export const FINANCIAL_CLASSES = [
+  'Medicare',
+  'Medicare Managed',
+  'Medicaid',
+  'Medicaid Managed',
+  'Blue Cross',
+  'All Other',
+  'Self Pay',
+];
+
+export const PAYERS = [
+  { key: 0, name: 'Medicare', fc: 0 },
+  { key: 1, name: 'Medicare Advantage Plan A', fc: 1 },
+  { key: 2, name: 'Medicare Advantage Plan B', fc: 1 },
+  { key: 3, name: 'Medicaid', fc: 2 },
+  { key: 4, name: 'Medicaid Managed Plan A', fc: 3 },
+  { key: 5, name: 'Medicaid Managed Plan B', fc: 3 },
+  { key: 6, name: 'Blue Cross', fc: 4 },
+  { key: 7, name: 'Commercial Plan A', fc: 5 },
+  { key: 8, name: 'Commercial Plan B', fc: 5 },
+  { key: 9, name: 'Workers Comp and Auto', fc: 5 },
+  { key: 10, name: 'Self Pay', fc: 6 },
+];
+
+export const SERVICE_LINES = [
+  { key: 0, name: 'Medical/Surgical', department: 'Inpatient Nursing', patientType: 'Inpatient' },
+  { key: 1, name: 'Obstetrics', department: 'Labor and Delivery', patientType: 'Inpatient' },
+  { key: 2, name: 'Emergency', department: 'Emergency Department', patientType: 'Emergency' },
+  { key: 3, name: 'Outpatient Surgery', department: 'Surgical Services', patientType: 'Outpatient' },
+  { key: 4, name: 'Imaging', department: 'Radiology', patientType: 'Outpatient' },
+  { key: 5, name: 'Laboratory', department: 'Laboratory', patientType: 'Outpatient' },
+  { key: 6, name: 'Therapy', department: 'Rehabilitation', patientType: 'Outpatient' },
+  { key: 7, name: 'Clinic', department: 'Hospital Clinics', patientType: 'Outpatient' },
+];
+
+export const DENIAL_CATEGORIES = [
+  'Coordination of benefits',
+  'Lacks info / records',
+  'Medical necessity',
+  'Non-covered',
+  'Eligibility',
+  'Authorization',
+  'Timely filing',
+  'All other categories',
+  'Not categorized',
+];
+
+export const DENIAL_REASONS = [
+  { key: 0, name: 'Authorization', category: 5 },
+  { key: 1, name: 'Benefits Exhausted', category: 7 },
+  { key: 2, name: 'Billing', category: 7 },
+  { key: 3, name: 'Coding', category: 7 },
+  { key: 4, name: 'Coordination of Benefits', category: 0 },
+  { key: 5, name: 'Eligibility', category: 4 },
+  { key: 6, name: 'Lacks Information/Med Records', category: 1 },
+  { key: 7, name: 'Medical Necessity', category: 2 },
+  { key: 8, name: 'Non-Covered', category: 3 },
+  { key: 9, name: 'Payer', category: 7 },
+  { key: 10, name: 'Provider', category: 7 },
+  { key: 11, name: 'Timely Filing', category: 6 },
+  { key: 12, name: 'Uncategorized', category: 8 },
+];
+
+export const WRITEOFF_REASONS = [
+  { key: 0, name: 'Medical necessity' },
+  { key: 1, name: 'Timely filing' },
+  { key: 2, name: 'Authorization' },
+  { key: 3, name: 'Insurance verification' },
+  { key: 4, name: 'Credentials' },
+  { key: 5, name: 'Clinical doc and other' },
+];
+
+/** Denial reason key -> write-off reason key. */
+export const DENIAL_TO_WRITEOFF = [2, 3, 5, 5, 3, 3, 5, 0, 5, 5, 4, 1, 5];
+
+export const EDIT_CATEGORIES = [
+  { key: 0, name: 'Registration' },
+  { key: 1, name: 'Coding' },
+  { key: 2, name: 'Charge' },
+  { key: 3, name: 'Other' },
+];
+
+export const DNFB_HOLDS = [
+  { key: 0, name: 'Routine (within bill hold)', owner: 'Mid Cycle' },
+  { key: 1, name: 'Coding backlog', owner: 'Mid Cycle' },
+  { key: 2, name: 'Physician query', owner: 'Mid Cycle' },
+  { key: 3, name: 'Charge reconciliation', owner: 'Mid Cycle' },
+  { key: 4, name: 'Registration hold', owner: 'Front End' },
+  { key: 5, name: 'Billing edit hold', owner: 'Back End' },
+  { key: 6, name: 'Unassigned', owner: 'Other' },
+];
+
+export const DNFB_AGE = [
+  { key: 0, name: 'Under 4 days', min: 0, max: 3 },
+  { key: 1, name: '4 to 6 days', min: 4, max: 6 },
+  { key: 2, name: '7 to 10 days', min: 7, max: 10 },
+  { key: 3, name: '11+ days', min: 11, max: 99999 },
+];
+
+export const AR_AGE = [
+  { key: 0, name: '0-30', min: 0, max: 30 },
+  { key: 1, name: '31-60', min: 31, max: 60 },
+  { key: 2, name: '61-90', min: 61, max: 90 },
+  { key: 3, name: '91-180', min: 91, max: 180 },
+  { key: 4, name: '181-360', min: 181, max: 360 },
+  { key: 5, name: '361+', min: 361, max: 99999 },
+];
+
+export const BILLED_STATUS = ['Unbilled', 'Billed Insurance', 'Self Pay'];
+
+export const WORK_QUEUES = [
+  { key: 0, name: 'Coding and final billing' },
+  { key: 1, name: 'Claim release' },
+  { key: 2, name: 'Claim edits' },
+  { key: 3, name: 'Denial follow-up' },
+  { key: 4, name: 'A/R follow-up' },
+];
