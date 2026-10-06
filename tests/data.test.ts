@@ -187,3 +187,17 @@ describe('status and change logic', () => {
     expect(changeOf(5, 6, 'none')).toBeNull();
   });
 });
+
+describe('composite facility score', () => {
+  it('equals 100 x (N - average rank) / (N - 1) over five metric ranks', async () => {
+    const { rankFacilities } = await import('../src/engine/ranking');
+    const rows = rankFacilities(e, last, {}, ds.dims.facilities);
+    expect(rows).toHaveLength(10);
+    for (const r of rows) {
+      const ranks = r.ranks.filter((x): x is number => x !== null);
+      const avg = ranks.reduce((a, b) => a + b, 0) / ranks.length;
+      close(r.score!, (100 * (10 - avg)) / 9);
+    }
+    expect(rows[0].score).toBeGreaterThanOrEqual(rows[9].score!);
+  });
+});
