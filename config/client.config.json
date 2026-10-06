@@ -1,0 +1,52 @@
+{
+  "clientKey": 0,
+  "atRiskBand": 0.1,
+  "metricTargets": {
+    "M01": 4,
+    "M04": 1,
+    "M05": 0.9,
+    "M07": 0.1,
+    "M11": 40,
+    "M13": 0.22,
+    "M14": 0.02,
+    "M18": 0.02,
+    "M19": 0.02,
+    "M22": 1,
+    "M32": 0.95,
+    "M35": 0.97,
+    "M38": 0.97,
+    "M40": 45,
+    "M41": 0.03
+  },
+  "tasks": [
+    { "id": "T01", "group": "Front End", "name": "Scheduling", "metric": "M32", "given": "fe:ordersReceived", "performed": "fe:ordersScheduled", "target": 0.95, "targetType": "Contractual" },
+    { "id": "T02", "group": "Front End", "name": "Pre-registration (DPA I)", "metric": "M35", "given": "fe:preRegDue", "performed": "fe:preReg1Day", "target": 0.97, "targetType": "Contractual" },
+    { "id": "T03", "group": "Front End", "name": "Pre-registration (DPA II)", "metric": "M38", "given": "fe:dpa2Due", "performed": "fe:dpa2Done", "target": 0.97, "targetType": "Internal" },
+    { "id": "T04", "group": "Front End", "name": "Patient access calls", "metric": "M41", "given": "fe:callsOffered", "performed": "fe:callsAnswered", "target": 0.03, "targetType": "Contractual" },
+    { "id": "T05", "group": "Front End", "name": "Eligibility screening", "metric": "M45", "given": "fe:selfPayAccounts", "performed": "fe:screened", "target": null, "targetType": null },
+    { "id": "T06", "group": "Mid Cycle", "name": "Coding and final billing", "metric": "M01", "given": "wq:0:assigned", "performed": "wq:0:completed", "target": 4, "targetType": "Internal" },
+    { "id": "T07", "group": "Mid Cycle", "name": "Claim release", "metric": "M04", "given": "wq:1:assigned", "performed": "wq:1:completed", "target": 1, "targetType": "Internal" },
+    { "id": "T08", "group": "Back End", "name": "Claim edits", "metric": "M05", "given": "wq:2:assigned", "performed": "wq:2:completed", "target": 0.9, "targetType": "Contractual" },
+    { "id": "T09", "group": "Back End", "name": "Denial follow-up", "metric": "M07", "given": "wq:3:assigned", "performed": "wq:3:completed", "target": 0.1, "targetType": "Internal" },
+    { "id": "T10", "group": "Back End", "name": "A/R follow-up", "metric": "M13", "given": "wq:4:assigned", "performed": "wq:4:completed", "target": 0.22, "targetType": "Contractual" }
+  ],
+  "bridge": {
+    "title": "Cash posted by financial class",
+    "measure": "M21",
+    "categories": [
+      { "label": "Medicare", "financialClasses": [0] },
+      { "label": "Medicare Managed", "financialClasses": [1] },
+      { "label": "Medicaid", "financialClasses": [2] },
+      { "label": "Medicaid Managed", "financialClasses": [3] },
+      { "label": "Blue Cross", "financialClasses": [4] },
+      { "label": "All Other", "financialClasses": [5] },
+      { "label": "Self Pay", "financialClasses": [6] }
+    ]
+  },
+  "metricGovernance": {
+    "owner": "RCM Analytics (placeholder)",
+    "version": "0.1-draft",
+    "changeDate": "2026-10-06",
+    "changeReason": "Initial draft definitions for the prototype"
+  }
+}
