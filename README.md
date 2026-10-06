@@ -15,6 +15,12 @@ npm run dev
 
 Open http://localhost:5173 and sign in.
 
+## GitHub Pages
+
+The workflow `.github/workflows/pages.yml` runs the tests, builds the app and deploys `dist` to GitHub Pages on each push.
+One-time setup: in the repository **Settings > Pages**, set **Source** to **GitHub Actions**.
+The site is public, so anyone with the link can sign in with the demo account. Use synthetic data only.
+
 ## Demo sign-in
 
 | User name | Password |
