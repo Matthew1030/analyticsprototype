@@ -15,6 +15,8 @@ export interface PathStep {
   /** Fixed content (e.g. the headline metric value). */
   value?: ReactNode;
   action?: { label: string; onClick: () => void };
+  /** Secondary action shown after the main one (e.g. the analytical account list). */
+  secondary?: { label: string; onClick: () => void };
 }
 
 export function InvestigationPath({ title, steps }: { title: string; steps: PathStep[] }) {
@@ -42,6 +44,7 @@ export function InvestigationPath({ title, steps }: { title: string; steps: Path
             )}
             {s.field && chosen.length === 0 && <span className="ipath-hint">{s.hint}</span>}
             {s.action && <button type="button" className="btn btn-sm btn-primary" onClick={s.action.onClick}>{s.action.label}</button>}
+            {s.secondary && <button type="button" className="btn btn-sm" onClick={s.secondary.onClick}>{s.secondary.label}</button>}
           </span>
         );
       })}

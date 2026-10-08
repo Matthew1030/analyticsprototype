@@ -16,7 +16,7 @@ import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, KpiStrip, TrendVisual } from '../ui/widgets';
-import { CashVsGoal } from './ExecutiveOverview';
+import { CashVsGoal } from './EnterpriseOverview';
 
 export function Cash() {
   const { go } = useApp();

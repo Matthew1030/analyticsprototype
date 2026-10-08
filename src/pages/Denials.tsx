@@ -34,7 +34,8 @@ export function Denials() {
         { label: 'Hospital', field: 'facility', hint: 'click a hospital' },
         { label: 'Category', field: 'denialCategory', hint: 'click a category' },
         { label: 'Root cause', field: 'rootCause', hint: 'click a driver row' },
-        { label: 'Claims', hint: '', action: { label: 'View denied claims', onClick: () => go('accounts', { mode: 'denied' }, { drill: true }) } },
+        { label: 'Act', hint: '', action: { label: 'Work these claims in the Denials worklist ›', onClick: () => go('wl-denials', {}, { drill: true }) },
+          secondary: { label: 'View denied claims', onClick: () => go('accounts', { mode: 'denied' }, { drill: true }) } },
       ]} />
       <DecompositionTree id="denial_dollars" title="Denial decomposition" dims={['payer', 'facility', 'denialCategory', 'rootCause', 'financialClass', 'serviceLine', 'patientType']}
         initial={['payer', 'facility', 'denialCategory', 'rootCause']} />

@@ -6,7 +6,7 @@ import { BillingDnfb } from './pages/BillingDnfb';
 import { Cash } from './pages/Cash';
 import { Definitions } from './pages/Definitions';
 import { Denials } from './pages/Denials';
-import { ExecutiveOverview } from './pages/ExecutiveOverview';
+import { EltSummary } from './pages/EltSummary';
 import { Facilities } from './pages/Facilities';
 import { FacilityProfile } from './pages/FacilityProfile';
 import { MetricAnalysis } from './pages/MetricAnalysis';
@@ -14,8 +14,9 @@ import { MidCycle } from './pages/MidCycle';
 import { PatientAccess } from './pages/PatientAccess';
 import { Payers } from './pages/Payers';
 import { RevenueCycle } from './pages/RevenueCycle';
+import { Worklist } from './pages/Worklist';
 import { AppProvider, useApp } from './state/AppState';
-import { FilterPane, Header, NavTabs, StaleBanner, StatusBar, Toasts } from './ui/Shell';
+import { FilterPane, Header, NavTabs, sectionOf, StaleBanner, StatusBar, Toasts } from './ui/Shell';
 
 export default function App() {
   const [ds, setDs] = useState<Dataset | null>(null);
@@ -62,12 +63,15 @@ export default function App() {
 
 function Workspace() {
   const { route } = useApp();
+  // Only Analytics carries the full filter pane. The ELT Summary has a compact period and scope
+  // bar; worklists have their own operational filters.
+  const section = sectionOf(route.page);
   return (
-    <div className="app">
+    <div className={`app app-${section}`}>
       <Header />
       <NavTabs />
       <div className="body">
-        <FilterPane />
+        {section === 'analytics' && <FilterPane />}
         <main className="canvas" id="main">
           <StaleBanner />
           <Page key={`${route.page}/${route.params.id ?? ''}`} />
@@ -95,6 +99,9 @@ function Page() {
     case 'metric': return <MetricAnalysis />;
     case 'facility': return <FacilityProfile />;
     case 'accounts': return <AccountDetail />;
-    default: return <ExecutiveOverview />;
+    case 'wl-denials': return <Worklist kind="denials" />;
+    case 'wl-ar': return <Worklist kind="ar" />;
+    case 'wl-dnfb': return <Worklist kind="dnfb" />;
+    default: return <EltSummary />;
   }
 }

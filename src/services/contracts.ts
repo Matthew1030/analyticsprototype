@@ -85,6 +85,52 @@ export interface AccountRow {
   last_activity: string;
 }
 
+export type WorklistKind = 'denials' | 'ar' | 'dnfb';
+
+/**
+ * One item on an operational worklist (open denied claim, A/R account to follow up, unbilled
+ * account). No patient identifiers. Example endpoint:
+ *   GET /api/worklists/{kind}?facility=0&denial_category=5&assignee=me&sort=-priority,-amount
+ */
+export interface WorkItem {
+  id: string;
+  kind: WorklistKind;
+  account: string;
+  claim: string | null;
+  facility_key: number;
+  facility: string;
+  payer_key: number;
+  payer: string;
+  financial_class: string;
+  service_line: string;
+  department: string;
+  discharge_date: string;
+  /** Denied $, open balance or DNFB $, by worklist. */
+  amount: number;
+  /** Expected reimbursement still to collect. */
+  expected: number | null;
+  /** Days since denial (denials) or since discharge (A/R, DNFB). */
+  age: number;
+  aging_bucket: string | null;
+  /** Denial category, account status or DNFB hold reason, by worklist. */
+  category: string | null;
+  /** Denial root cause or DNFB hold reason. */
+  reason: string | null;
+  recoverable: boolean | null;
+  deadline: string | null;
+  days_to_deadline: number | null;
+  last_activity: string;
+  last_activity_days: number;
+  priority: 'High' | 'Medium' | 'Low';
+  priority_rank: number;
+  priority_why: string;
+  status: string;
+  assignee: string | null;
+  team: string;
+  next_action: string;
+  timeline: { date: string; event: string }[];
+}
+
 /** Data freshness for the header and the definitions page. */
 export interface DataFreshness {
   last_refreshed_utc: string;

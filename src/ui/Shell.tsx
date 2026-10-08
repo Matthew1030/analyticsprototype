@@ -12,25 +12,41 @@ import { DIMENSION_LABEL, members } from '../services/analytics';
 import { scopeText, useApp, type PageId, type Route, type SimState } from '../state/AppState';
 import { Icon } from './icons';
 
-export interface PageMeta { id: PageId; label: string; title: string; question: string; nav?: boolean; pageFilters?: SelField[] }
+/** The three product experiences: See (ELT Summary), Understand (Analytics), Act (Worklists). */
+export type Section = 'elt' | 'analytics' | 'worklists';
+
+export const SECTIONS: { id: Section; label: string; verb: string; question: string; home: PageId }[] = [
+  { id: 'elt', label: 'ELT Summary', verb: 'See', question: 'How are we doing?', home: 'executive' },
+  { id: 'analytics', label: 'Analytics', verb: 'Understand', question: 'What is happening, where, and why?', home: 'cycle' },
+  { id: 'worklists', label: 'Worklists', verb: 'Act', question: 'What specifically needs to be worked?', home: 'wl-denials' },
+];
+
+export interface PageMeta { id: PageId; label: string; title: string; question: string; section: Section; nav?: boolean; pageFilters?: SelField[] }
 
 export const PAGES: PageMeta[] = [
-  { id: 'executive', label: 'Executive Overview', title: 'Executive Overview', question: 'How is the revenue cycle performing against target, and where should leadership look first?', nav: true },
-  { id: 'cycle', label: 'Revenue Cycle', title: 'Revenue Cycle Overview', question: 'Which stage of the revenue cycle is causing the problem?', nav: true },
-  { id: 'ar', label: 'A/R', title: 'A/R Analytics', question: 'Where is A/R accumulating, and why?', nav: true, pageFilters: ['arAge', 'accountStatus'] },
-  { id: 'denials', label: 'Denials', title: 'Denials Analytics', question: 'Which payers, hospitals and root causes drive denials?', nav: true, pageFilters: ['denialCategory', 'rootCause'] },
-  { id: 'cash', label: 'Cash', title: 'Cash and Collections', question: 'Are we on track to hit the cash goal?', nav: true },
-  { id: 'access', label: 'Patient Access', title: 'Patient Access (Front End)', question: 'Are we getting registration, eligibility and authorization right before service?', nav: true },
-  { id: 'midcycle', label: 'Mid-Cycle', title: 'Mid-Cycle: Charge Capture, Coding and CDI', question: 'Are charges, coding and documentation complete and on time?', nav: true },
-  { id: 'billing', label: 'Billing / DNFB', title: 'Billing and DNFB', question: 'What is holding claims back from going out the door?', nav: true, pageFilters: ['dnfbHold', 'editCategory'] },
-  { id: 'payers', label: 'Payers', title: 'Payer Performance', question: 'Which payers pay slowly, deny more, or underpay?', nav: true },
-  { id: 'facilities', label: 'Facilities', title: 'Facility Comparison', question: 'How do our hospitals compare, and which need attention?', nav: true },
-  { id: 'definitions', label: 'Definitions', title: 'Metric Definitions and Data', question: 'What does each measure mean, and how current is the data?', nav: true },
-  { id: 'metric', label: 'Metric Analysis', title: 'Metric Analysis', question: 'What is happening, where is it happening, and why?' },
-  { id: 'facility', label: 'Hospital Profile', title: 'Hospital Profile', question: 'How is this hospital performing across the revenue cycle?' },
-  { id: 'accounts', label: 'Account Detail', title: 'Account Detail', question: 'Which accounts make up this balance?' },
+  { id: 'executive', section: 'elt', label: 'ELT Summary', title: 'ELT Summary', question: 'How are we doing?', nav: true },
+  { id: 'cycle', section: 'analytics', label: 'Revenue Cycle Overview', title: 'Revenue Cycle Overview', question: 'How is each part of the revenue cycle performing against target, and which stage is causing the problem?', nav: true },
+  { id: 'ar', section: 'analytics', label: 'A/R', title: 'A/R Analytics', question: 'Where is A/R accumulating, and why?', nav: true, pageFilters: ['arAge', 'accountStatus'] },
+  { id: 'denials', section: 'analytics', label: 'Denials', title: 'Denials Analytics', question: 'Which payers, hospitals and root causes drive denials?', nav: true, pageFilters: ['denialCategory', 'rootCause'] },
+  { id: 'cash', section: 'analytics', label: 'Cash', title: 'Cash and Collections', question: 'Are we on track to hit the cash goal?', nav: true },
+  { id: 'access', section: 'analytics', label: 'Patient Access', title: 'Patient Access (Front End)', question: 'Are we getting registration, eligibility and authorization right before service?', nav: true },
+  { id: 'midcycle', section: 'analytics', label: 'Mid-Cycle', title: 'Mid-Cycle: Charge Capture, Coding and CDI', question: 'Are charges, coding and documentation complete and on time?', nav: true },
+  { id: 'billing', section: 'analytics', label: 'Billing / DNFB', title: 'Billing and DNFB', question: 'What is holding claims back from going out the door?', nav: true, pageFilters: ['dnfbHold', 'editCategory'] },
+  { id: 'payers', section: 'analytics', label: 'Payers', title: 'Payer Performance', question: 'Which payers pay slowly, deny more, or underpay?', nav: true },
+  { id: 'facilities', section: 'analytics', label: 'Facilities', title: 'Facility Comparison', question: 'How do our hospitals compare, and which need attention?', nav: true },
+  { id: 'definitions', section: 'analytics', label: 'Definitions', title: 'Metric Definitions and Data', question: 'What does each measure mean, and how current is the data?', nav: true },
+  { id: 'metric', section: 'analytics', label: 'Metric Analysis', title: 'Metric Analysis', question: 'What is happening, where is it happening, and why?' },
+  { id: 'facility', section: 'analytics', label: 'Hospital Profile', title: 'Hospital Profile', question: 'How is this hospital performing across the revenue cycle?' },
+  { id: 'accounts', section: 'analytics', label: 'Account Detail', title: 'Account Detail', question: 'Which accounts make up this balance?' },
+  { id: 'wl-denials', section: 'worklists', label: 'Denials', title: 'Denials worklist', question: 'Which denied claims do I appeal, correct or close today?', nav: true },
+  { id: 'wl-ar', section: 'worklists', label: 'A/R follow-up', title: 'A/R follow-up worklist', question: 'Which insurance balances do I follow up today?', nav: true },
+  { id: 'wl-dnfb', section: 'worklists', label: 'DNFB', title: 'DNFB worklist', question: 'Which unbilled accounts do I release today?', nav: true },
 ];
 export const PAGE_BY_ID = Object.fromEntries(PAGES.map((p) => [p.id, p])) as Record<PageId, PageMeta>;
+
+export function sectionOf(page: PageId): Section {
+  return PAGE_BY_ID[page]?.section ?? 'elt';
+}
 
 // ---------------------------------------------------------------- header
 
@@ -47,6 +63,7 @@ export function Header() {
         <span className="sep" aria-hidden="true" />
         <span className="org">{scopeText(sel, valueLabel, ds.dims.organization.name, ds.dims.facilities.length)}</span>
       </div>
+      <SectionNav />
       <div className="header-meta">
         <span title="Reporting period selected in the filter pane">Reporting period <b>{period.label}</b>
           <span className={`pill ${st === 'Preliminary' ? 'pill-prelim' : 'pill-closed'}`} title={st === 'Preliminary' ? `Month not closed. Planned close ${ds.meta.availability[String(period.endMi + 1)] ?? ''}` : 'Closed period'}>{st}</span>
@@ -64,6 +81,24 @@ export function Header() {
         </span>
       </div>
     </header>
+  );
+}
+
+/** Top-level product sections. Each remembers the last page the user had open in it. */
+function SectionNav() {
+  const { route, go } = useApp();
+  const current = sectionOf(route.page);
+  const last = useRef<Record<Section, PageId>>({ elt: 'executive', analytics: 'cycle', worklists: 'wl-denials' });
+  if (PAGE_BY_ID[route.page]?.nav) last.current[current] = route.page;
+  return (
+    <nav className="sections" aria-label="Product sections">
+      {SECTIONS.map((x, i) => (
+        <button key={x.id} type="button" className={`section-btn ${current === x.id ? 'on' : ''}`} aria-current={current === x.id ? 'page' : undefined}
+          title={`${x.verb}: ${x.question}`} onClick={() => go(current === x.id ? x.home : last.current[x.id])}>
+          <span className="section-step" aria-hidden="true">{i + 1}</span>{x.label}
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -107,15 +142,20 @@ function PrototypeMenu() {
 
 export function NavTabs() {
   const { route, go, toast } = useApp();
-  const active = route.page === 'metric' || route.page === 'facility' || route.page === 'accounts' ? null : route.page;
+  const section = sectionOf(route.page);
+  const meta = SECTIONS.find((x) => x.id === section)!;
+  const active = PAGE_BY_ID[route.page]?.nav ? route.page : null;
+  const tabs = PAGES.filter((p) => p.nav && p.section === section && section !== 'elt');
   return (
-    <nav className="tabs no-print" aria-label="Pages">
+    <nav className={`tabs no-print tabs-${section}`} aria-label={`${meta.label} pages`}>
+      <span className="tabs-lead" title={meta.question}><b>{meta.verb}</b><span className="muted">{meta.question}</span></span>
       <div className="tab-list" role="tablist">
-        {PAGES.filter((p) => p.nav).map((p) => (
+        {tabs.map((p) => (
           <button key={p.id} type="button" role="tab" aria-selected={active === p.id} className={`tab ${active === p.id ? 'on' : ''} ${p.id === 'definitions' ? 'tab-right' : ''}`} onClick={() => go(p.id)}>
             {p.label}
           </button>
         ))}
+        {section === 'elt' && <span className="tabs-note">One-minute view of revenue cycle health. Click any measure to investigate it in Analytics.</span>}
       </div>
       <div className="tab-actions">
         <button type="button" className="icon-btn" title="Copy link to this view (filters persist in the link and in your browser)" onClick={() => {
@@ -299,24 +339,32 @@ function pageNote(f: SelField) {
 
 // ---------------------------------------------------------------- canvas header
 
+export function Crumbs({ extra }: { extra?: ReactNode }) {
+  const { route, trail, back, go } = useApp();
+  const section = SECTIONS.find((x) => x.id === sectionOf(route.page))!;
+  return (
+    <nav className="crumbs" aria-label="Breadcrumb">
+      {trail.length > 0 && (
+        <button type="button" className="crumb-back" onClick={back} title="Back to the previous view"><Icon name="back" size={12} /> Back</button>
+      )}
+      {trail.length === 0 && <button type="button" className="crumb" onClick={() => go(section.home)}>{section.label}</button>}
+      {trail.map((r, i) => (
+        <span key={i} className="crumb-item">{i > 0 && <span className="crumb-sep">›</span>}<span className="crumb muted-crumb">{routeLabel(r)}</span></span>
+      ))}
+      <span className="crumb-item"><span className="crumb-sep">›</span><span className="crumb current">{routeLabel(route)}</span></span>
+      {extra}
+    </nav>
+  );
+}
+
 export function CanvasHeader({ title, question, crumbs, right }: { title?: string; question?: string; crumbs?: ReactNode; right?: ReactNode }) {
-  const { route, trail, back, go, ds } = useApp();
+  const { route } = useApp();
   const meta = PAGE_BY_ID[route.page] ?? PAGE_BY_ID.executive;
   return (
     <div className="canvas-head">
       <div className="canvas-title-row">
         <div>
-          <nav className="crumbs" aria-label="Breadcrumb">
-            {trail.length > 0 && (
-              <button type="button" className="crumb-back" onClick={back} title="Back to the previous view"><Icon name="back" size={12} /> Back</button>
-            )}
-            <button type="button" className="crumb" onClick={() => go('executive')}>{ds.dims.organization.name}</button>
-            {trail.map((r, i) => (
-              <span key={i} className="crumb-item"><span className="crumb-sep">›</span><span className="crumb muted-crumb">{routeLabel(r)}</span></span>
-            ))}
-            <span className="crumb-item"><span className="crumb-sep">›</span><span className="crumb current">{routeLabel(route)}</span></span>
-            {crumbs}
-          </nav>
+          <Crumbs extra={crumbs} />
           <h1>{title ?? meta.title}</h1>
           <p className="question">{question ?? meta.question}</p>
         </div>
@@ -331,6 +379,8 @@ function routeLabel(r: Route): string {
   const meta = PAGE_BY_ID[r.page];
   if (r.page === 'metric' && r.params.id) return `${METRIC_BY_ID[r.params.id]?.short ?? METRIC_BY_ID[r.params.id]?.name ?? r.params.id}`;
   if (r.page === 'facility' && r.params.id) return `Hospital profile`;
+  if (meta?.section === 'worklists') return `${meta.label} worklist`;
+  if (r.page === 'cycle') return 'Revenue Cycle Overview';
   return meta?.label ?? r.page;
 }
 

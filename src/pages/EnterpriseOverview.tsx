@@ -1,4 +1,6 @@
-// Executive Overview: enterprise performance against target, and where to look first.
+// Enterprise overview parts: the analytical scorecard, the ranked exception list and the hospital
+// matrix. They used to sit on the executive page; they now live in Analytics (Revenue Cycle
+// Overview), where dense, comparative detail belongs.
 
 import { useMemo } from 'react';
 import { FACILITY_TYPES } from '../engine/engine';
@@ -12,9 +14,7 @@ import { Chart } from '../ui/Chart';
 import { barLineOption, COMPARE, SERIES } from '../ui/charts';
 import { Delta, fmtMetric, StatusMark } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
-import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
-import { KpiStrip, Scorecard, TrendVisual } from '../ui/widgets';
 
 export const EXEC_KPIS = [
   'net_ar_days', 'gross_ar', 'net_ar', 'npsr', 'cash', 'cash_pct_npsr', 'denial_rate', 'clean_claim_rate',
@@ -22,32 +22,12 @@ export const EXEC_KPIS = [
 ];
 export const MATRIX_KPIS = ['net_ar_days', 'cash_pct_npsr', 'denial_rate', 'clean_claim_rate', 'dnfb_days', 'ar_gt90_pct', 'cost_to_collect'];
 
-export function ExecutiveOverview() {
-  const { areas } = useApp();
-  const ids = areas.length ? EXEC_KPIS.filter((id) => areas.includes(METRIC_BY_ID[id].area)) : EXEC_KPIS;
-  return (
-    <div className="page">
-      <CanvasHeader />
-      <KpiStrip ids={['npsr', 'cash', 'cash_pct_npsr', 'net_ar_days', 'denial_rate', 'clean_claim_rate', 'dnfb_days']} />
-      <div className="row cols-7-5">
-        <Scorecard ids={ids.length ? ids : EXEC_KPIS} title="Enterprise scorecard" groupByArea={false} showPy={false} />
-        <AttentionList />
-      </div>
-      <FacilityMatrix />
-      <div className="row cols-2">
-        <TrendVisual id="net_ar_days" title="Net A/R days vs target" />
-        <CashVsGoal />
-      </div>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------- attention list
 
 interface Flag { fac: number; facName: string; id: string; value: number; target: number; status: Status; gap: number; impact: number; change: number | null }
 
 /** Largest misses against target by hospital: the "where to look first" list. */
-function AttentionList() {
+export function AttentionList() {
   const { engine, period, compare, sel, ds, go, selectOnly } = useApp();
   const flags = useMemo(() => {
     const out: Flag[] = [];

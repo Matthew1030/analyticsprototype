@@ -299,3 +299,36 @@ function step(v: number) {
 }
 function niceFloor(v: number) { const st = step(v); return Math.floor(v / st) * st; }
 function niceCeil(v: number) { const st = step(v); return Math.ceil(v / st) * st; }
+
+/**
+ * Executive trend: one series, the target as a dashed line, and a faint tint on the side of the
+ * target that misses it (conditional formatting, not decoration). No legend: the title names it.
+ */
+export function eltTrendOption(o: { labels: string[]; values: (number | null)[]; target: number | null; fmt: (v: number) => string; direction: 'up' | 'down' | 'none' }): EChartsOption {
+  const vals = o.values.filter((v): v is number => v != null);
+  const lo = Math.min(...vals, o.target ?? Infinity);
+  const hi = Math.max(...vals, o.target ?? -Infinity);
+  const pad = (hi - lo) * 0.18 || Math.abs(hi) * 0.05 || 1;
+  const min = niceFloor(lo - pad);
+  const max = niceCeil(hi + pad);
+  const last = o.values.length - 1;
+  const missZone = o.target === null || o.direction === 'none' ? undefined : {
+    silent: true, itemStyle: { color: 'rgba(187,51,40,0.045)' },
+    data: [[{ yAxis: o.direction === 'down' ? o.target : min }, { yAxis: o.direction === 'down' ? max : o.target }]],
+  };
+  return {
+    ...base,
+    grid: { left: 4, right: 14, top: 12, bottom: 4, containLabel: true },
+    tooltip: { ...tooltipBase, trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: INK.axis } }, valueFormatter: (v) => (v == null ? '–' : o.fmt(v as number)) },
+    xAxis: catAxis(o.labels, { boundaryGap: false, axisLabel: { color: INK.muted, fontSize: 10, interval: (i: number) => i === 0 || i === last || i === Math.floor(last / 2) } }),
+    yAxis: { ...valueAxis(o.fmt, { min, max, splitNumber: 3 }), splitLine: { lineStyle: { color: '#f0f2f5' } } },
+    series: [{
+      name: 'Actual', type: 'line', data: o.values, smooth: false, showSymbol: false, symbol: 'circle', symbolSize: 8,
+      lineStyle: { width: 2, color: SERIES[0] }, itemStyle: { color: SERIES[0], borderColor: '#fff', borderWidth: 2 },
+      areaStyle: { color: 'rgba(42,120,214,0.06)' },
+      markLine: o.target === null ? undefined : { ...targetMark(o.target, o.fmt, 'y'), label: { show: false } },
+      markArea: missZone,
+      markPoint: o.values[last] == null ? undefined : { symbol: 'circle', symbolSize: 8, silent: true, itemStyle: { color: SERIES[0], borderColor: '#fff', borderWidth: 2 }, label: { show: false }, data: [{ coord: [last, o.values[last]] }] },
+    }],
+  } as EChartsOption;
+}

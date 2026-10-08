@@ -43,7 +43,8 @@ export function ArAnalytics() {
         { label: 'Hospital', field: 'facility', hint: 'click a bar in “A/R by hospital”' },
         { label: 'Aging bucket', field: 'arAge', hint: 'click a bucket in “Aging”' },
         { label: 'Payer', field: 'payer', hint: 'click a payer in “A/R by payer”' },
-        { label: 'Accounts', hint: '', action: { label: 'View accounts', onClick: () => go('accounts', { mode: 'open' }, { drill: true }) } },
+        { label: 'Act', hint: '', action: { label: 'Work these in the A/R worklist ›', onClick: () => go('wl-ar', {}, { drill: true }) },
+          secondary: { label: 'View accounts', onClick: () => go('accounts', { mode: 'open' }, { drill: true }) } },
       ]} />
       <div className="row cols-2">
         <TrendVisual id="net_ar_days" months={18} />

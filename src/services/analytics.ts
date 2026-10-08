@@ -177,7 +177,8 @@ export function accounts(e: Engine, q: AccountQuery, sel: Selections, limit = 50
   return rows.slice(0, limit).map((r) => r.row);
 }
 
-function statusAt(e: Engine, i: number, day: number): number {
+/** Account status index (dims.accountStatus) of account row i on a day. */
+export function statusAt(e: Engine, i: number, day: number): number {
   const c = e.ds.acc;
   if (c.fbd[i] === -1 || c.fbd[i] > day) return 0;
   if (c.sbd[i] === -1 || c.sbd[i] > day) return 1;

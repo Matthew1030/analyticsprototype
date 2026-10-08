@@ -30,15 +30,45 @@ GitHub Pages: `.github/workflows/pages.yml` tests, builds and deploys `dist` on 
 
 ## What the product does
 
-Users move from **enterprise → hospital → revenue-cycle area → metric → detail records**, and the
-product is built to answer *what is happening, where, and why*, not only to show KPIs.
+The product has three connected experiences, each with its own level of information density:
 
-### Screens
+| Experience | User question | Design | Density |
+|---|---|---|---|
+| **1. ELT Summary** (See) | How are we doing? | Simple, visual, prioritized | Low density, high signal |
+| **2. Analytics** (Understand) | What is happening, where, and why? | Dense, interactive, exploratory | Medium-high density |
+| **3. Worklists** (Act) | What specifically needs to be worked? | Operational, table-first, actionable | High density, high actionability |
+
+They form one journey: **See → Understand → Act**. For example: Denial rate is off target on the
+ELT Summary → click it (or its most affected hospital) → Denials Analytics, filtered to that hospital
+→ pick the denial category → **Work these claims in the Denials worklist** → the specific open claims,
+already filtered to that hospital and category. Breadcrumbs and Back keep the path in both directions.
+
+The three sections are the top-level navigation in the header. The full filter pane appears only in
+Analytics; the ELT Summary has a compact period and scope bar, and worklists have operational filters.
+
+### 1. ELT Summary
+
+Designed to be read in under a minute. Four levels, nothing else:
+
+1. **Revenue cycle health**: Net A/R days, Cash as % of NPSR, Denial rate, DNFB days (with DNFB $ as
+   context, because dollars have no scope-independent target) and Clean claim rate, each with
+   current, target, variance, status and three-month direction.
+2. **Are we getting better or worse?** Three 12-month trends (Net A/R days, Cash % NPSR, Denial rate)
+   with the target and a faint tint where the measure misses it.
+3. **Where attention is needed**: up to three headline measures off target (most severe first), plus at
+   most one *emerging* risk (a secondary measure that misses target and worsened over three months), each
+   with the most affected hospital. Rows open the analytical page; the hospital link opens it filtered.
+4. **Performance highlights**: up to three computed positives (three-month improvements, measures
+   beating target, the hospital with the largest improvement).
+
+A one-line headline sentence, and links to Analytics and each worklist, frame the page. All statements
+are computed from the data for the selected period and scope.
+
+### 2. Analytics
 
 | Page | Question it answers |
 |---|---|
-| Executive Overview | How is the revenue cycle performing against target, and where should leadership look first? |
-| Revenue Cycle | Which lifecycle stage (Patient Access → Charge Capture → Coding → CDI → Billing → A/R → Denials → Cash) is failing, and where? |
+| Revenue Cycle Overview | Full enterprise scorecard, ranked hospital exceptions ("where to look first"), lifecycle stages (Patient Access → Charge Capture → Coding → CDI → Billing → A/R → Denials → Cash), hospital performance matrix |
 | A/R | Where is A/R accumulating, and why? (aging trend, hospital, payer, financial class, status, concentration, aging matrix, accounts) |
 | Denials | Which payers, hospitals, categories and root causes drive denials? (decomposition tree, drivers, payer × category) |
 | Cash | Are we on track for the cash goal? (month pace, YTD by hospital, payer collections) |
@@ -52,15 +82,39 @@ product is built to answer *what is happening, where, and why*, not only to show
 | *Hospital Profile* (drill-through) | One hospital vs target, peers and system, by stage |
 | *Account Detail* (drill-through) | The accounts behind an aggregate (synthetic IDs, no patient data) |
 
+The A/R and Denials investigation paths, Billing / DNFB and Account Detail end in an **Act** step that
+opens the matching worklist with the current filters.
+
+### 3. Worklists
+
+| Worklist | Items | Main columns |
+|---|---|---|
+| Denials | Open denied claims (not paid, not written off) | Claim, hospital, payer, denial category and reason, denied $, age, appeal due, priority, status, assigned to, next action |
+| A/R follow-up | Open insurance balances in process or pended (denied claims stay on the denials list) | Account, hospital, payer, balance, age, aging bucket, last activity, expected payment, priority, status, assigned to, next action |
+| DNFB | Discharged accounts not final billed | Account, hospital, DNFB $, days in DNFB, DNFB reason, department, owner, priority, status, next action |
+
+Each worklist has queues (All open, My queue, Unassigned, High priority, an urgency queue, Resolved),
+search, facet filters, sorting, paging, multi-select with bulk assign and status change, CSV export,
+and a row panel with the next action, the reason for the priority, the account activity and work notes.
+The analytics context (hospital, payer, category, aging bucket, hold reason ...) shows as chips that
+can be removed.
+
+Priority rules are explicit and shown in the product (`PRIORITY_RULES` in `src/services/worklists.ts`).
+Assignee, work status, next action and appeal deadlines are **simulated** with fixed rules and a
+deterministic hash; appeal limits by financial class are illustrative only. In production these come
+from the work-queue or task system and the payer contract setup. Status, assignment and notes made in
+the prototype are kept in the browser only.
+
 ### Interaction model
 
-- **Global filter pane**: date (month, quarter, YTD, rolling 12), comparison (prior period / prior year),
+- **Global filter pane** (Analytics): date (month, quarter, YTD, rolling 12), comparison (prior period / prior year),
   region, facility type, hospital, financial class, payer, patient type, service line, RCM area, plus
   page-level fields (aging bucket, account status, denial category, root cause, DNFB hold, edit category).
   Multi-select, search, select all, clear, applied-filter chips, Clear all. Filters persist in the browser.
 - **Click-to-filter / cross-filtering**: clicking a bar, segment, row or point filters every visual.
   Unselected members fade.
-- **Drill-through**: KPI → Metric Analysis; hospital → Hospital Profile; aggregate → Account Detail.
+- **Drill-through**: ELT measure → analytical page; KPI → Metric Analysis; hospital → Hospital Profile;
+  aggregate → Account Detail; investigation path → worklist.
   Breadcrumbs and Back keep the path. Bar charts have a Filter / Drill click mode.
 - **Investigation path** (A/R, Denials): shows the analyst's drill steps as they click.
 - **Every visual**: definition popover, show as table, focus (full screen), CSV export.
@@ -93,9 +147,10 @@ src/engine/         engine.ts   aggregation for any filter context (sums, snapsh
                     status.ts   On target / Watch / Off target
 src/services/       contracts.ts  response shapes the UI expects from a data service
                     analytics.ts  the only data API pages use (metricValue, trend, breakdown, accounts)
+                    worklists.ts  worklist items, priority rules, simulated work fields
 src/ui/             Shell, Visual container, Grid (analytical table), charts, widgets
                     (KPI card, scorecard, trend, breakdown, decomposition tree), investigation path
-src/pages/          One file per screen
+src/pages/          One file per screen (EltSummary, analytics pages, Worklist)
 tests/              Data, reconciliation, planted-pattern and contract tests
 ```
 

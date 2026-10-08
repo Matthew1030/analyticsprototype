@@ -11,7 +11,7 @@ import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual } from '../ui/widgets';
-import { overallStatus } from './ExecutiveOverview';
+import { overallStatus } from './EnterpriseOverview';
 
 const COMPARE_IDS = ['net_ar_days', 'cash_pct_npsr', 'denial_rate', 'dnfb_days', 'clean_claim_rate'];
 const RANK_IDS = ['net_ar_days', 'cash_pct_npsr', 'denial_rate', 'dnfb_days', 'clean_claim_rate', 'ar_gt90_pct', 'cost_to_collect', 'coding_tat', 'eligibility_rate'];
