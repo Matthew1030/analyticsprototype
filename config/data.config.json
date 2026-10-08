@@ -1,10 +1,12 @@
 {
-  "seed": 20261006,
+  "seed": 20261008,
   "endMonth": "2026-09",
   "months": 24,
   "warmupMonths": 20,
   "preliminaryMonths": 1,
-  "claimsPerMonth": 3000,
-  "lastRefreshUtc": "2026-10-05T06:00:00Z",
-  "availabilityBusinessDay": 10
+  "claimsPerMonth": 4200,
+  "sampleWeight": 10,
+  "lastRefreshUtc": "2026-10-08T11:00:00Z",
+  "displayTimeZone": "America/Chicago",
+  "availabilityBusinessDay": 6
 }

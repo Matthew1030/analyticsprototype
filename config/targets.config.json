@@ -1,0 +1,157 @@
+{
+  "_comment": "Targets and watch thresholds per metric. 'target' = goal. 'watch' = the limit between Watch and Off target. Values are illustrative for the prototype and must be set by the client.",
+  "organizationKey": 0,
+  "cashGoalPctOfNpsr": 0.98,
+  "targets": {
+    "net_ar_days": {
+      "target": 50,
+      "watch": 55
+    },
+    "gross_ar_days": {
+      "target": 52,
+      "watch": 57
+    },
+    "ar_gt90_pct": {
+      "target": 0.22,
+      "watch": 0.26
+    },
+    "ar_gt180_pct": {
+      "target": 0.06,
+      "watch": 0.08
+    },
+    "cash": {
+      "target": "dynamic",
+      "watch": 0.97
+    },
+    "cash_pct_npsr": {
+      "target": 0.98,
+      "watch": 0.95
+    },
+    "net_collection_rate": {
+      "target": 0.95,
+      "watch": 0.93
+    },
+    "denial_rate": {
+      "target": 0.05,
+      "watch": 0.06
+    },
+    "denial_pct_npsr": {
+      "target": 0.045,
+      "watch": 0.055
+    },
+    "denial_wo_pct_npsr": {
+      "target": 0.015,
+      "watch": 0.02
+    },
+    "appeal_success": {
+      "target": 0.6,
+      "watch": 0.5
+    },
+    "front_end_denial_rate": {
+      "target": 0.025,
+      "watch": 0.03
+    },
+    "coding_denial_rate": {
+      "target": 0.006,
+      "watch": 0.008
+    },
+    "documentation_denial_rate": {
+      "target": 0.012,
+      "watch": 0.015
+    },
+    "clean_claim_rate": {
+      "target": 0.9,
+      "watch": 0.85
+    },
+    "billing_lag": {
+      "target": 1.0,
+      "watch": 1.3
+    },
+    "dnfb_days": {
+      "target": 5.0,
+      "watch": 6.0
+    },
+    "dnsp_days": {
+      "target": 1,
+      "watch": 1.5
+    },
+    "dnfb_15plus_pct": {
+      "target": 0.1,
+      "watch": 0.15
+    },
+    "charge_lag": {
+      "target": 1.5,
+      "watch": 1.8
+    },
+    "late_charge_pct": {
+      "target": 0.0075,
+      "watch": 0.01
+    },
+    "coding_tat": {
+      "target": 1.6,
+      "watch": 2
+    },
+    "bad_debt_pct": {
+      "target": 0.01,
+      "watch": 0.013
+    },
+    "cost_to_collect": {
+      "target": 0.032,
+      "watch": 0.037
+    },
+    "eligibility_rate": {
+      "target": 0.965,
+      "watch": 0.95
+    },
+    "auth_rate": {
+      "target": 0.94,
+      "watch": 0.92
+    },
+    "preservice_auth_rate": {
+      "target": 0.88,
+      "watch": 0.84
+    },
+    "registration_accuracy": {
+      "target": 0.95,
+      "watch": 0.93
+    },
+    "scheduled_rate": {
+      "target": 0.92,
+      "watch": 0.88
+    },
+    "prereg_rate": {
+      "target": 0.95,
+      "watch": 0.92
+    },
+    "fin_clearance_rate": {
+      "target": 0.9,
+      "watch": 0.86
+    },
+    "pos_rate": {
+      "target": 0.15,
+      "watch": 0.12
+    },
+    "call_abandon_rate": {
+      "target": 0.05,
+      "watch": 0.07
+    },
+    "asa": {
+      "target": 30,
+      "watch": 45
+    },
+    "payment_variance_pct": {
+      "target": -0.01,
+      "watch": -0.02
+    },
+    "denial_dollar_rate": {
+      "target": 0.06,
+      "watch": 0.075
+    }
+  },
+  "governance": {
+    "owner": "Revenue Cycle Analytics (placeholder)",
+    "version": "0.2-draft",
+    "changeDate": "2026-10-08",
+    "changeReason": "Expanded metric catalog for the enterprise prototype"
+  }
+}

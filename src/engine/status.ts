@@ -1,49 +1,50 @@
-// Status against target. Thresholds are configuration data, not code.
+// Status against target. Targets and thresholds are configuration data, not code.
 
-import clientConfig from '../../config/client.config.json';
-import type { Direction, MetricDef } from './metrics';
+import targetsConfig from '../../config/targets.config.json';
+import type { Direction } from './metrics';
 
-export type Status = 'On Track' | 'At Risk' | 'Off Track' | null;
+export type Status = 'On target' | 'Watch' | 'Off target' | null;
 
-export interface ClientConfig {
-  clientKey: number;
-  atRiskBand: number;
-  metricTargets: Record<string, number>;
-  tasks: TaskConfig[];
-  bridge: { title: string; measure: string; categories: { label: string; financialClasses: number[] }[] };
-  metricGovernance: { owner: string; version: string; changeDate: string; changeReason: string };
+interface TargetEntry { target: number | 'dynamic'; watch: number }
+
+export interface TargetsConfig {
+  organizationKey: number;
+  cashGoalPctOfNpsr: number;
+  targets: Record<string, TargetEntry>;
+  governance: { owner: string; version: string; changeDate: string; changeReason: string };
 }
 
-export interface TaskConfig {
-  id: string;
-  group: 'Front End' | 'Mid Cycle' | 'Back End';
-  name: string;
-  metric: string;
-  given: string;
-  performed: string;
-  target: number | null;
-  targetType: 'Contractual' | 'Internal' | null;
-}
+export const CONFIG = targetsConfig as unknown as TargetsConfig;
 
-export const CONFIG = clientConfig as ClientConfig;
-
-export function targetFor(metricId: string): number | null {
-  const t = CONFIG.metricTargets[metricId];
-  return t === undefined ? null : t;
+/** Static target, or null. Dynamic targets (cash goal) are computed by the metric. */
+export function staticTarget(metricId: string): number | null {
+  const t = CONFIG.targets[metricId]?.target;
+  return typeof t === 'number' ? t : null;
 }
 
 /**
- * On Track: meets the target. At Risk: misses by no more than the band (relative).
- * Off Track: misses by more than the band. No target or no value: no status.
+ * Watch threshold. For dynamic targets the config holds a ratio of the target
+ * (e.g. 0.97 = Watch while cash is at least 97% of goal).
  */
-export function statusOf(value: number | null, target: number | null, direction: Direction, band = CONFIG.atRiskBand): Status {
+export function watchFor(metricId: string, target: number | null): number | null {
+  const e = CONFIG.targets[metricId];
+  if (!e || target === null) return null;
+  return e.target === 'dynamic' ? target * e.watch : e.watch;
+}
+
+/**
+ * On target: meets the target. Watch: misses it but stays within the watch threshold.
+ * Off target: beyond the watch threshold. No target or no value: no status.
+ */
+export function statusOf(value: number | null, target: number | null, direction: Direction, watch: number | null): Status {
   if (value === null || target === null || direction === 'none') return null;
+  const w = watch ?? target;
   if (direction === 'down') {
-    if (value <= target) return 'On Track';
-    return value <= target * (1 + band) ? 'At Risk' : 'Off Track';
+    if (value <= target) return 'On target';
+    return value <= w ? 'Watch' : 'Off target';
   }
-  if (value >= target) return 'On Track';
-  return value >= target * (1 - band) ? 'At Risk' : 'Off Track';
+  if (value >= target) return 'On target';
+  return value >= w ? 'Watch' : 'Off target';
 }
 
 export type Change = 'Favorable' | 'Unfavorable' | 'No change' | null;
@@ -57,6 +58,4 @@ export function changeOf(current: number | null, prior: number | null, direction
   return better ? 'Favorable' : 'Unfavorable';
 }
 
-export function metricTarget(m: MetricDef): number | null {
-  return targetFor(m.id);
-}
+export const STATUS_RANK: Record<string, number> = { 'Off target': 0, Watch: 1, 'On target': 2 };
