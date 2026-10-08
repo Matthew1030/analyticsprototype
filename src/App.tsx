@@ -1,68 +1,100 @@
 import { useEffect, useState } from 'react';
 import { fetchDataset, type Dataset } from './data/model';
-import { ClaimList } from './pages/ClaimList';
-import { DetailAr } from './pages/DetailAr';
-import { DetailClaims } from './pages/DetailClaims';
-import { DetailDnfb } from './pages/DetailDnfb';
-import { Operational } from './pages/Operational';
-import { PeriodChange } from './pages/PeriodChange';
-import { Scorecard } from './pages/Scorecard';
-import { SignIn } from './pages/SignIn';
+import { AccountDetail } from './pages/AccountDetail';
+import { ArAnalytics } from './pages/ArAnalytics';
+import { BillingDnfb } from './pages/BillingDnfb';
+import { Cash } from './pages/Cash';
+import { Definitions } from './pages/Definitions';
+import { Denials } from './pages/Denials';
+import { ExecutiveOverview } from './pages/ExecutiveOverview';
+import { Facilities } from './pages/Facilities';
+import { FacilityProfile } from './pages/FacilityProfile';
+import { MetricAnalysis } from './pages/MetricAnalysis';
+import { MidCycle } from './pages/MidCycle';
+import { PatientAccess } from './pages/PatientAccess';
+import { Payers } from './pages/Payers';
+import { RevenueCycle } from './pages/RevenueCycle';
 import { AppProvider, useApp } from './state/AppState';
-import { ActionBar, FilterBar, Header, Nav, SelectionsBar, Toasts } from './ui/Shell';
-
-const SESSION_KEY = 'rcm-proto-user';
-
-function readSession(): string | null {
-  try { return sessionStorage.getItem(SESSION_KEY); } catch { return null; }
-}
-function writeSession(v: string | null) {
-  try { if (v) sessionStorage.setItem(SESSION_KEY, v); else sessionStorage.removeItem(SESSION_KEY); } catch { /* storage may be blocked */ }
-}
+import { FilterPane, Header, NavTabs, StaleBanner, StatusBar, Toasts } from './ui/Shell';
 
 export default function App() {
-  const [user, setUser] = useState<string | null>(readSession);
   const [ds, setDs] = useState<Dataset | null>(null);
   const [err, setErr] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [attempt, setAttempt] = useState(0);
 
-  // Load data only after sign-in: no data is shown before the user signs in.
   useEffect(() => {
-    if (!user || ds) return;
-    fetchDataset(`${import.meta.env.BASE_URL}data/`).then(setDs).catch((e: Error) => setErr(e.message));
-  }, [user, ds]);
+    setErr('');
+    fetchDataset(`${import.meta.env.BASE_URL}data/`, (done, total) => setProgress(done / total))
+      .then(setDs)
+      .catch((e: Error) => setErr(e.message));
+  }, [attempt]);
 
-  if (!user) return <SignIn onSignIn={(u) => { writeSession(u); setUser(u); }} />;
-  if (err) return <div className="loading">Data could not load: {err}</div>;
-  if (!ds) return <div className="loading" role="status">Loading data…</div>;
+  if (err) {
+    return (
+      <div className="boot">
+        <div className="boot-card" role="alert">
+          <h1>The analytics workspace could not load</h1>
+          <p>{err}</p>
+          <p className="muted small">If this continues, contact the analytics support team and quote the time of the error.</p>
+          <button type="button" className="btn btn-primary" onClick={() => setAttempt((a) => a + 1)}>Try again</button>
+        </div>
+      </div>
+    );
+  }
+  if (!ds) {
+    return (
+      <div className="boot" role="status">
+        <div className="boot-card">
+          <h1>Loading RCM Analytics</h1>
+          <div className="boot-bar"><span style={{ width: `${Math.max(8, progress * 100)}%` }} /></div>
+          <p className="muted small">Loading the analytical model (synthetic prototype data)…</p>
+        </div>
+      </div>
+    );
+  }
   return (
-    <AppProvider ds={ds} user={user}>
-      <Layout onSignOut={() => { writeSession(null); setUser(null); }} />
+    <AppProvider ds={ds}>
+      <Workspace />
     </AppProvider>
   );
 }
 
-function Layout({ onSignOut }: { onSignOut: () => void }) {
-  const { page } = useApp();
+function Workspace() {
+  const { route } = useApp();
   return (
     <div className="app">
-      <Header onSignOut={onSignOut} />
-      <FilterBar />
-      <SelectionsBar />
-      <div className="navrow">
-        <Nav />
-        <ActionBar />
+      <Header />
+      <NavTabs />
+      <div className="body">
+        <FilterPane />
+        <main className="canvas" id="main">
+          <StaleBanner />
+          <Page key={`${route.page}/${route.params.id ?? ''}`} />
+        </main>
       </div>
-      <main>
-        {page === 'scorecard' && <Scorecard />}
-        {page === 'operational' && <Operational />}
-        {page === 'change' && <PeriodChange />}
-        {page === 'dnfb' && <DetailDnfb />}
-        {page === 'claims' && <DetailClaims />}
-        {page === 'ar' && <DetailAr />}
-        {page === 'claimlist' && <ClaimList />}
-      </main>
-      <footer className="app-footer">Synthetic data only. Prototype for discussion; the production build is a Qlik Cloud app.</footer>
+      <StatusBar />
       <Toasts />
     </div>
   );
+}
+
+function Page() {
+  const { route } = useApp();
+  switch (route.page) {
+    case 'cycle': return <RevenueCycle />;
+    case 'ar': return <ArAnalytics />;
+    case 'denials': return <Denials />;
+    case 'cash': return <Cash />;
+    case 'access': return <PatientAccess />;
+    case 'midcycle': return <MidCycle />;
+    case 'billing': return <BillingDnfb />;
+    case 'payers': return <Payers />;
+    case 'facilities': return <Facilities />;
+    case 'definitions': return <Definitions />;
+    case 'metric': return <MetricAnalysis />;
+    case 'facility': return <FacilityProfile />;
+    case 'accounts': return <AccountDetail />;
+    default: return <ExecutiveOverview />;
+  }
 }

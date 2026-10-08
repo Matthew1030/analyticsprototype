@@ -1,5 +1,4 @@
-// Placeholder brand. Change these values to apply a real brand.
+// Product name shown in the header. Placeholder: replace with the client's product branding.
 export const BRAND = {
-  name: 'Placeholder RCM',
-  product: 'Revenue Cycle Dashboard',
+  product: 'RCM Analytics',
 };

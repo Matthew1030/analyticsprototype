@@ -1,221 +1,380 @@
-import { useEffect, useRef, useState } from 'react';
+// Workspace shell: header, page tabs, filter pane, canvas header (breadcrumb + applied
+// filters) and status bar. Vendor-neutral: this is the analytics product, not a BI tool.
+
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BRAND } from '../config/brand';
-import type { SelField } from '../engine/engine';
-import { availablePeriods } from '../engine/periods';
-import { FIELD_LABEL, facilityText, useApp, type PageId } from '../state/AppState';
+import { isoDay } from '../data/dates';
+import { FIELD_LABEL, type SelField } from '../engine/engine';
+import { METRIC_BY_ID, RCM_AREAS } from '../engine/metrics';
+import { availablePeriods, COMPARE_LABEL, comparePeriod, PERIOD_KIND_LABEL, type PeriodKind } from '../engine/periods';
+import { fmtDate, fmtDateTime } from '../format';
+import { DIMENSION_LABEL, members } from '../services/analytics';
+import { scopeText, useApp, type PageId, type Route, type SimState } from '../state/AppState';
+import { Icon } from './icons';
 
-const PAGES: { id: PageId; label: string; group?: string }[] = [
-  { id: 'scorecard', label: 'Scorecard' },
-  { id: 'operational', label: 'Operational' },
-  { id: 'change', label: 'Period-over-Period Change' },
-  { id: 'dnfb', label: 'DNFB and DNSP', group: 'Detail' },
-  { id: 'claims', label: 'Claims and Denials', group: 'Detail' },
-  { id: 'ar', label: 'A/R and Cash', group: 'Detail' },
+export interface PageMeta { id: PageId; label: string; title: string; question: string; nav?: boolean; pageFilters?: SelField[] }
+
+export const PAGES: PageMeta[] = [
+  { id: 'executive', label: 'Executive Overview', title: 'Executive Overview', question: 'How is the revenue cycle performing against target, and where should leadership look first?', nav: true },
+  { id: 'cycle', label: 'Revenue Cycle', title: 'Revenue Cycle Overview', question: 'Which stage of the revenue cycle is causing the problem?', nav: true },
+  { id: 'ar', label: 'A/R', title: 'A/R Analytics', question: 'Where is A/R accumulating, and why?', nav: true, pageFilters: ['arAge', 'accountStatus'] },
+  { id: 'denials', label: 'Denials', title: 'Denials Analytics', question: 'Which payers, hospitals and root causes drive denials?', nav: true, pageFilters: ['denialCategory', 'rootCause'] },
+  { id: 'cash', label: 'Cash', title: 'Cash and Collections', question: 'Are we on track to hit the cash goal?', nav: true },
+  { id: 'access', label: 'Patient Access', title: 'Patient Access (Front End)', question: 'Are we getting registration, eligibility and authorization right before service?', nav: true },
+  { id: 'midcycle', label: 'Mid-Cycle', title: 'Mid-Cycle: Charge Capture, Coding and CDI', question: 'Are charges, coding and documentation complete and on time?', nav: true },
+  { id: 'billing', label: 'Billing / DNFB', title: 'Billing and DNFB', question: 'What is holding claims back from going out the door?', nav: true, pageFilters: ['dnfbHold', 'editCategory'] },
+  { id: 'payers', label: 'Payers', title: 'Payer Performance', question: 'Which payers pay slowly, deny more, or underpay?', nav: true },
+  { id: 'facilities', label: 'Facilities', title: 'Facility Comparison', question: 'How do our hospitals compare, and which need attention?', nav: true },
+  { id: 'definitions', label: 'Definitions', title: 'Metric Definitions and Data', question: 'What does each measure mean, and how current is the data?', nav: true },
+  { id: 'metric', label: 'Metric Analysis', title: 'Metric Analysis', question: 'What is happening, where is it happening, and why?' },
+  { id: 'facility', label: 'Hospital Profile', title: 'Hospital Profile', question: 'How is this hospital performing across the revenue cycle?' },
+  { id: 'accounts', label: 'Account Detail', title: 'Account Detail', question: 'Which accounts make up this balance?' },
 ];
+export const PAGE_BY_ID = Object.fromEntries(PAGES.map((p) => [p.id, p])) as Record<PageId, PageMeta>;
 
-export function refreshText(utc: string) {
-  const d = new Date(utc);
-  return `${d.toISOString().slice(0, 10)} ${d.toISOString().slice(11, 16)} UTC`;
-}
+// ---------------------------------------------------------------- header
 
-export function Header({ onSignOut }: { onSignOut: () => void }) {
-  const { ds, sel, period, valueLabel, periodStatus, user } = useApp();
-  const status = periodStatus(period);
-  const avail = ds.meta.availability[String(period.endMi)];
+export function Header() {
+  const { ds, period, periodStatus, sim, sel, valueLabel } = useApp();
+  const st = periodStatus(period);
+  const stale = sim === 'stale';
+  const refreshed = stale ? '2026-10-06T11:00:00Z' : ds.meta.lastRefreshUtc;
   return (
     <header className="app-header">
       <div className="brand">
-        <span className="wordmark" aria-label={BRAND.name}>
-          <span className="mark" aria-hidden="true" />{BRAND.name}
-        </span>
+        <span className="logo" aria-hidden="true"><Icon name="chart" size={14} /></span>
         <span className="product">{BRAND.product}</span>
+        <span className="sep" aria-hidden="true" />
+        <span className="org">{scopeText(sel, valueLabel, ds.dims.organization.name, ds.dims.facilities.length)}</span>
       </div>
-      <div className="context">
-        <div><span className="ctx-label">Client</span> {ds.dims.client.name}</div>
-        <div><span className="ctx-label">Facilities</span> {facilityText(sel, valueLabel, ds.dims.facilities.length)}</div>
-        <div>
-          <span className="ctx-label">Period</span> {period.label}{' '}
-          <span className={`period-badge ${status === 'Preliminary' ? 'prelim' : 'closed'}`}>{status}</span>
-          {status === 'Preliminary' && avail && <span className="small muted"> · Planned close {avail}</span>}
-        </div>
-        <div><span className="ctx-label">Data last refreshed</span> {refreshText(ds.meta.lastRefreshUtc)}</div>
+      <div className="header-meta">
+        <span title="Reporting period selected in the filter pane">Reporting period <b>{period.label}</b>
+          <span className={`pill ${st === 'Preliminary' ? 'pill-prelim' : 'pill-closed'}`} title={st === 'Preliminary' ? `Month not closed. Planned close ${ds.meta.availability[String(period.endMi + 1)] ?? ''}` : 'Closed period'}>{st}</span>
+        </span>
+        <span>Data through <b>{fmtDate(ds.meta.asOfDay)}</b></span>
+        <span className={stale ? 'fresh-warn' : 'fresh-ok'} title="Last successful load of all source systems">
+          <span className="dot" aria-hidden="true" />Refreshed {fmtDateTime(refreshed, ds.meta.displayTimeZone)}
+        </span>
       </div>
-      <div className="user">
-        <span>{user}</span>
-        <button type="button" className="btn-ghost no-print" onClick={onSignOut}>Sign out</button>
+      <div className="header-right">
+        <PrototypeMenu />
+        <span className="user" title="Signed in through the organization's single sign-on">
+          <span className="avatar" aria-hidden="true">JE</span>
+          <span className="user-name">Jordan Ellis<span className="user-role">Revenue Cycle Analyst</span></span>
+        </span>
       </div>
     </header>
   );
 }
 
-function MultiSelect({ field, options }: { field: SelField; options: { key: number; label: string }[] }) {
-  const { sel, toggle, clearField, selectOnly } = useApp();
+function PrototypeMenu() {
+  const { sim, setSim, specMode, setSpecMode } = useApp();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [open]);
-  const chosen = sel[field] ?? [];
-  const summary = chosen.length === 0 ? 'All' : chosen.length === 1 ? options.find((o) => o.key === chosen[0])?.label : `${chosen.length} selected`;
+  const ref = useOutside<HTMLDivElement>(open, () => setOpen(false));
+  const opts: { v: SimState; label: string; note: string }[] = [
+    { v: 'normal', label: 'Normal', note: 'Happy path' },
+    { v: 'loading', label: 'Loading', note: 'Visuals show skeletons' },
+    { v: 'stale', label: 'Stale data', note: 'Refresh is more than 24 hours old' },
+    { v: 'partial', label: 'Source delayed', note: 'Claims clearinghouse feed missing' },
+    { v: 'empty', label: 'Filtered to zero', note: 'No rows match the filters' },
+    { v: 'error', label: 'Service error', note: 'Visuals fail to load' },
+  ];
   return (
-    <div className="filter" ref={ref}>
-      <label className="filter-label" id={`lbl-${field}`}>{FIELD_LABEL[field]}</label>
-      <button type="button" className={`filter-btn ${chosen.length ? 'active' : ''}`} aria-haspopup="listbox" aria-expanded={open} aria-labelledby={`lbl-${field}`} onClick={() => setOpen((o) => !o)}>
-        {summary} <span aria-hidden="true">▾</span>
+    <div className="proto" ref={ref}>
+      <button type="button" className={`proto-btn ${sim !== 'normal' || specMode ? 'on' : ''}`} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <Icon name="code" size={13} /> Prototype{sim !== 'normal' ? `: ${opts.find((o) => o.v === sim)?.label}` : ''}
       </button>
       {open && (
-        <div className="filter-pop" role="listbox" aria-multiselectable="true">
-          <div className="filter-pop-actions">
-            <button type="button" onClick={() => clearField(field)}>All</button>
-            <button type="button" onClick={() => selectOnly(field, options.map((o) => o.key).filter((k) => !chosen.includes(k)))}>Invert</button>
-          </div>
-          {options.map((o) => (
-            <label key={o.key} className="filter-opt">
-              <input type="checkbox" checked={chosen.includes(o.key)} onChange={() => toggle(field, o.key)} /> {o.label}
-            </label>
+        <div className="menu proto-menu" role="menu">
+          <div className="menu-title">Simulate state (for developers)</div>
+          {opts.map((o) => (
+            <button key={o.v} type="button" role="menuitemradio" aria-checked={sim === o.v} className={`menu-item ${sim === o.v ? 'on' : ''}`} onClick={() => setSim(o.v)}>
+              <span className="radio" aria-hidden="true" />{o.label}<span className="muted small"> · {o.note}</span>
+            </button>
           ))}
+          <div className="menu-sep" />
+          <label className="menu-item">
+            <input type="checkbox" checked={specMode} onChange={(e) => setSpecMode(e.target.checked)} /> Show build annotations on visuals
+          </label>
+          <div className="menu-note">Synthetic data. All organizations and figures are fictional.</div>
         </div>
       )}
     </div>
   );
 }
 
-export function FilterBar() {
-  const { ds, period, setPeriod, setPeriodKind } = useApp();
-  const d = ds.dims;
-  const periods = availablePeriods(period.kind, ds.meta.windowStartMonth, ds.meta.endMonth);
-  return (
-    <div className="filterbar" role="region" aria-label="Filters">
-      <div className="filter">
-        <span className="filter-label">Period type</span>
-        <div className="seg" role="radiogroup" aria-label="Period type">
-          {(['month', 'quarter'] as const).map((k) => (
-            <button key={k} type="button" role="radio" aria-checked={period.kind === k} className={period.kind === k ? 'on' : ''} onClick={() => setPeriodKind(k)}>
-              {k === 'month' ? 'Month' : 'Quarter'}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="filter">
-        <label className="filter-label" htmlFor="period-select">Period</label>
-        <select id="period-select" className="filter-btn" value={period.key} onChange={(e) => setPeriod(period.kind, Number(e.target.value))}>
-          {periods.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
-        </select>
-      </div>
-      <MultiSelect field="facility" options={d.facilities.map((f) => ({ key: f.key, label: `${f.name} (${f.type === 'Critical Access' ? 'CAH' : 'Community'})` }))} />
-      <MultiSelect field="financialClass" options={d.financialClasses.map((n, i) => ({ key: i, label: n }))} />
-      <MultiSelect field="payer" options={d.payers.map((p) => ({ key: p.key, label: p.name }))} />
-      <MultiSelect field="serviceLine" options={d.serviceLines.map((s) => ({ key: s.key, label: s.name }))} />
-    </div>
-  );
-}
+// ---------------------------------------------------------------- tabs
 
-export function SelectionsBar() {
-  const { sel, valueLabel, toggle, clearField, clearAll } = useApp();
-  const items = (Object.keys(sel) as SelField[]).filter((f) => (sel[f]?.length ?? 0) > 0);
+export function NavTabs() {
+  const { route, go, toast } = useApp();
+  const active = route.page === 'metric' || route.page === 'facility' || route.page === 'accounts' ? null : route.page;
   return (
-    <div className="selbar" role="region" aria-label="Current selections">
-      <span className="selbar-title">Selections</span>
-      {items.length === 0 && <span className="muted small">None. Click a value in any chart or use the filters to select.</span>}
-      {items.map((f) => (
-        <span key={f} className="sel-chip">
-          <span className="sel-field">{FIELD_LABEL[f]}:</span>
-          {sel[f]!.length <= 3 ? sel[f]!.map((k) => (
-            <button key={k} type="button" className="sel-val" onClick={() => toggle(f, k)} aria-label={`Remove ${valueLabel(f, k)}`}>
-              {valueLabel(f, k)} ✕
-            </button>
-          )) : <span className="sel-val">{sel[f]!.length} values</span>}
-          <button type="button" className="sel-clear" aria-label={`Clear ${FIELD_LABEL[f]}`} onClick={() => clearField(f)}>Clear</button>
-        </span>
-      ))}
-      <button type="button" className="btn-primary clear-all" disabled={items.length === 0} onClick={clearAll}>Clear all selections</button>
-    </div>
-  );
-}
-
-export function Nav() {
-  const { page, setPage, claimListEnabled } = useApp();
-  const pages = claimListEnabled ? [...PAGES, { id: 'claimlist' as PageId, label: 'Claim list (prototype only)', group: 'Detail' }] : PAGES;
-  return (
-    <nav className="nav no-print" aria-label="Sheets">
-      {pages.map((p, i) => (
-        <span key={p.id} className="nav-item">
-          {p.group && pages[i - 1]?.group !== p.group && <span className="nav-group">{p.group}:</span>}
-          <button type="button" className={page === p.id ? 'on' : ''} aria-current={page === p.id ? 'page' : undefined} onClick={() => setPage(p.id)}>
+    <nav className="tabs no-print" aria-label="Pages">
+      <div className="tab-list" role="tablist">
+        {PAGES.filter((p) => p.nav).map((p) => (
+          <button key={p.id} type="button" role="tab" aria-selected={active === p.id} className={`tab ${active === p.id ? 'on' : ''} ${p.id === 'definitions' ? 'tab-right' : ''}`} onClick={() => go(p.id)}>
             {p.label}
           </button>
-        </span>
-      ))}
+        ))}
+      </div>
+      <div className="tab-actions">
+        <button type="button" className="icon-btn" title="Copy link to this view (filters persist in the link and in your browser)" onClick={() => {
+          try { void navigator.clipboard?.writeText(location.href); } catch { /* clipboard blocked */ }
+          toast('Link copied. Filters are saved with the workspace.');
+        }}><Icon name="share" /></button>
+        <button type="button" className="icon-btn" title="Save as bookmark (prototype: not saved)" onClick={() => toast('Prototype: personal bookmarks would save this page, filters and period.')}><Icon name="bookmark" /></button>
+        <button type="button" className="icon-btn" title="Print or save as PDF" onClick={() => window.print()}><Icon name="download" /></button>
+      </div>
     </nav>
   );
 }
 
-export function ActionBar() {
-  const { getExport, ds, sel, period, valueLabel, toast, claimListEnabled, setClaimListEnabled, periodStatus } = useApp();
-  const [emailOpen, setEmailOpen] = useState(false);
+// ---------------------------------------------------------------- filter pane
 
-  const doExport = () => {
-    const t = getExport();
-    if (!t) { toast('This view has no table to export.'); return; }
-    const other = (Object.keys(sel) as SelField[])
-      .filter((f) => f !== 'facility' && (sel[f]?.length ?? 0) > 0)
-      .map((f) => `${FIELD_LABEL[f]}: ${sel[f]!.map((k) => valueLabel(f, k)).join('; ')}`).join(' | ');
-    const lines = [
-      ['Client', ds.dims.client.name],
-      ['Facility selection', facilityText(sel, valueLabel, ds.dims.facilities.length)],
-      ['Other selections', other || 'None'],
-      ['Reporting period', `${period.label} (${periodStatus(period)})`],
-      ['Data last refreshed', refreshText(ds.meta.lastRefreshUtc)],
-      ['View', t.title],
-      ['Note', 'Synthetic data. Prototype export (CSV). The Qlik build uses its native Excel download.'],
-      [],
-      t.columns,
-      ...t.rows,
-    ];
-    const csv = lines.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${t.title.replace(/[^a-z0-9]+/gi, '_')}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    toast(`Exported "${t.title}" with the active selections (${t.rows.length} rows).`);
-  };
+function useOutside<T extends HTMLElement>(open: boolean, close: () => void) {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) close(); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open, close]);
+  return ref;
+}
 
+function Slicer({ field, defaultOpen = false, note }: { field: SelField; defaultOpen?: boolean; note?: string }) {
+  const { ds, sel, toggle, clearField, selectOnly } = useApp();
+  const [open, setOpen] = useState(defaultOpen);
+  const [q, setQ] = useState('');
+  const opts = useMemo(() => members(ds, field, sel), [ds, field, sel]);
+  const chosen = sel[field] ?? [];
+  const shown = q ? opts.filter((o) => o.label.toLowerCase().includes(q.toLowerCase())) : opts;
+  const summary = chosen.length === 0 ? 'All' : chosen.length === 1 ? opts.find((o) => o.key === chosen[0])?.label ?? '1 selected' : `${chosen.length} selected`;
   return (
-    <div className="actionbar no-print">
-      <button type="button" className="btn" onClick={doExport}>Export data (CSV)</button>
-      <button type="button" className="btn" onClick={() => window.print()}>Print</button>
-      <button type="button" className="btn" onClick={() => setEmailOpen(true)}>Schedule email</button>
-      <label className="toggle" title="Account-level records are excluded from version 1. This toggle shows the boundary to stakeholders.">
-        <input type="checkbox" checked={claimListEnabled} onChange={(e) => setClaimListEnabled(e.target.checked)} />
-        Claim list (prototype only, not in v1)
-      </label>
-      {emailOpen && <EmailDialog onClose={() => setEmailOpen(false)} />}
+    <div className={`slicer ${chosen.length ? 'active' : ''}`}>
+      <div className="slicer-head">
+        <button type="button" className="slicer-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          <Icon name={open ? 'chevronDown' : 'chevronRight'} size={10} />
+          <span className="slicer-name">{FIELD_LABEL[field]}</span>
+          <span className="slicer-sum" title={summary}>{summary}</span>
+        </button>
+        {chosen.length > 0 && <button type="button" className="icon-btn xs" title={`Clear ${FIELD_LABEL[field]}`} onClick={() => clearField(field)}><Icon name="close" size={10} /></button>}
+      </div>
+      {open && (
+        <div className="slicer-body">
+          {note && <div className="slicer-note">{note}</div>}
+          {opts.length > 7 && (
+            <div className="slicer-search"><Icon name="search" size={11} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label={`Search ${FIELD_LABEL[field]}`} /></div>
+          )}
+          <div className="slicer-actions">
+            <button type="button" className="link" onClick={() => selectOnly(field, opts.map((o) => o.key))}>Select all</button>
+            <button type="button" className="link" onClick={() => clearField(field)}>Clear</button>
+          </div>
+          <div className="slicer-list" role="listbox" aria-multiselectable="true" aria-label={FIELD_LABEL[field]}>
+            {shown.map((o) => (
+              <label key={o.key} className={`slicer-opt ${chosen.includes(o.key) ? 'on' : ''}`} title={o.sub}>
+                <input type="checkbox" checked={chosen.includes(o.key)} onChange={() => toggle(field, o.key)} />
+                <span className="opt-label">{o.label}</span>
+              </label>
+            ))}
+            {shown.length === 0 && <span className="muted small">No match</span>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function EmailDialog({ onClose }: { onClose: () => void }) {
-  const { toast } = useApp();
+function AreaSlicer() {
+  const { areas, setAreas } = useApp();
+  const [open, setOpen] = useState(false);
   return (
-    <div className="modal-back" role="presentation" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="email-title" onClick={(e) => e.stopPropagation()}>
-        <h2 id="email-title">Schedule email (mock)</h2>
-        <p className="small">In the Qlik build this uses Qlik subscriptions or reporting (verify the license). Content follows the same facility entitlements as the screen.</p>
-        <label className="field">Recipients<input type="text" placeholder="name@example.com" /></label>
-        <label className="field">Frequency
-          <select defaultValue="monthly"><option value="weekly">Weekly</option><option value="monthly">Monthly, after period close</option></select>
-        </label>
-        <div className="modal-actions">
-          <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="button" className="btn-primary" onClick={() => { toast('Prototype only: no email is scheduled or sent.'); onClose(); }}>Save schedule</button>
-        </div>
+    <div className={`slicer ${areas.length ? 'active' : ''}`}>
+      <div className="slicer-head">
+        <button type="button" className="slicer-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          <Icon name={open ? 'chevronDown' : 'chevronRight'} size={10} />
+          <span className="slicer-name">RCM area</span>
+          <span className="slicer-sum">{areas.length === 0 ? 'All' : areas.length === 1 ? areas[0] : `${areas.length} selected`}</span>
+        </button>
+        {areas.length > 0 && <button type="button" className="icon-btn xs" title="Clear RCM area" onClick={() => setAreas([])}><Icon name="close" size={10} /></button>}
       </div>
+      {open && (
+        <div className="slicer-body">
+          <div className="slicer-note">Limits the metrics listed in scorecards and definitions.</div>
+          <div className="slicer-list">
+            {RCM_AREAS.map((a) => (
+              <label key={a} className={`slicer-opt ${areas.includes(a) ? 'on' : ''}`}>
+                <input type="checkbox" checked={areas.includes(a)} onChange={() => setAreas(areas.includes(a) ? areas.filter((x) => x !== a) : [...areas, a])} />
+                <span className="opt-label">{a}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export function FilterPane() {
+  const { ds, period, setPeriod, setPeriodKind, compare, setCompare, clearAll, sel, paneOpen, setPaneOpen, route, areas } = useApp();
+  const periods = availablePeriods(period.kind, ds.meta.windowStartMonth, ds.meta.endMonth);
+  const active = Object.values(sel).reduce((a, v) => a + (v?.length ? 1 : 0), 0) + (areas.length ? 1 : 0);
+  const pageFilters = PAGE_BY_ID[route.page]?.pageFilters ?? [];
+  if (!paneOpen) {
+    return (
+      <aside className="pane pane-closed no-print" aria-label="Filters (collapsed)">
+        <button type="button" className="pane-rail" onClick={() => setPaneOpen(true)} title="Show filters">
+          <Icon name="filter" /><span className="rail-text">Filters{active ? ` (${active})` : ''}</span>
+        </button>
+      </aside>
+    );
+  }
+  return (
+    <aside className="pane no-print" aria-label="Filters">
+      <div className="pane-head">
+        <span><Icon name="filter" size={13} /> Filters</span>
+        <span className="pane-head-actions">
+          <button type="button" className="link" disabled={!active} onClick={clearAll}>Clear all</button>
+          <button type="button" className="icon-btn" onClick={() => setPaneOpen(false)} title="Hide filter pane"><Icon name="chevronLeft" /></button>
+        </span>
+      </div>
+      <div className="pane-scroll">
+        <section className="pane-sec">
+          <h4>Date</h4>
+          <label className="fld">Period type
+            <select value={period.kind} onChange={(e) => setPeriodKind(e.target.value as PeriodKind)}>
+              {(Object.keys(PERIOD_KIND_LABEL) as PeriodKind[]).map((k) => <option key={k} value={k}>{PERIOD_KIND_LABEL[k]}</option>)}
+            </select>
+          </label>
+          <label className="fld">Period
+            <select value={period.key} onChange={(e) => setPeriod(period.kind, Number(e.target.value))}>
+              {periods.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            </select>
+          </label>
+          <div className="fld-note">{isoDay(period.startDay)} to {isoDay(period.endDay)}</div>
+          <label className="fld">Compare to
+            <select value={compare} onChange={(e) => setCompare(e.target.value as 'prior' | 'py')}>
+              {(['prior', 'py'] as const).map((c) => <option key={c} value={c}>{COMPARE_LABEL[c]} ({comparePeriod(period, c).short})</option>)}
+            </select>
+          </label>
+        </section>
+        <section className="pane-sec">
+          <h4>Organization</h4>
+          <Slicer field="region" />
+          <Slicer field="facilityType" />
+          <Slicer field="facility" defaultOpen />
+        </section>
+        <section className="pane-sec">
+          <h4>Payer</h4>
+          <Slicer field="financialClass" />
+          <Slicer field="payer" />
+        </section>
+        <section className="pane-sec">
+          <h4>Service</h4>
+          <Slicer field="patientType" />
+          <Slicer field="serviceLine" />
+        </section>
+        <section className="pane-sec">
+          <h4>Metrics</h4>
+          <AreaSlicer />
+        </section>
+        {pageFilters.length > 0 && (
+          <section className="pane-sec pane-page">
+            <h4>This page</h4>
+            {pageFilters.map((f) => <Slicer key={f} field={f} defaultOpen={!!sel[f]?.length} note={pageNote(f)} />)}
+          </section>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function pageNote(f: SelField) {
+  if (f === 'arAge' || f === 'accountStatus') return 'Applies to A/R balances ($). A/R days and aging shares ignore it.';
+  if (f === 'denialCategory' || f === 'rootCause') return 'Applies to denial measures.';
+  if (f === 'dnfbHold') return 'Applies to DNFB measures.';
+  if (f === 'editCategory') return 'Applies to claim edit measures.';
+  return undefined;
+}
+
+// ---------------------------------------------------------------- canvas header
+
+export function CanvasHeader({ title, question, crumbs, right }: { title?: string; question?: string; crumbs?: ReactNode; right?: ReactNode }) {
+  const { route, trail, back, go, ds } = useApp();
+  const meta = PAGE_BY_ID[route.page] ?? PAGE_BY_ID.executive;
+  return (
+    <div className="canvas-head">
+      <div className="canvas-title-row">
+        <div>
+          <nav className="crumbs" aria-label="Breadcrumb">
+            {trail.length > 0 && (
+              <button type="button" className="crumb-back" onClick={back} title="Back to the previous view"><Icon name="back" size={12} /> Back</button>
+            )}
+            <button type="button" className="crumb" onClick={() => go('executive')}>{ds.dims.organization.name}</button>
+            {trail.map((r, i) => (
+              <span key={i} className="crumb-item"><span className="crumb-sep">›</span><span className="crumb muted-crumb">{routeLabel(r)}</span></span>
+            ))}
+            <span className="crumb-item"><span className="crumb-sep">›</span><span className="crumb current">{routeLabel(route)}</span></span>
+            {crumbs}
+          </nav>
+          <h1>{title ?? meta.title}</h1>
+          <p className="question">{question ?? meta.question}</p>
+        </div>
+        {right && <div className="canvas-right">{right}</div>}
+      </div>
+      <AppliedFilters />
+    </div>
+  );
+}
+
+function routeLabel(r: Route): string {
+  const meta = PAGE_BY_ID[r.page];
+  if (r.page === 'metric' && r.params.id) return `${METRIC_BY_ID[r.params.id]?.short ?? METRIC_BY_ID[r.params.id]?.name ?? r.params.id}`;
+  if (r.page === 'facility' && r.params.id) return `Hospital profile`;
+  return meta?.label ?? r.page;
+}
+
+export function AppliedFilters() {
+  const { sel, valueLabel, toggle, clearField, clearAll, period, compare, areas, setAreas } = useApp();
+  const items = (Object.keys(sel) as SelField[]).filter((f) => (sel[f]?.length ?? 0) > 0);
+  return (
+    <div className="applied" role="region" aria-label="Applied filters">
+      <span className="applied-chip fixed" title="Report period and comparison">
+        <span className="chip-field">Period</span> {period.label} <span className="muted">vs {COMPARE_LABEL[compare].toLowerCase()} ({comparePeriod(period, compare).short})</span>
+      </span>
+      {items.map((f) => (
+        <span key={f} className="applied-chip">
+          <span className="chip-field">{FIELD_LABEL[f]}</span>
+          {sel[f]!.length <= 2 ? sel[f]!.map((k) => (
+            <button key={k} type="button" className="chip-val" onClick={() => toggle(f, k)} aria-label={`Remove ${valueLabel(f, k)}`}>{valueLabel(f, k)} <Icon name="close" size={9} /></button>
+          )) : <span className="chip-val static" title={sel[f]!.map((k) => valueLabel(f, k)).join(', ')}>{sel[f]!.length} values</span>}
+          {sel[f]!.length > 2 && <button type="button" className="chip-x" aria-label={`Clear ${FIELD_LABEL[f]}`} onClick={() => clearField(f)}><Icon name="close" size={9} /></button>}
+        </span>
+      ))}
+      {areas.length > 0 && (
+        <span className="applied-chip"><span className="chip-field">RCM area</span>
+          <span className="chip-val static">{areas.length <= 2 ? areas.join(', ') : `${areas.length} areas`}</span>
+          <button type="button" className="chip-x" aria-label="Clear RCM area" onClick={() => setAreas([])}><Icon name="close" size={9} /></button>
+        </span>
+      )}
+      {items.length === 0 && areas.length === 0 && <span className="muted small">No filters applied. Click any bar, row or point to filter; use the pane on the left for more.</span>}
+      {(items.length > 0 || areas.length > 0) && <button type="button" className="link" onClick={clearAll}>Clear all</button>}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- status bar & toasts
+
+export function StatusBar() {
+  const { ds, sim, period, periodStatus } = useApp();
+  const delayed = sim === 'partial';
+  return (
+    <footer className="statusbar no-print">
+      <span><Icon name="database" size={11} /> Sources: patient accounting, clearinghouse, registration/ADT, scheduling, coding/CDI, general ledger</span>
+      <span className={delayed ? 'txt-off' : ''}>{delayed ? 'Clearinghouse feed delayed (last load Oct 6, 2026 3:30 AM)' : 'All sources loaded'}</span>
+      <span>Period status: {periodStatus(period)}{periodStatus(period) === 'Preliminary' ? ` · closes ${ds.meta.availability[String(period.endMi + 1)] ?? ''}` : ''}</span>
+      <span className="synthetic">Synthetic data · {DIMENSION_LABEL.facility} and payer figures are fictional</span>
+    </footer>
   );
 }
 
@@ -224,6 +383,19 @@ export function Toasts() {
   return (
     <div className="toasts" aria-live="polite">
       {toasts.map((t) => <div key={t.id} className="toast">{t.msg}</div>)}
+    </div>
+  );
+}
+
+export function StaleBanner() {
+  const { sim, ds } = useApp();
+  if (sim !== 'stale' && sim !== 'partial') return null;
+  return (
+    <div className={`banner ${sim === 'stale' ? 'banner-warn' : 'banner-info'}`} role="status">
+      <Icon name="warn" size={14} />
+      {sim === 'stale'
+        ? <span><b>Data may be out of date.</b> The last successful refresh was {fmtDateTime('2026-10-06T11:00:00Z', ds.meta.displayTimeZone)} (more than 24 hours ago). The scheduled refresh on Oct 7 failed. Activity posted after Oct 5, 2026 is not yet included.</span>
+        : <span><b>Partial data.</b> The claims clearinghouse feed is delayed. Denial, clean-claim and remittance measures may be incomplete after Oct 5, 2026. Other sources are current.</span>}
     </div>
   );
 }
