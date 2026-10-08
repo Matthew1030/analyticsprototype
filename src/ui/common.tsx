@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { METRIC_BY_ID, type MetricDef } from '../engine/metrics';
-import { CONFIG, targetFor, type Status } from '../engine/status';
-import { fmt } from '../format';
+import { METRIC_BY_ID, type MetricDef, type Unit } from '../engine/metrics';
+import { CONFIG, staticTarget, watchFor, type Change, type Status } from '../engine/status';
+import { fmt, fmtDelta } from '../format';
+import { Icon } from './icons';
 
-/** Info icon: opens the draft definition and calculation of a metric or column. */
-export function InfoIcon({ metricId, text, title }: { metricId?: string; text?: string; title?: string }) {
+/** Info button: opens the definition and calculation of a metric, or a free text note. */
+export function InfoIcon({ metricId, text, title }: { metricId?: string; text?: ReactNode; title?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -18,93 +19,109 @@ export function InfoIcon({ metricId, text, title }: { metricId?: string; text?: 
   const m = metricId ? METRIC_BY_ID[metricId] : undefined;
   return (
     <span className="info" ref={ref}>
-      <button
-        type="button"
-        className="info-btn"
-        aria-label={`Definition of ${m?.name ?? title ?? 'this item'}`}
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-      >i</button>
+      <button type="button" className="icon-btn info-btn" aria-label={`About ${m?.name ?? title ?? 'this item'}`} title="Definition"
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}>
+        <Icon name="info" size={13} />
+      </button>
       {open && (
         <span className="info-pop" role="dialog" onClick={(e) => e.stopPropagation()}>
-          {m ? <MetricInfo m={m} /> : (
-            <>
-              <strong>{title}</strong>
-              <span className="info-row">{text}</span>
-            </>
-          )}
+          {m ? <MetricInfo m={m} /> : (<><strong>{title}</strong><span className="info-row">{text}</span></>)}
         </span>
       )}
     </span>
   );
 }
 
-function MetricInfo({ m }: { m: MetricDef }) {
-  const t = targetFor(m.id);
-  const g = CONFIG.metricGovernance;
+export function MetricInfo({ m }: { m: MetricDef }) {
+  const t = staticTarget(m.id);
+  const w = watchFor(m.id, t);
+  const g = CONFIG.governance;
   return (
     <>
-      <strong>{m.name} <span className="tag">{m.id} · Draft</span></strong>
+      <strong>{m.name}</strong>
+      <span className="tagline">{m.area} · {m.type === 'balance' ? 'Point in time (period end)' : 'Flow (sum over period)'} · <code>{m.id}</code></span>
       <span className="info-row">{m.definition}</span>
       <span className="info-label">Calculation</span>
-      <span className="info-row">{m.formula}</span>
-      <span className="info-label">Unit and direction</span>
+      <code className="info-code">{m.calculation}</code>
+      <span className="info-label">Direction and target</span>
       <span className="info-row">
-        {unitName(m.unit)} · {m.direction === 'up' ? 'Higher is better' : m.direction === 'down' ? 'Lower is better' : 'No direction'}
-        {t !== null && <> · Target {m.direction === 'up' ? '≥' : '≤'} {fmt(t, m.unit)}</>}
+        {m.direction === 'up' ? 'Higher is better' : m.direction === 'down' ? 'Lower is better' : 'No preferred direction'}
+        {t !== null && <> · Target {m.direction === 'up' ? '≥' : '≤'} {fmt(t, m.unit, m.digits)} · Watch to {fmt(w, m.unit, m.digits)}</>}
+        {m.target && <> · Target is calculated (cash goal)</>}
       </span>
-      {m.multiDef && <span className="info-row note">This metric has more than one common definition in the industry.</span>}
-      <span className="info-label">Draft Qlik expression</span>
-      <code className="info-code">{m.qlik}</code>
-      <span className="info-label">Governance</span>
-      <span className="info-row small">Owner: {g.owner} · Version {g.version} · Changed {g.changeDate}: {g.changeReason}</span>
+      {m.multiDef && <span className="info-row note">More than one definition is common in the industry. Confirm this one with Finance.</span>}
+      <span className="info-label">Source fields</span>
+      <span className="info-row small mono">{m.sourceFields.join(', ')}</span>
+      <span className="info-row small muted">Draft definition · {g.owner} · v{g.version}</span>
     </>
   );
 }
 
-function unitName(u: MetricDef['unit']) {
-  return { pct: 'Percent', days: 'Days', usd: 'Dollars', count: 'Count', sec: 'Seconds', score: 'Score 0-100' }[u];
-}
-
-export function StatusChip({ status, na }: { status: Status; na?: boolean }) {
-  if (!status) return <span className="chip chip-none">{na ? 'Not applicable' : 'No target'}</span>;
-  const cls = status === 'On Track' ? 'good' : status === 'At Risk' ? 'warn' : 'crit';
-  const icon = status === 'On Track' ? '✓' : status === 'At Risk' ? '!' : '✕';
-  return <span className={`chip chip-${cls}`}><span aria-hidden="true">{icon}</span> {status}</span>;
-}
-
-export function ChangeText({ text, kind }: { text: string; kind: 'Favorable' | 'Unfavorable' | 'No change' | null }) {
-  const cls = kind === 'Favorable' ? 'fav' : kind === 'Unfavorable' ? 'unfav' : 'neutral';
-  const arrow = kind === 'Favorable' ? '▲' : kind === 'Unfavorable' ? '▼' : '';
+/** Status: small shape + label. Color is never the only cue. */
+export function StatusMark({ status, compact }: { status: Status; compact?: boolean }) {
+  if (!status) return <span className="status status-none">{compact ? '' : 'No target'}</span>;
+  const cls = status === 'On target' ? 'ok' : status === 'Watch' ? 'watch' : 'off';
   return (
-    <span className={`change ${cls}`}>
-      {text}{kind && kind !== 'No change' && <span className="change-label"> {arrow} {kind}</span>}
+    <span className={`status status-${cls}`} title={status}>
+      <span className="status-shape" aria-hidden="true" />{compact ? <span className="sr-only">{status}</span> : status}
     </span>
   );
 }
 
-/** A Qlik-style object: title, info, object type tag, and content or a no-data message. */
-export function Panel({ title, metricId, info, qlik, children, noData, actions, className }: {
-  title: string; metricId?: string; info?: string; qlik: string; children: ReactNode;
-  noData?: string | null; actions?: ReactNode; className?: string;
-}) {
+/** Change value with favorable / unfavorable coloring by metric direction. */
+export function Delta({ d, unit, kind, digits, suffix }: { d: number | null; unit: Unit; kind: Change; digits?: number; suffix?: string }) {
+  const cls = kind === 'Favorable' ? 'fav' : kind === 'Unfavorable' ? 'unfav' : 'neutral';
+  const arrow = d === null || Math.abs(d) < 1e-12 ? '' : d > 0 ? '▲' : '▼';
   return (
-    <section className={`panel ${className ?? ''}`}>
-      <header className="panel-head">
-        <h3>{title} {(metricId || info) && <InfoIcon metricId={metricId} text={info} title={title} />}</h3>
-        <span className="panel-actions">
-          {actions}
-          <span className="qlik-tag" title="Native Qlik Cloud object type for this visual">Qlik: {qlik}</span>
-        </span>
-      </header>
-      {noData ? <NoData msg={noData} /> : children}
-    </section>
+    <span className={`delta ${cls}`} title={kind ?? undefined}>
+      {arrow && <span className="delta-arrow" aria-hidden="true">{arrow}</span>}{fmtDelta(d, unit, digits)}{suffix ? <span className="muted"> {suffix}</span> : null}
+    </span>
   );
 }
 
-export function NoData({ msg }: { msg: string }) {
-  return <div className="nodata" role="status">{msg}</div>;
+/** Inline SVG sparkline with optional target line and an emphasized last point. */
+export function Sparkline({ values, target, width = 84, height = 22, color = '#2a78d6' }: {
+  values: (number | null)[]; target?: number | null; width?: number; height?: number; color?: string;
+}) {
+  const vs = values.filter((v): v is number => v !== null);
+  if (vs.length < 2) return <svg width={width} height={height} aria-hidden="true" />;
+  let min = Math.min(...vs);
+  let max = Math.max(...vs);
+  if (target != null) { min = Math.min(min, target); max = Math.max(max, target); }
+  const span = max - min || Math.abs(max) || 1;
+  const x = (i: number) => 1 + (i * (width - 4)) / (values.length - 1);
+  const y = (v: number) => height - 3 - ((v - min) / span) * (height - 6);
+  let d = '';
+  values.forEach((v, i) => {
+    if (v === null) return;
+    d += `${d && values[i - 1] !== null ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+  });
+  const li = values.length - 1;
+  const last = values[li];
+  return (
+    <svg className="spark" width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      {target != null && <line x1={0} x2={width} y1={y(target)} y2={y(target)} stroke="#9aa2ae" strokeDasharray="2 2" strokeWidth={1} />}
+      <path d={d} fill="none" stroke={color} strokeWidth={1.5} />
+      {last !== null && <circle cx={x(li)} cy={y(last)} r={2.2} fill={color} />}
+    </svg>
+  );
+}
+
+/** Horizontal in-cell data bar. */
+export function DataBar({ value, max, color = '#2a78d6' }: { value: number | null; max: number; color?: string }) {
+  if (value === null || max <= 0) return null;
+  return <span className="databar" style={{ width: `${Math.max(1, (100 * Math.max(0, value)) / max)}%`, background: color }} aria-hidden="true" />;
+}
+
+export function NoData({ msg, action }: { msg: string; action?: ReactNode }) {
+  return <div className="state state-empty" role="status"><Icon name="filter" size={16} /><span>{msg}</span>{action}</div>;
 }
 
 export function metricLabel(id: string) {
   return METRIC_BY_ID[id]?.short ?? METRIC_BY_ID[id]?.name ?? id;
+}
+
+export function fmtMetric(id: string, v: number | null) {
+  const m = METRIC_BY_ID[id];
+  return fmt(v, m.unit, m.digits);
 }
