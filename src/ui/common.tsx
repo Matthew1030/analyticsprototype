@@ -38,7 +38,7 @@ export function MetricInfo({ m }: { m: MetricDef }) {
   const g = CONFIG.governance;
   return (
     <>
-      <strong>{m.name}</strong>
+      <strong>{m.code ? `${m.code} · ` : ''}{m.name}</strong>
       <span className="tagline">{m.area} · {m.type === 'balance' ? 'Point in time (period end)' : 'Flow (sum over period)'} · <code>{m.id}</code></span>
       <span className="info-row">{m.definition}</span>
       <span className="info-label">Calculation</span>

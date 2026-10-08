@@ -6,6 +6,7 @@
 // (src/services/contracts.ts). It does not assume any BI tool or database.
 
 import { monthEndDay } from '../data/dates';
+import { hash01 } from '../data/hash';
 import type { Engine, FactName, Selections } from './engine';
 import { FIELD_LABEL, missingFields } from './engine';
 import { shiftMonths } from './periods';
@@ -56,6 +57,8 @@ export interface MetricDef {
   page: AnalysisPage;
   /** Digits for display (default by unit). */
   digits?: number;
+  /** Code in the client's ELT metric framework (e.g. P1), when the metric is part of it. */
+  code?: string;
   compute: (c: Ctx) => number | null;
   /** Dynamic target (e.g. cash goal); otherwise the static target in config. */
   target?: (c: Ctx) => number | null;
@@ -110,6 +113,43 @@ const deniedIn = (c: Ctx, cats: number[]) => {
   return c.e.sum('acc', 'denAmt', 'denD', c.r.startDay, c.r.endDay, { ...c.sel, denialCategory: use }, { detail: 'denial' });
 };
 const cashGoal = (c: Ctx) => CONFIG.cashGoalPctOfNpsr * lagNet(c);
+
+// ---------- modeled components (synthetic: the prototype data has no source for them) ----------
+const endOf = (c: Ctx) => Math.min(c.r.endDay, c.e.lastDay);
+/**
+ * Insurance credit balances (overpayments awaiting refund). The synthetic data carries no
+ * overpayments, so the prototype models them: about 5% of paid insurance accounts carry a credit
+ * of 10–50% of expected net from 3 days after payment until refund 15–165 days later.
+ */
+const creditAt = (c: Ctx, day: number) => {
+  const a = c.e.ds.acc;
+  return c.e.accountTotal(`credit|${day}`, c.sel, 'none', (i) => {
+    if (a.fc[i] === 6 || a.payD[i] === -1) return 0;
+    const id = a.id[i];
+    if (hash01(id, 21) >= 0.05) return 0;
+    const start = a.payD[i] + 3;
+    const lag = 15 + Math.floor(hash01(id, 22) * 150);
+    return start <= day && day < start + lag ? a.net[i] * (0.1 + 0.4 * hash01(id, 23)) : 0;
+  });
+};
+/** Illustrative allowance rates for open self-pay balances by days from discharge (configuration). */
+const RESERVE_RATE = (age: number) => (age <= 90 ? 0.15 : age <= 180 ? 0.45 : 0.8);
+/** Allowance for uncollectible self-pay balances open on a day (unrealized bad debt). */
+const reserveAt = (c: Ctx, day: number) => {
+  const a = c.e.ds.acc;
+  return c.e.accountTotal(`reserve|${day}`, c.sel, 'none', (i) => {
+    if (a.fc[i] !== 6 || a.dd[i] > day || (a.closeD[i] !== -1 && a.closeD[i] <= day)) return 0;
+    const paid = a.pos[i] + (a.payD[i] !== -1 && a.payD[i] <= day ? a.payAmt[i] : 0);
+    return Math.max(0, a.net[i] - paid) * RESERVE_RATE(day - a.dd[i]);
+  });
+};
+/** Expected net on open, unresolved denials more than 90 days past the denial date (unrealized write-offs). */
+const staleDenialsAt = (c: Ctx, day: number) => {
+  const a = c.e.ds.acc;
+  return c.e.accountTotal(`stale-den|${day}`, c.sel, 'denial', (i) =>
+    (a.denD[i] !== -1 && a.denD[i] <= day - 90 && (a.payD[i] === -1 || a.payD[i] > day) && (a.woD[i] === -1 || a.woD[i] > day) ? a.denNet[i] : 0));
+};
+const avoidableWo = (c: Ctx) => s(c, 'woAmt', 'woD', { detail: 'denial' });
 
 export const METRICS: MetricDef[] = [
   // ================= Financial =================
@@ -169,6 +209,56 @@ export const METRICS: MetricDef[] = [
     sourceFields: ['gl.rcm_operating_cost', 'transaction.amount'], multiDef: true, fact: 'ops',
     compute: (c) => (missingFields('acc', c.sel).length ? null : div(c.e.sum('ops', 'rcmCost', 'day', c.r.startDay, c.r.endDay, c.sel), cash(c))),
   },
+  // ================= ELT metric framework additions =================
+  {
+    id: 'net_to_gross', code: 'P2', name: 'Net to gross ratio', short: 'Net to gross', area: 'Financial', unit: 'pct', direction: 'up', type: 'flow', page: 'payers',
+    definition: 'Net patient service revenue as a share of gross charges for accounts discharged in the period (reimbursement yield). Some organizations use net A/R / gross A/R instead.',
+    calculation: 'SUM(account.expected_net) / SUM(account.gross_charges), by discharge date',
+    sourceFields: ['account.expected_net', 'account.gross_charges'], multiDef: true, fact: 'acc',
+    compute: (c) => div(net(c), gross(c)),
+  },
+  {
+    id: 'credit_balance_days', code: 'P6', name: 'Credit balance days', short: 'Credit balance days', area: 'A/R', unit: 'days', direction: 'down', type: 'balance', page: 'ar',
+    definition: 'Open credit balances (overpayments awaiting refund) at period end divided by average daily net revenue over the last 90 days. Prototype: credit balances are modeled, because the synthetic data has no overpayments.',
+    calculation: 'SUM(open credit balance, period end) / (SUM(expected_net, last 90 days) / 90)',
+    sourceFields: ['account.credit_balance', 'account.expected_net'], multiDef: true, fact: 'acc',
+    compute: (c) => { const d = endOf(c); return div(creditAt(c, d), adnr(c, d)); },
+  },
+  {
+    id: 'pos_pct_net', code: 'P7', name: 'POS collections % of net revenue', short: 'POS % net rev', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access', digits: 2,
+    definition: 'Point-of-service patient cash as a share of net patient service revenue, by service date.',
+    calculation: 'SUM(POS cash) / NPSR, by discharge date',
+    sourceFields: ['transaction.amount', 'transaction.pos_flag', 'account.expected_net'], fact: 'acc',
+    compute: (c) => div(s(c, 'pos', 'dd'), net(c)),
+  },
+  {
+    id: 'bad_debt_pct_gross', code: 'P9', name: 'Bad debt % of gross revenue', short: 'Bad debt % gross', area: 'Financial', unit: 'pct', direction: 'down', type: 'flow', page: 'cash', digits: 2,
+    definition: 'Bad debt write-offs posted in the period as a share of gross charges in the period.',
+    calculation: 'Bad debt write-offs (post date) / gross charges (discharge date)',
+    sourceFields: ['transaction.amount', 'transaction.type', 'account.gross_charges'], multiDef: true, fact: 'acc',
+    compute: (c) => div(s(c, 'bdAmt', 'bdD'), gross(c)),
+  },
+  {
+    id: 'bad_debt_unrealized_pct', code: 'P11', name: 'Bad debt incl. unrealized, % of gross revenue', short: 'Bad debt incl. unrealized', area: 'Financial', unit: 'pct', direction: 'down', type: 'flow', page: 'cash', digits: 2,
+    definition: 'Bad debt write-offs plus the change in the allowance for uncollectible open self-pay balances (unrealized bad debt), as a share of gross charges. Allowance rates by age are illustrative configuration (15% to 90 days, 45% to 180 days, 80% after).',
+    calculation: '(Bad debt write-offs + allowance(period end) − allowance(prior period end)) / gross charges',
+    sourceFields: ['transaction.amount', 'ar_snapshot.self_pay_balance', 'config.allowance_rates', 'account.gross_charges'], multiDef: true, fact: 'acc',
+    compute: (c) => div(s(c, 'bdAmt', 'bdD') + reserveAt(c, endOf(c)) - reserveAt(c, c.r.startDay - 1), gross(c)),
+  },
+  {
+    id: 'avoidable_wo_pct_net', code: 'P12', name: 'Avoidable write-offs % of net revenue', short: 'Avoidable W/O % net', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials', digits: 2,
+    definition: 'Administrative write-offs after a final denial (eligibility, authorization, timely filing, coding, documentation and similar), as a share of NPSR. Excludes contractual allowances, charity care and bad debt.',
+    calculation: 'SUM(denial write-offs, post date) / NPSR (discharge date)',
+    sourceFields: ['transaction.amount', 'transaction.type', 'denial.root_cause', 'account.expected_net'], multiDef: true, fact: 'acc',
+    compute: (c) => div(avoidableWo(c), net(c)),
+  },
+  {
+    id: 'avoidable_wo_unrealized_pct', code: 'P13', name: 'Avoidable write-offs incl. unrealized, % of net revenue', short: 'Avoidable W/O incl. unrealized', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials', digits: 2,
+    definition: 'Avoidable write-offs plus the change in expected net on open denials more than 90 days old and not yet resolved (unrealized write-offs), as a share of NPSR.',
+    calculation: '(Denial write-offs + stale open denials(period end) − stale open denials(prior period end)) / NPSR',
+    sourceFields: ['transaction.amount', 'denial.denial_date', 'denial.status', 'account.expected_net'], multiDef: true, fact: 'acc',
+    compute: (c) => div(avoidableWo(c) + staleDenialsAt(c, endOf(c)) - staleDenialsAt(c, c.r.startDay - 1), net(c)),
+  },
   // ================= Cash =================
   {
     id: 'cash', name: 'Cash collections', short: 'Cash collected', area: 'Cash', unit: 'usd', direction: 'up', type: 'flow', page: 'cash',
@@ -186,7 +276,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => cashGoal(c),
   },
   {
-    id: 'cash_pct_npsr', name: 'Cash as % of NPSR', short: 'Cash % NPSR', area: 'Cash', unit: 'pct', direction: 'up', type: 'flow', page: 'cash',
+    id: 'cash_pct_npsr', code: 'P8', name: 'Cash as % of NPSR', short: 'Cash % NPSR', area: 'Cash', unit: 'pct', direction: 'up', type: 'flow', page: 'cash',
     definition: 'Average daily cash collected in the period as a share of lagged average daily NPSR (the same-length period shifted back 1, 2 and 3 months).',
     calculation: '(Cash collections / days in period) / (SUM(NPSR over the 3 lagged windows) / days in those windows)',
     sourceFields: ['transaction.amount', 'account.expected_net'], multiDef: true, fact: 'acc',
@@ -242,14 +332,14 @@ export const METRICS: MetricDef[] = [
     compute: (c0) => { const c = whole(c0); const v = ar(c, 'net'); return v === null ? null : div(v, adnr(c, arDay(c)!)); },
   },
   {
-    id: 'gross_ar_days', name: 'Gross A/R days', area: 'A/R', unit: 'days', direction: 'down', type: 'balance', page: 'ar',
+    id: 'gross_ar_days', code: 'P1', name: 'Gross A/R days', area: 'A/R', unit: 'days', direction: 'down', type: 'balance', page: 'ar',
     definition: 'Gross A/R at period end divided by average daily gross charges over the last 90 days.',
     calculation: 'Gross A/R (period end) / (SUM(gross_charges, last 90 days) / 90)',
     sourceFields: ['ar_snapshot.gross_balance', 'account.gross_charges'], multiDef: true, fact: 'ar',
     compute: (c0) => { const c = whole(c0); const v = ar(c, 'gross'); return v === null ? null : div(v, adgr(c, arDay(c)!)); },
   },
   {
-    id: 'ar_gt90_pct', name: 'A/R > 90 days', short: 'A/R > 90 days', area: 'A/R', unit: 'pct', direction: 'down', type: 'balance', page: 'ar',
+    id: 'ar_gt90_pct', code: 'P4', name: 'A/R > 90 days', short: 'A/R > 90 days', area: 'A/R', unit: 'pct', direction: 'down', type: 'balance', page: 'ar',
     definition: 'Share of gross A/R more than 90 days from discharge.',
     calculation: 'Gross A/R aged 91+ days / gross A/R, period-end snapshot',
     sourceFields: ['ar_snapshot.gross_balance', 'ar_snapshot.aging_bucket'], multiDef: true, fact: 'ar',
@@ -264,7 +354,7 @@ export const METRICS: MetricDef[] = [
   },
   // ================= Denials =================
   {
-    id: 'denial_rate', name: 'Initial denial rate', short: 'Denial rate', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials',
+    id: 'denial_rate', code: 'P10', name: 'Initial denial rate', short: 'Denial rate', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials',
     definition: 'Claims with an initial denial (by denial date) as a share of claims submitted (by submit date) in the period.',
     calculation: 'COUNT(denial.claim_id, denial date) / COUNT(claim.claim_id, submit date)',
     sourceFields: ['denial.claim_id', 'denial.denial_date', 'claim.claim_id', 'claim.submit_date'], multiDef: true, fact: 'acc',
@@ -377,7 +467,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => dnfb(c, 0),
   },
   {
-    id: 'dnfb_days', name: 'Days in DNFB', short: 'DNFB days', area: 'Billing', unit: 'days', direction: 'down', type: 'balance', page: 'billing',
+    id: 'dnfb_days', code: 'P5', name: 'Days in DNFB', short: 'DNFB days', area: 'Billing', unit: 'days', direction: 'down', type: 'balance', page: 'billing',
     definition: 'DNFB dollars at period end divided by average daily gross charges over the last 90 days.',
     calculation: 'DNFB $ (period end) / (SUM(gross_charges, last 90 days) / 90)',
     sourceFields: ['dnfb_snapshot.gross_amount', 'account.gross_charges'], multiDef: true, fact: 'dnfb',

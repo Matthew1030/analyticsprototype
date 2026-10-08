@@ -7,6 +7,7 @@
 // Priority rules are in PRIORITY_RULES and are shown to users, so a priority is never a black box.
 
 import { isoDay } from '../data/dates';
+import { hash01 } from '../data/hash';
 import type { Engine, Selections } from '../engine/engine';
 import type { WorkItem, WorklistKind } from './contracts';
 import { statusAt } from './analytics';
@@ -84,12 +85,7 @@ const DNFB_ACTION = [
   'Assign an owner',
 ];
 
-/** Deterministic 0–1 value per account and purpose. */
-function hash(id: number, salt: number): number {
-  let x = (id * 2654435761 + salt * 40503) >>> 0;
-  x = (x ^ (x >>> 15)) >>> 0; x = Math.imul(x, 2246822519) >>> 0; x = (x ^ (x >>> 13)) >>> 0;
-  return (x % 10000) / 10000;
-}
+const hash = hash01;
 
 const pick = <T,>(list: readonly T[], h: number): T => list[Math.min(list.length - 1, Math.floor(h * list.length))];
 const PRIORITY_RANK = { High: 3, Medium: 2, Low: 1 } as const;

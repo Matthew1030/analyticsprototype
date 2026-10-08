@@ -146,6 +146,34 @@
     "denial_dollar_rate": {
       "target": 0.06,
       "watch": 0.075
+    },
+    "net_to_gross": {
+      "target": 0.34,
+      "watch": 0.325
+    },
+    "credit_balance_days": {
+      "target": 1.5,
+      "watch": 2.0
+    },
+    "pos_pct_net": {
+      "target": 0.003,
+      "watch": 0.0025
+    },
+    "bad_debt_pct_gross": {
+      "target": 0.0035,
+      "watch": 0.0045
+    },
+    "bad_debt_unrealized_pct": {
+      "target": 0.004,
+      "watch": 0.005
+    },
+    "avoidable_wo_pct_net": {
+      "target": 0.015,
+      "watch": 0.02
+    },
+    "avoidable_wo_unrealized_pct": {
+      "target": 0.02,
+      "watch": 0.025
     }
   },
   "governance": {

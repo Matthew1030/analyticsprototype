@@ -253,6 +253,23 @@ export class Engine {
     });
   }
 
+  /**
+   * Sum of a per-account value over the accounts that pass the filters (scaled by the sample
+   * weight). `key` names the calculation for the cache; `fn` returns the account's value (0 = none).
+   */
+  accountTotal(key: string, sel: Selections, detail: DetailKind, fn: (i: number) => number): number {
+    return this.memo(`A|${key}|${detail}|${JSON.stringify(sel)}`, () => {
+      const c = this.ds.acc;
+      const ok = this.rowOk('acc', sel, detail);
+      let t = 0;
+      for (let i = 0; i < c.n; i++) {
+        const v = fn(i);
+        if (v !== 0 && ok(i)) t += v;
+      }
+      return t * this.weight;
+    });
+  }
+
   /** Open accounts at a day (account drill-through). Returns row indexes. */
   openAccounts(day: number, sel: Selections, predicate?: (i: number) => boolean): number[] {
     const c = this.ds.acc;

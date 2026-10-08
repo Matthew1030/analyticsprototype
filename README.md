@@ -48,27 +48,52 @@ Analytics; the ELT Summary has a compact period and scope bar, and worklists hav
 
 ### 1. ELT Summary
 
-Designed to be read in under a minute. Four levels, nothing else:
+The executive view, built only from standard BI components (KPI cards, trend charts, a metric table
+with conditional formatting, ranked variance tables, slicers, tooltips, drill-through) and no
+explanatory prose. Slicers: period type, period and hospital (or region).
 
-1. **Revenue cycle health**: Net A/R days, Cash as % of NPSR, Denial rate, DNFB days (with DNFB $ as
-   context, because dollars have no scope-independent target) and Clean claim rate, each with
-   current, target, variance, status and three-month direction.
-2. **Are we getting better or worse?** Three 12-month trends (Net A/R days, Cash % NPSR, Denial rate)
-   with the target and a faint tint where the measure misses it.
-3. **Where attention is needed**: up to three headline measures off target (most severe first), plus at
-   most one *emerging* risk (a secondary measure that misses target and worsened over three months), each
-   with the most affected hospital. Rows open the analytical page; the hospital link opens it filtered.
-4. **Performance highlights**: up to three computed positives (three-month improvements, measures
-   beating target, the hospital with the largest improvement).
+| Section | Content |
+|---|---|
+| Key Performance Indicators | P1, P8, P10, P5, P4: actual, target, variance, 3-month change, 12-month sparkline |
+| Performance Trends | P1, P8, P10 monthly for 12 months, with target line and off-target range |
+| Performance vs. Target | All 12 framework metrics, grouped by domain: actual, target, variance, status, 3-month change, 12-month trend |
+| Areas of Focus | Up to 5 off-target metrics with the largest unfavorable variance (relative to target), with the key driver hospital |
+| Performance Highlights | Up to 3 on-target metrics with the largest favorable variance, with the leading hospital |
 
-A one-line headline sentence, and links to Analytics and each worklist, frame the page. All statements
-are computed from the data for the selected period and scope.
+Variance and change colors follow each metric's direction (higher Gross AR Days is unfavorable;
+higher Cash as % of Net Revenue is favorable). Every metric row and card drills into its analytical
+page (P1, P4, P6 → A/R; P5 → Billing / DNFB; P8 → Cash; P10, P12, P13 → Denials; others → Metric
+Analysis). A hospital link applies that hospital as a filter first.
+
+#### ELT metric framework
+
+Codes are the client's (there is no P3). `src/engine/framework.ts` maps each code to a catalog metric.
+
+| Code | Metric | Catalog id | Draft definition |
+|---|---|---|---|
+| P1 | Gross AR Days | `gross_ar_days` | Gross A/R / average daily gross charges (90 days) |
+| P2 | Net to Gross Ratio | `net_to_gross` | NPSR / gross charges, by discharge date ¹ |
+| P4 | % of AR Over 90 Days | `ar_gt90_pct` | Gross A/R aged 91+ days / gross A/R |
+| P5 | DNFB / Unbilled Days | `dnfb_days` | DNFB $ / average daily gross charges (90 days) |
+| P6 | Credit Balance Days | `credit_balance_days` | Open credit balances / average daily net revenue (90 days) ² |
+| P7 | POS Collections % Net Rev | `pos_pct_net` | Point-of-service cash / NPSR |
+| P8 | Cash as % of Net Revenue | `cash_pct_npsr` | Cash / lagged NPSR |
+| P9 | Bad Debt % Gross Rev | `bad_debt_pct_gross` | Bad debt write-offs / gross charges |
+| P10 | Initial Denial Rate | `denial_rate` | Claims denied / claims submitted |
+| P11 | Bad Debt incl. Unrealized | `bad_debt_unrealized_pct` | (Bad debt write-offs + change in allowance on open self-pay balances) / gross charges ³ |
+| P12 | Avoidable Write-Offs % Net | `avoidable_wo_pct_net` | Write-offs after final denial / NPSR |
+| P13 | Avoidable W/O incl. Unreal. | `avoidable_wo_unrealized_pct` | (Denial write-offs + change in open denials older than 90 days) / NPSR |
+
+¹ Some organizations define net-to-gross on A/R (net A/R / gross A/R). ² The synthetic data has no
+overpayments, so credit balances are modeled (about 5% of paid insurance accounts, refunded after
+15–165 days). ³ Allowance rates by age (15% / 45% / 80%) are illustrative configuration. All
+definitions and targets are drafts for confirmation with the client's finance team.
 
 ### 2. Analytics
 
 | Page | Question it answers |
 |---|---|
-| Revenue Cycle Overview | Full enterprise scorecard, ranked hospital exceptions ("where to look first"), lifecycle stages (Patient Access → Charge Capture → Coding → CDI → Billing → A/R → Denials → Cash), hospital performance matrix |
+| Revenue Cycle Overview | Full enterprise scorecard (P1–P13 first, with codes), ranked hospital exceptions ("where to look first"), lifecycle stages (Patient Access → Charge Capture → Coding → CDI → Billing → A/R → Denials → Cash), hospital performance matrix |
 | A/R | Where is A/R accumulating, and why? (aging trend, hospital, payer, financial class, status, concentration, aging matrix, accounts) |
 | Denials | Which payers, hospitals, categories and root causes drive denials? (decomposition tree, drivers, payer × category) |
 | Cash | Are we on track for the cash goal? (month pace, YTD by hospital, payer collections) |
