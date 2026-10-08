@@ -135,7 +135,25 @@ function expandAccounts(raw: Record<string, number[]>, dims: Dims): Fact<AccCol>
   return { n, ...o } as Fact<AccCol>;
 }
 
+/** Fields the current code needs. A file without them is from another version of the prototype. */
+const REQUIRED_DIMS: (keyof Dims)[] = ['organization', 'regions', 'facilities', 'payers', 'serviceLines', 'patientTypes', 'denialCategories', 'rootCauses', 'arAge', 'accountStatus'];
+
+export class DataVersionError extends Error {}
+
+function checkVersion(raw: RawFiles) {
+  const dims = raw.dims as Partial<Dims> | undefined;
+  const missing = REQUIRED_DIMS.filter((k) => !dims || dims[k] === undefined);
+  const meta = raw.meta as Partial<Meta> | undefined;
+  if (missing.length || !meta || meta.sampleWeight === undefined || !(raw.accounts as { fac?: unknown })?.fac) {
+    throw new DataVersionError(
+      'The data files do not match this version of the application (they are probably cached from an older version). ' +
+      'Reload the page without the cache (Ctrl+Shift+R, or Cmd+Shift+R on a Mac).',
+    );
+  }
+}
+
 export function buildDataset(raw: RawFiles): Dataset {
+  checkVersion(raw);
   const dims = raw.dims as Dims;
   return {
     dims,
@@ -152,7 +170,8 @@ export async function fetchDataset(base = 'data/', onProgress?: (done: number, t
   let done = 0;
   const entries = await Promise.all(
     DATA_FILES.map(async (f) => {
-      const res = await fetch(`${base}${f}.json`);
+      const v = typeof __DATA_VERSION__ === 'string' ? __DATA_VERSION__ : 'dev';
+      const res = await fetch(`${base}${f}.json?v=${v}`);
       if (!res.ok) throw new Error(`The data service did not return "${f}" (HTTP ${res.status}).`);
       const json = await res.json();
       onProgress?.(++done, DATA_FILES.length);

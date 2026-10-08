@@ -201,3 +201,12 @@ describe('service contract', () => {
     expect(['On target', 'Watch', 'Off target']).toContain(mv.status);
   });
 });
+
+describe('data version check', () => {
+  it('rejects data files from an older version with a clear message', async () => {
+    const { buildDataset, DataVersionError } = await import('../src/data/model');
+    const old = { dims: { client: { key: 0, name: 'x' }, facilities: [] }, meta: {}, accounts: {}, ar: {}, dnfb: {}, access: {}, ops: {} };
+    expect(() => buildDataset(old as never)).toThrow(DataVersionError);
+    expect(() => buildDataset(old as never)).toThrow(/Reload the page without the cache/);
+  });
+});
