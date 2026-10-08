@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { METRIC_BY_ID, type MetricDef, type Unit } from '../engine/metrics';
 import { CONFIG, staticTarget, watchFor, type Change, type Status } from '../engine/status';
 import { fmt, fmtDelta } from '../format';
+import { FRAMEWORK_BY_ID } from '../engine/framework';
 import { Icon } from './icons';
 
 /** Info button: opens the definition and calculation of a metric, or a free text note. */
@@ -49,6 +50,7 @@ export function MetricInfo({ m }: { m: MetricDef }) {
         {t !== null && <> · Target {m.direction === 'up' ? '≥' : '≤'} {fmt(t, m.unit, m.digits)} · Watch to {fmt(w, m.unit, m.digits)}</>}
         {m.target && <> · Target is calculated (cash goal)</>}
       </span>
+      {FRAMEWORK_BY_ID[m.id] && <><span className="info-label">ELT framework</span><span className="info-row">{FRAMEWORK_BY_ID[m.id].code} · {FRAMEWORK_BY_ID[m.id].name} · Benchmark {FRAMEWORK_BY_ID[m.id].benchmark}</span></>}
       {m.multiDef && <span className="info-row note">More than one definition is common in the industry. Confirm this one with Finance.</span>}
       <span className="info-label">Source fields</span>
       <span className="info-row small mono">{m.sourceFields.join(', ')}</span>

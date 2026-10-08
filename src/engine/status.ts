@@ -12,6 +12,8 @@ export interface TargetsConfig {
   cashGoalPctOfNpsr: number;
   targets: Record<string, TargetEntry>;
   governance: { owner: string; version: string; changeDate: string; changeReason: string };
+  /** ELT framework settings: bill hold days (P5 target = bill hold + 1.5), bad-debt criteria (P11), unrealized denial age (P13). */
+  framework: { billHoldDays: number; badDebtCriteriaDays: number; unrealizedDenialDays: number };
 }
 
 export const CONFIG = targetsConfig as unknown as TargetsConfig;

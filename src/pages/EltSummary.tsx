@@ -23,14 +23,14 @@ import { fmtMetric, InfoIcon, Sparkline, StatusMark } from '../ui/common';
 import { Icon } from '../ui/icons';
 
 /** Headline KPIs and trend charts (framework codes P1, P4, P5, P8, P10). */
-export const ELT_KPIS = ['gross_ar_days', 'cash_pct_npsr', 'denial_rate', 'dnfb_days', 'ar_gt90_pct'];
-const ELT_TRENDS = ['gross_ar_days', 'cash_pct_npsr', 'denial_rate'];
+export const ELT_KPIS = ['gross_ar_days', 'cash_pct_npsr', 'denial_dollar_rate', 'dnfb_days', 'ar_gt90_pct'];
+const ELT_TRENDS = ['gross_ar_days', 'cash_pct_npsr', 'denial_dollar_rate'];
 const ALL_IDS = FRAMEWORK.flatMap((g) => g.metrics.map((m) => m.id));
 
 /** Drill-through target: the analytical page for the metric, or Metric Analysis. */
 const DRILL: Record<string, PageId> = {
   gross_ar_days: 'ar', ar_gt90_pct: 'ar', credit_balance_days: 'ar', dnfb_days: 'billing', cash_pct_npsr: 'cash',
-  denial_rate: 'denials', avoidable_wo_pct_net: 'denials', avoidable_wo_unrealized_pct: 'denials',
+  denial_dollar_rate: 'denials', avoidable_wo_pct_net: 'denials', avoidable_wo_unrealized_pct: 'denials',
 };
 
 /** A change smaller than this (per unit) is shown as flat. */
@@ -240,12 +240,12 @@ function TargetTable({ rows, onOpen }: { rows: Record<string, Row>; onOpen: (id:
         <thead>
           <tr>
             <th className="al-left">Metric</th><th>Actual</th><th>Target</th><th>Variance</th>
-            <th className="al-center">Status</th><th>3M change</th><th className="al-center">12-month trend</th>
+            <th className="al-center">Status</th><th>3M change</th><th className="al-center">12-month trend</th><th className="al-left">Benchmark</th>
           </tr>
         </thead>
         <tbody>
           {FRAMEWORK.map((g) => [
-            <tr key={g.name} className="elt-group"><td colSpan={7}>{g.name}</td></tr>,
+            <tr key={g.name} className="elt-group"><td colSpan={8}>{g.name}</td></tr>,
             ...g.metrics.map((f) => {
               const r = rows[f.id];
               return (
@@ -256,7 +256,8 @@ function TargetTable({ rows, onOpen }: { rows: Record<string, Row>; onOpen: (id:
                   <td><Variance r={r} /></td>
                   <td className="al-center"><StatusMark status={r.v.status} compact /></td>
                   <td><Change3 r={r} /></td>
-                  <td className="al-center"><Sparkline values={r.v.trend.slice(-12).map((t) => t.value)} target={r.v.target} width={92} height={20} /></td>
+                  <td className="al-center"><Sparkline values={r.v.trend.slice(-12).map((t) => t.value)} target={r.v.target} width={72} height={20} /></td>
+                  <td className="al-left muted">{f.benchmark}</td>
                 </tr>
               );
             }),
@@ -321,12 +322,11 @@ function VarianceTable({ list, facility, facLabel, onOpen, empty }: {
                 <td><Variance r={r} /></td>
                 <td className="al-left">
                   {f ? (
-                    <button type="button" className="link" title={`Analyze ${METRIC_BY_ID[r.id].name} for ${f.label}`}
+                    <button type="button" className="link" title={`${f.label}: ${fmtMetric(r.id, f.value)}. Analyze ${METRIC_BY_ID[r.id].name} for this hospital.`}
                       onClick={(e) => { e.stopPropagation(); selectOnly('facility', [f.key]); go(DRILL[r.id] ?? 'metric', DRILL[r.id] ? {} : { id: r.id }, { drill: true }); }}>
                       {f.label}
                     </button>
                   ) : <span className="muted">–</span>}
-                  {f && <span className="muted"> {fmtMetric(r.id, f.value)}</span>}
                 </td>
               </tr>
             );
@@ -341,12 +341,12 @@ function Focus({ rows, onOpen }: { rows: Record<string, Row>; onOpen: (id: strin
   const list = Object.values(rows).filter((r) => r.v.status === 'Off target' && r.varPct !== null)
     .sort((a, b) => b.varPct! - a.varPct!).slice(0, 5);
   const ext = useFacilityExtremes(list.map((r) => r.id));
-  return <VarianceTable list={list} facility={(id) => ext[id]?.worst ?? null} facLabel="Key driver hospital" onOpen={onOpen} empty="No metric off target." />;
+  return <VarianceTable list={list} facility={(id) => ext[id]?.worst ?? null} facLabel="Key driver" onOpen={onOpen} empty="No metric off target." />;
 }
 
 function Highlights({ rows, onOpen }: { rows: Record<string, Row>; onOpen: (id: string) => void }) {
   const list = Object.values(rows).filter((r) => r.v.status === 'On target' && r.varPct !== null)
     .sort((a, b) => a.varPct! - b.varPct!).slice(0, 3);
   const ext = useFacilityExtremes(list.map((r) => r.id));
-  return <VarianceTable list={list} facility={(id) => ext[id]?.best ?? null} facLabel="Leading hospital" onOpen={onOpen} empty="No metric at target." />;
+  return <VarianceTable list={list} facility={(id) => ext[id]?.best ?? null} facLabel="Top hospital" onOpen={onOpen} empty="No metric at target." />;
 }

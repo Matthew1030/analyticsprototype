@@ -494,12 +494,12 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
 .lg-line { height: 2px; background: #2a78d6; }
 .lg-target { height: 0; border-top: 1px dashed #4b5361; }
 .lg-zone { height: 8px; background: rgba(187,51,40,0.09); }
-.elt-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+.elt-split { display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 5fr); gap: 20px; align-items: start; }
 .elt-stack { display: grid; gap: 20px; min-width: 0; }
 .elt-table { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; overflow-x: auto; }
 .elt-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.elt-table th { font-size: 10.5px; color: var(--muted); font-weight: 600; text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--line-2); background: #fafbfc; white-space: nowrap; }
-.elt-table td { padding: 6px 10px; text-align: right; border-bottom: 1px solid #f0f2f5; white-space: nowrap; }
+.elt-table th { font-size: 10.5px; color: var(--muted); font-weight: 600; text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--line-2); background: #fafbfc; white-space: nowrap; }
+.elt-table td { padding: 6px 8px; text-align: right; border-bottom: 1px solid #f0f2f5; white-space: nowrap; }
 .elt-table tr:last-child td { border-bottom: none; }
 .elt-table .al-left { text-align: left; }
 .elt-table .al-center { text-align: center; }
@@ -508,6 +508,7 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
 .elt-table tr.elt-group td { background: #f6f7f9; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); padding: 5px 10px; text-align: left; border-bottom: 1px solid var(--line); }
 .elt-table .spark { display: inline-block; vertical-align: middle; }
 .elt-mname { color: var(--ink); }
+.elt-stack .elt-mname { white-space: normal; }
 .elt-mname .info { margin-left: 2px; opacity: .6; }
 .elt-table .link { font-size: 12px; }
 .elt-none { padding: 12px; color: var(--muted); font-size: 12px; }

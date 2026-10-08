@@ -3,7 +3,7 @@ import { Engine } from '../src/engine/engine';
 import { FRAMEWORK, FRAMEWORK_METRICS } from '../src/engine/framework';
 import { evaluate, METRIC_BY_ID } from '../src/engine/metrics';
 import { monthPeriod } from '../src/engine/periods';
-import { staticTarget } from '../src/engine/status';
+import { CONFIG, staticTarget } from '../src/engine/status';
 import { loadDataset } from './loadDataset';
 
 const ds = loadDataset();
@@ -16,14 +16,30 @@ describe('ELT metric framework', () => {
       .toEqual(['P1', 'P2', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12', 'P13']);
   });
 
-  it('maps every code to a catalog metric with the same code, a direction and a target', () => {
+  it('maps every code to a catalog metric with the same code, a direction and a target (P2 has none)', () => {
     for (const f of FRAMEWORK_METRICS) {
       const m = METRIC_BY_ID[f.id];
       expect(m, f.id).toBeDefined();
       expect(m.code).toBe(f.code);
       expect(m.direction).not.toBe('none');
-      expect(staticTarget(f.id), f.id).not.toBeNull();
+      const t = evaluate(m, e, last, {}).target;
+      if (f.code === 'P2') expect(t).toBeNull();
+      else expect(t, f.id).not.toBeNull();
     }
+  });
+
+  it('uses the client targets and settings', () => {
+    expect(evaluate(METRIC_BY_ID.gross_ar_days, e, last, {}).target).toBe(45);
+    expect(evaluate(METRIC_BY_ID.dnfb_days, e, last, {}).target).toBe(CONFIG.framework.billHoldDays + 1.5);
+    expect(evaluate(METRIC_BY_ID.cash_pct_npsr, e, last, {}).target).toBe(1);
+    expect(staticTarget('avoidable_wo_unrealized_pct')).toBe(0.01);
+  });
+
+  it('counts only billed A/R in % of AR over 90 days (P4)', () => {
+    const d = e.snapshotDayOnOrBefore('ar', last.endDay)!;
+    const billed = e.snapshot('ar', 'gross', d, {}, { billed: [1, 2] });
+    const old = e.snapshot('ar', 'gross', d, {}, { billed: [1, 2], ageMin: 3 });
+    expect(evaluate(METRIC_BY_ID.ar_gt90_pct, e, last, {}).value).toBeCloseTo(old / billed, 9);
   });
 
   it('puts every metric in one group only', () => {
