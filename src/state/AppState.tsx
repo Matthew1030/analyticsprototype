@@ -11,7 +11,11 @@ import type { RcmArea } from '../engine/metrics';
 
 export type PageId =
   | 'executive' | 'cycle' | 'ar' | 'denials' | 'cash' | 'access' | 'midcycle' | 'billing' | 'payers' | 'facilities'
-  | 'definitions' | 'metric' | 'facility' | 'accounts';
+  | 'definitions' | 'metric' | 'facility' | 'accounts'
+  | 'wl-denials' | 'wl-ar' | 'wl-dnfb';
+
+/** Changes a user makes to a work item (prototype: kept in this browser only). */
+export interface WorkEdit { assignee?: string | null; status?: string; notes?: { at: string; text: string }[] }
 
 export interface Route { page: PageId; params: Record<string, string> }
 
@@ -50,10 +54,14 @@ interface AppState {
   toasts: { id: number; msg: string }[];
   valueLabel: (field: SelField, key: number) => string;
   periodStatus: (p: Period) => 'Preliminary' | 'Closed';
+  /** Worklist edits by item id. */
+  workEdits: Record<string, WorkEdit>;
+  editWork: (ids: string[], patch: WorkEdit) => void;
 }
 
 const Ctx = createContext<AppState | null>(null);
 const STORE_KEY = 'rcm-analytics-workspace-v2';
+const WORK_KEY = 'rcm-analytics-worklist-edits-v1';
 
 export function useApp(): AppState {
   const c = useContext(Ctx);
@@ -99,6 +107,22 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
   const [areas, setAreas] = useState<RcmArea[]>([]);
   const [paneOpen, setPaneOpen] = useState(stored.paneOpen ?? true);
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
+  const [workEdits, setWorkEdits] = useState<Record<string, WorkEdit>>(() => {
+    try { return JSON.parse(localStorage.getItem(WORK_KEY) ?? '{}') as Record<string, WorkEdit>; } catch { return {}; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(WORK_KEY, JSON.stringify(workEdits)); } catch { /* storage blocked: edits last for the session */ }
+  }, [workEdits]);
+
+  const editWork = useCallback((ids: string[], patch: WorkEdit) => setWorkEdits((w) => {
+    const next = { ...w };
+    for (const id of ids) {
+      const cur = next[id] ?? {};
+      next[id] = { ...cur, ...patch, notes: patch.notes ? [...(cur.notes ?? []), ...patch.notes] : cur.notes };
+    }
+    return next;
+  }), []);
 
   useEffect(() => {
     try {
@@ -172,7 +196,7 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
   const value: AppState = {
     ds, engine, sel, period, compare, route, trail, sim, specMode, paneOpen, areas, setAreas,
     go, back, setPeriod, setPeriodKind, setCompare, toggle, selectOnly, clearField, clearAll,
-    setSim, setSpecMode, setPaneOpen, toast, toasts, valueLabel, periodStatus,
+    setSim, setSpecMode, setPaneOpen, toast, toasts, valueLabel, periodStatus, workEdits, editWork,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -12,6 +12,7 @@ import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
 
 type Mode = 'open' | 'denied' | 'dnfb';
+const WORKLIST_FOR = { open: 'wl-ar', denied: 'wl-denials', dnfb: 'wl-dnfb' } as const;
 const MODE_LABEL: Record<Mode, string> = { open: 'Open A/R accounts', denied: 'Denied claims', dnfb: 'Unbilled (DNFB) accounts' };
 
 const COLS: GridColumn<AccountRow>[] = [
@@ -54,7 +55,7 @@ export function AccountsTable({ rows, pageSize = 25, compact }: { rows: AccountR
 }
 
 export function AccountDetail() {
-  const { route, engine, period, sel, valueLabel } = useApp();
+  const { route, engine, period, sel, valueLabel, go } = useApp();
   const mode = (['open', 'denied', 'dnfb'].includes(route.params.mode) ? route.params.mode : 'open') as Mode;
   const day = mode === 'denied' ? period.endDay : engine.snapshotDayOnOrBefore('ar', period.endDay) ?? period.endDay;
   const rows = useMemo(() => accounts(engine, { mode, day, start: period.startDay, arAge: sel.arAge, accountStatus: sel.accountStatus }, sel, 2000), [engine, mode, day, period.startDay, sel]);
@@ -64,7 +65,8 @@ export function AccountDetail() {
     .map((f) => `${DIMENSION_LABEL[f]}: ${sel[f]!.map((k) => valueLabel(f, k)).join(', ')}`);
   return (
     <div className="page">
-      <CanvasHeader title={MODE_LABEL[mode]} question={mode === 'denied' ? `Claims denied in ${period.label}, largest first.` : `Accounts open at ${period.short} month end, largest balance first.`} />
+      <CanvasHeader title={MODE_LABEL[mode]} question={mode === 'denied' ? `Claims denied in ${period.label}, largest first.` : `Accounts open at ${period.short} month end, largest balance first.`}
+        right={<button type="button" className="btn btn-sm btn-primary" onClick={() => go(WORKLIST_FOR[mode], {}, { drill: true })}>Open the {mode === 'denied' ? 'Denials' : mode === 'dnfb' ? 'DNFB' : 'A/R'} worklist ›</button>} />
       <div className="kpi-strip" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
         <div className="kpi static"><div className="kpi-top"><span className="kpi-name">Accounts (sample)</span></div><div className="kpi-value">{rows.length.toLocaleString('en-US')}</div><div className="kpi-row muted small">≈ {(rows.length * engine.weight).toLocaleString('en-US')} accounts in full population</div></div>
         <div className="kpi static"><div className="kpi-top"><span className="kpi-name">{mode === 'denied' ? 'Denied charges (sample)' : 'Open balance (sample)'}</span></div><div className="kpi-value">{usd(total)}</div></div>

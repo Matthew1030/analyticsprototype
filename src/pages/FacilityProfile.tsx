@@ -12,7 +12,7 @@ import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, KpiStrip, TrendVisual } from '../ui/widgets';
-import { EXEC_KPIS } from './ExecutiveOverview';
+import { EXEC_KPIS } from './EnterpriseOverview';
 import { STAGES } from './RevenueCycle';
 
 export function FacilityProfile() {

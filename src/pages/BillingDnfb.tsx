@@ -18,7 +18,10 @@ export function BillingDnfb() {
   const drill = (k: number) => go('facility', { id: String(k) }, { drill: true });
   return (
     <div className="page">
-      <CanvasHeader right={<button type="button" className="btn btn-sm" onClick={() => go('accounts', { mode: 'dnfb' }, { drill: true })}>View unbilled accounts ›</button>} />
+      <CanvasHeader right={<>
+        <button type="button" className="btn btn-sm" onClick={() => go('accounts', { mode: 'dnfb' }, { drill: true })}>View unbilled accounts</button>
+        <button type="button" className="btn btn-sm btn-primary" onClick={() => go('wl-dnfb', {}, { drill: true })}>Work these in the DNFB worklist ›</button>
+      </>} />
       <KpiStrip ids={['dnfb_dollars', 'dnfb_days', 'unbilled_accounts', 'dnfb_15plus_pct', 'dnsp_days', 'clean_claim_rate', 'billing_lag']} />
       <div className="row cols-2">
         <WeeklyDnfb />

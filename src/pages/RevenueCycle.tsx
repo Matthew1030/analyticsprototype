@@ -1,5 +1,6 @@
-// Revenue Cycle Overview: the lifecycle from patient access to cash, stage by stage.
-// Select a stage to see its metrics, trend and hospital breakdown.
+// Revenue Cycle Overview: the analytical entry point. The full enterprise scorecard, the ranked
+// hospital exceptions, then the lifecycle from patient access to cash, stage by stage (select a
+// stage to see its metrics, trend and hospital breakdown), and the hospital matrix.
 
 import { useMemo, useState } from 'react';
 import type { Selections } from '../engine/engine';
@@ -11,7 +12,8 @@ import { Grid, gridExport, type GridColumn } from '../ui/Grid';
 import { Icon } from '../ui/icons';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
-import { BreakdownVisual, Scorecard, TrendVisual } from '../ui/widgets';
+import { BreakdownVisual, KpiStrip, Scorecard, TrendVisual } from '../ui/widgets';
+import { AttentionList, EXEC_KPIS, FacilityMatrix } from './EnterpriseOverview';
 
 export interface Stage { id: string; name: string; page: PageId; metrics: string[] }
 
@@ -42,7 +44,8 @@ function stageStatus(e: Parameters<typeof evaluate>[1], st: Stage, r: Parameters
 }
 
 export function RevenueCycle() {
-  const { engine, period, sel, go } = useApp();
+  const { engine, period, sel, go, areas } = useApp();
+  const ids = areas.length ? EXEC_KPIS.filter((id) => areas.includes(METRIC_BY_ID[id].area)) : EXEC_KPIS;
   const summaries = useMemo(() => STAGES.map((s) => ({ s, ...stageStatus(engine, s, period, sel) })), [engine, period, sel]);
   const worst = [...summaries].sort((a, b) => b.off * 10 + b.watch - (a.off * 10 + a.watch))[0];
   const [stageId, setStageId] = useState(worst?.s.id ?? 'billing');
@@ -50,6 +53,11 @@ export function RevenueCycle() {
   return (
     <div className="page">
       <CanvasHeader />
+      <KpiStrip ids={['npsr', 'cash', 'cash_pct_npsr', 'net_ar_days', 'denial_rate', 'clean_claim_rate', 'dnfb_days']} />
+      <div className="row cols-7-5">
+        <Scorecard ids={ids.length ? ids : EXEC_KPIS} title="Enterprise scorecard" groupByArea={false} showPy={false} />
+        <AttentionList />
+      </div>
       <div className="flow" role="tablist" aria-label="Revenue cycle stages">
         {summaries.map(({ s, status, off, watch }, i) => (
           <button key={s.id} type="button" role="tab" aria-selected={s.id === stageId} className={`flow-stage ${s.id === stageId ? 'on' : ''}`} onClick={() => setStageId(s.id)}>
@@ -70,6 +78,7 @@ export function RevenueCycle() {
       <div className="row">
         <button type="button" className="btn" onClick={() => go(stage.page, {}, { drill: true })}>Open {stage.name} analysis <Icon name="chevronRight" size={10} /></button>
       </div>
+      <FacilityMatrix />
     </div>
   );
 }
