@@ -4,6 +4,7 @@
 
 import { useMemo } from 'react';
 import { FACILITY_TYPES } from '../engine/engine';
+import { FRAMEWORK_METRICS } from '../engine/framework';
 import { evaluate, METRIC_BY_ID } from '../engine/metrics';
 import { comparePeriod } from '../engine/periods';
 import { changeOf, statusOf, type Status } from '../engine/status';
@@ -16,9 +17,10 @@ import { Delta, fmtMetric, StatusMark } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { Visual } from '../ui/Visual';
 
+/** The ELT framework metrics (P1–P13) first, then the other enterprise measures. */
 export const EXEC_KPIS = [
-  'net_ar_days', 'gross_ar', 'net_ar', 'npsr', 'cash', 'cash_pct_npsr', 'denial_rate', 'clean_claim_rate',
-  'dnfb_days', 'dnfb_dollars', 'bad_debt_pct', 'charity_pct', 'cost_to_collect',
+  ...FRAMEWORK_METRICS.map((f) => f.id),
+  'net_ar_days', 'gross_ar', 'net_ar', 'npsr', 'cash', 'clean_claim_rate', 'dnfb_dollars', 'bad_debt_pct', 'charity_pct', 'cost_to_collect',
 ];
 export const MATRIX_KPIS = ['net_ar_days', 'cash_pct_npsr', 'denial_rate', 'clean_claim_rate', 'dnfb_days', 'ar_gt90_pct', 'cost_to_collect'];
 

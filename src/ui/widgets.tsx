@@ -16,6 +16,9 @@ import { Grid, gridExport, type GridColumn, type GridRow } from './Grid';
 import { Icon } from './icons';
 import { Visual, type VisualSpec } from './Visual';
 
+/** Catalog name with the framework code in front (e.g. "P1 · Gross A/R days"). */
+const codeName = (id: string) => `${METRIC_BY_ID[id].code ? `${METRIC_BY_ID[id].code} · ` : ''}${METRIC_BY_ID[id].name}`;
+
 const f = (id: string) => (v: number | null) => fmt(v, METRIC_BY_ID[id].unit, METRIC_BY_ID[id].digits);
 
 /** Memoized metric value for the current context. */
@@ -37,7 +40,7 @@ export function KpiCard({ id, onOpen, selOverride }: { id: string; onOpen?: () =
     <div className="kpi" role="button" tabIndex={0} onClick={open} onKeyDown={(e) => { if (e.key === 'Enter') open(); }}
       title={`Analyze ${m.name}`}>
       <div className="kpi-top">
-        <span className="kpi-name">{m.short ?? m.name}</span>
+        <span className="kpi-name">{m.code ? `${m.code} · ` : ''}{m.short ?? m.name}</span>
         <span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={id} /></span>
       </div>
       {v.value === null ? <div className="kpi-nodata">{v.no_data_reason}</div> : (
@@ -93,9 +96,9 @@ export function Scorecard({ ids, title, groupByArea = true, selOverride, spec, s
   const rows: GridRow<ScoreRow>[] = groupByArea
     ? RCM_AREAS.filter((a) => vals.some((v) => v.rcm_area === a)).map((a) => ({
       id: a, kind: 'subtotal' as const, data: { area: a, label: a, v: { metric: '' } as MetricValue },
-      children: vals.filter((v) => v.rcm_area === a).map((v) => ({ id: v.metric, data: { v, area: a, label: METRIC_BY_ID[v.metric].name } })),
+      children: vals.filter((v) => v.rcm_area === a).map((v) => ({ id: v.metric, data: { v, area: a, label: codeName(v.metric) } })),
     }))
-    : vals.map((v) => ({ id: v.metric, data: { v, area: v.rcm_area, label: METRIC_BY_ID[v.metric].name } }));
+    : vals.map((v) => ({ id: v.metric, data: { v, area: v.rcm_area, label: codeName(v.metric) } }));
   return (
     <Visual title={title} subtitle={`${period.label} vs ${cmpLabel} · click a metric to analyze it`} table={gridExport(cols, rows)}
       spec={spec ?? { type: 'Scorecard table (grouped, expandable)', metrics: ids, interactions: 'Row click opens Metric Analysis (drill-through)' }}>

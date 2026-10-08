@@ -145,7 +145,9 @@ export function NavTabs() {
   const section = sectionOf(route.page);
   const meta = SECTIONS.find((x) => x.id === section)!;
   const active = PAGE_BY_ID[route.page]?.nav ? route.page : null;
-  const tabs = PAGES.filter((p) => p.nav && p.section === section && section !== 'elt');
+  const tabs = PAGES.filter((p) => p.nav && p.section === section);
+  // The ELT Summary has no sub-pages; its slicers and actions sit in the page header.
+  if (section === 'elt') return null;
   return (
     <nav className={`tabs no-print tabs-${section}`} aria-label={`${meta.label} pages`}>
       <span className="tabs-lead" title={meta.question}><b>{meta.verb}</b><span className="muted">{meta.question}</span></span>
@@ -155,7 +157,6 @@ export function NavTabs() {
             {p.label}
           </button>
         ))}
-        {section === 'elt' && <span className="tabs-note">One-minute view of revenue cycle health. Click any measure to investigate it in Analytics.</span>}
       </div>
       <div className="tab-actions">
         <button type="button" className="icon-btn" title="Copy link to this view (filters persist in the link and in your browser)" onClick={() => {

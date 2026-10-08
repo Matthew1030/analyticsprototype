@@ -48,27 +48,63 @@ Analytics; the ELT Summary has a compact period and scope bar, and worklists hav
 
 ### 1. ELT Summary
 
-Designed to be read in under a minute. Four levels, nothing else:
+The executive view, built only from standard BI components (KPI cards, trend charts, a metric table
+with conditional formatting, ranked variance tables, slicers, tooltips, drill-through) and no
+explanatory prose. Slicers: period type, period and hospital (or region).
 
-1. **Revenue cycle health**: Net A/R days, Cash as % of NPSR, Denial rate, DNFB days (with DNFB $ as
-   context, because dollars have no scope-independent target) and Clean claim rate, each with
-   current, target, variance, status and three-month direction.
-2. **Are we getting better or worse?** Three 12-month trends (Net A/R days, Cash % NPSR, Denial rate)
-   with the target and a faint tint where the measure misses it.
-3. **Where attention is needed**: up to three headline measures off target (most severe first), plus at
-   most one *emerging* risk (a secondary measure that misses target and worsened over three months), each
-   with the most affected hospital. Rows open the analytical page; the hospital link opens it filtered.
-4. **Performance highlights**: up to three computed positives (three-month improvements, measures
-   beating target, the hospital with the largest improvement).
+| Section | Content |
+|---|---|
+| Key Performance Indicators | P1, P8, P10, P5, P4: actual, target, variance, 3-month change, 12-month sparkline |
+| Performance Trends | P1, P8, P10 monthly for 12 months, with target line and off-target range |
+| Performance vs. Target | All 12 framework metrics, grouped as Balance Sheet and Income Statement: actual, target, variance, status, 3-month change, 12-month trend, benchmark |
+| Areas of Focus | Up to 5 off-target metrics with the largest unfavorable variance (relative to target), with the key driver hospital |
+| Performance Highlights | Up to 3 on-target metrics with the largest favorable variance, with the leading hospital |
 
-A one-line headline sentence, and links to Analytics and each worklist, frame the page. All statements
-are computed from the data for the selected period and scope.
+Variance and change colors follow each metric's direction (higher Gross AR Days is unfavorable;
+higher Cash as % of Net Revenue is favorable). Every metric row and card drills into its analytical
+page (P1, P4, P6 → A/R; P5 → Billing / DNFB; P8 → Cash; P10, P12, P13 → Denials; others → Metric
+Analysis). A hospital link applies that hospital as a filter first.
+
+#### ELT metric framework
+
+Client definitions, codes (no P3), benchmarks and targets. `src/engine/framework.ts` maps each code to
+the catalog metric; targets are in `config/targets.config.json`. Watch thresholds (the line between
+Watch and Off target) are prototype choices, not client values.
+
+| Group | Code | Metric | Calculation | Target | Watch |
+|---|---|---|---|---|---|
+| Balance Sheet | P1 | Gross AR Days | Ending gross AR ÷ (trailing 90-day gross revenue ÷ 90) | 45 | 50 |
+| Balance Sheet | P4 | % of AR Over 90 Days | Billed gross AR in 91+ buckets ÷ total billed gross AR | 20% | 25% |
+| Balance Sheet | P6 | Credit Balance Days | \|Month-end credit balance AR\| ÷ (trailing 90-day net revenue ÷ 90) ¹ | 1.0 | 1.5 |
+| Balance Sheet | P7 | POS Collections % Net Rev | Patient POS payments ÷ net revenue | 2% | 1% |
+| Income Statement | P2 | Net to Gross Ratio | Net revenue ÷ gross revenue | none (mix dependent) | – |
+| Income Statement | P5 | DNFB / Unbilled Days | Month-end DNFB gross $ ÷ (trailing 90-day gross revenue ÷ 90) | bill hold + 1.5 ² | 5.5 |
+| Income Statement | P8 | Cash as % of Net Revenue | Cash ÷ average monthly net revenue, most recent 3 months ³ | 100% | 95% |
+| Income Statement | P9 | Bad Debt % Gross Rev | Bad debt provision ÷ gross revenue ⁴ | 2% | 5% |
+| Income Statement | P10 | Initial Denial Rate (claim $) | Gross charges denied ÷ gross charges submitted ⁵ | 5% | 6% |
+| Income Statement | P11 | Bad Debt incl. Unrealized | (Provision + unrealized bad debt) ÷ gross revenue ⁶ | 3% | 3.5% |
+| Income Statement | P12 | Avoidable Write-Offs % Net | Net avoidable write-offs ÷ average monthly net revenue ⁷ | 0.5% | 0.75% |
+| Income Statement | P13 | Avoidable W/O incl. Unreal. | (Avoidable write-offs + unrealized) ÷ average monthly net revenue ⁸ | 1% | 1.5% |
+
+Prototype assumptions (confirm with the client):
+¹ Credit balances are modeled; the synthetic data has no overpayments.
+² `framework.billHoldDays` = 3 (illustrative), so the P5 target is 4.5 days.
+³ The 3 months include the reporting month; quarters and YTD use the monthly average × months.
+⁴ The provision is the bad debt transfers posted in the period.
+⁵ Denials by denial date over claims by submit date in the same period, an approximation of the
+submission cohort (a true cohort is incomplete for recent months).
+⁶ Unrealized = open self-pay balances older than `framework.badDebtCriteriaDays` (120) after discharge.
+⁷ Avoidable write-offs = write-offs after a final denial.
+⁸ Unrealized = expected net on open denials older than `framework.unrealizedDenialDays` (90).
+
+The synthetic data was generated before these benchmarks, so several metrics (notably P7, P12, P13)
+sit far from target.
 
 ### 2. Analytics
 
 | Page | Question it answers |
 |---|---|
-| Revenue Cycle Overview | Full enterprise scorecard, ranked hospital exceptions ("where to look first"), lifecycle stages (Patient Access → Charge Capture → Coding → CDI → Billing → A/R → Denials → Cash), hospital performance matrix |
+| Revenue Cycle Overview | Full enterprise scorecard (P1–P13 first, with codes), ranked hospital exceptions ("where to look first"), lifecycle stages (Patient Access → Charge Capture → Coding → CDI → Billing → A/R → Denials → Cash), hospital performance matrix |
 | A/R | Where is A/R accumulating, and why? (aging trend, hospital, payer, financial class, status, concentration, aging matrix, accounts) |
 | Denials | Which payers, hospitals, categories and root causes drive denials? (decomposition tree, drivers, payer × category) |
 | Cash | Are we on track for the cash goal? (month pace, YTD by hospital, payer collections) |

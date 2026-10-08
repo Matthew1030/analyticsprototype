@@ -38,7 +38,7 @@ export function MetricAnalysis() {
 
   return (
     <div className="page">
-      <CanvasHeader title={m.name} question={m.definition}
+      <CanvasHeader title={m.code ? `${m.code} · ${m.name}` : m.name} question={m.definition}
         right={(
           <div className="metric-switch">
             <label className="fld inline">Metric
