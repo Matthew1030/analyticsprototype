@@ -1,4 +1,4 @@
-// Workspace shell: header, page tabs, filter pane, canvas header (breadcrumb + applied
+// Workspace shell: prototype bar, header, page tabs, filter pane, canvas header (breadcrumb + applied
 // filters) and status bar. Vendor-neutral: this is the analytics product, not a BI tool.
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -9,7 +9,7 @@ import { METRIC_BY_ID, RCM_AREAS } from '../engine/metrics';
 import { availablePeriods, COMPARE_LABEL, comparePeriod, PERIOD_KIND_LABEL, type PeriodKind } from '../engine/periods';
 import { fmtDate, fmtDateTime } from '../format';
 import { DIMENSION_LABEL, members } from '../services/analytics';
-import { scopeText, useApp, type PageId, type Route, type SimState } from '../state/AppState';
+import { scopeText, useApp, type Audience, type PageId, type Route, type SimState } from '../state/AppState';
 import { Icon } from './icons';
 
 /** The three product experiences: See (ELT Summary), Understand (Analytics), Act (Worklists). */
@@ -48,6 +48,40 @@ export function sectionOf(page: PageId): Section {
   return PAGE_BY_ID[page]?.section ?? 'elt';
 }
 
+// ---------------------------------------------------------------- prototype bar
+
+/**
+ * Prototype controls. Not part of the product design: this bar lets reviewers pick a dashboard,
+ * switch the viewer type and simulate states. The design starts with the header below it.
+ */
+export function PrototypeBar() {
+  const { audience, setAudience } = useApp();
+  return (
+    <div className="proto-bar no-print" role="region" aria-label="Prototype controls (not part of the design)">
+      <span className="proto-label" title="Everything in this bar is for the prototype only and is not part of the design.">
+        <Icon name="code" size={12} /> Prototype controls<span className="proto-label-note"> · not part of the design</span>
+      </span>
+      <span className="proto-field-label" id="proto-dash-label">Select dashboard:</span>
+      <SectionNav />
+      <div className="proto-right">
+        <span className="proto-field-label" id="proto-aud-label">User type:</span>
+        <div className="seg proto-seg" role="radiogroup" aria-labelledby="proto-aud-label">
+          {AUDIENCES.map((a) => (
+            <button key={a.v} type="button" role="radio" aria-checked={audience === a.v} className={audience === a.v ? 'on' : ''}
+              title={a.note} onClick={() => setAudience(a.v)}>{a.label}</button>
+          ))}
+        </div>
+        <PrototypeMenu />
+      </div>
+    </div>
+  );
+}
+
+const AUDIENCES: { v: Audience; label: string; note: string }[] = [
+  { v: 'internal', label: 'Internal', note: 'Internal user (prototype: same view as external for now)' },
+  { v: 'external', label: 'External', note: 'External user (prototype: same view as internal for now)' },
+];
+
 // ---------------------------------------------------------------- header
 
 export function Header() {
@@ -63,7 +97,6 @@ export function Header() {
         <span className="sep" aria-hidden="true" />
         <span className="org">{scopeText(sel, valueLabel, ds.dims.organization.name, ds.dims.facilities.length)}</span>
       </div>
-      <SectionNav />
       <div className="header-meta">
         <span title="Reporting period selected in the filter pane">Reporting period <b>{period.label}</b>
           <span className={`pill ${st === 'Preliminary' ? 'pill-prelim' : 'pill-closed'}`} title={st === 'Preliminary' ? `Month not closed. Planned close ${ds.meta.availability[String(period.endMi + 1)] ?? ''}` : 'Closed period'}>{st}</span>
@@ -74,7 +107,6 @@ export function Header() {
         </span>
       </div>
       <div className="header-right">
-        <PrototypeMenu />
         <span className="user" title="Signed in through the organization's single sign-on">
           <span className="avatar" aria-hidden="true">JE</span>
           <span className="user-name">Jordan Ellis<span className="user-role">Revenue Cycle Analyst</span></span>
@@ -84,20 +116,27 @@ export function Header() {
   );
 }
 
-/** Top-level product sections. Each remembers the last page the user had open in it. */
+/** Dashboards not yet available in this prototype. Shown greyed out with a release tag. */
+const PLANNED: Partial<Record<Section, string>> = { worklists: 'v2' };
+
+/** Top-level dashboards. Each remembers the last page the user had open in it. */
 function SectionNav() {
   const { route, go } = useApp();
   const current = sectionOf(route.page);
   const last = useRef<Record<Section, PageId>>({ elt: 'executive', analytics: 'cycle', worklists: 'wl-denials' });
   if (PAGE_BY_ID[route.page]?.nav) last.current[current] = route.page;
   return (
-    <nav className="sections" aria-label="Product sections">
-      {SECTIONS.map((x, i) => (
-        <button key={x.id} type="button" className={`section-btn ${current === x.id ? 'on' : ''}`} aria-current={current === x.id ? 'page' : undefined}
-          title={`${x.verb}: ${x.question}`} onClick={() => go(current === x.id ? x.home : last.current[x.id])}>
-          <span className="section-step" aria-hidden="true">{i + 1}</span>{x.label}
-        </button>
-      ))}
+    <nav className="sections" aria-labelledby="proto-dash-label">
+      {SECTIONS.map((x, i) => {
+        const planned = PLANNED[x.id];
+        return (
+          <button key={x.id} type="button" className={`section-btn ${current === x.id ? 'on' : ''} ${planned ? 'planned' : ''}`} aria-current={current === x.id ? 'page' : undefined}
+            disabled={!!planned} title={planned ? `${x.label}: planned for ${planned}` : `${x.verb}: ${x.question}`}
+            onClick={() => go(current === x.id ? x.home : last.current[x.id])}>
+            <span className="section-step" aria-hidden="true">{i + 1}</span>{x.label}{planned && <span className="section-tag"> ({planned})</span>}
+          </button>
+        );
+      })}
     </nav>
   );
 }
