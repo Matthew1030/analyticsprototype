@@ -16,7 +16,7 @@ import { Payers } from './pages/Payers';
 import { RevenueCycle } from './pages/RevenueCycle';
 import { Worklist } from './pages/Worklist';
 import { AppProvider, useApp } from './state/AppState';
-import { FilterPane, Header, NavTabs, sectionOf, StaleBanner, StatusBar, Toasts } from './ui/Shell';
+import { FilterPane, Header, NavTabs, PrototypeBar, sectionOf, StaleBanner, StatusBar, Toasts } from './ui/Shell';
 
 export default function App() {
   const [ds, setDs] = useState<Dataset | null>(null);
@@ -62,12 +62,13 @@ export default function App() {
 }
 
 function Workspace() {
-  const { route } = useApp();
+  const { route, audience } = useApp();
   // Only Analytics carries the full filter pane. The ELT Summary has a compact period and scope
   // bar; worklists have their own operational filters.
   const section = sectionOf(route.page);
   return (
-    <div className={`app app-${section}`}>
+    <div className={`app app-${section}`} data-audience={audience}>
+      <PrototypeBar />
       <Header />
       <NavTabs />
       <div className="body">

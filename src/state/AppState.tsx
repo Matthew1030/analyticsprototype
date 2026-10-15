@@ -22,6 +22,9 @@ export interface Route { page: PageId; params: Record<string, string> }
 /** Prototype-only switch that shows the non-happy-path states. */
 export type SimState = 'normal' | 'loading' | 'stale' | 'partial' | 'error' | 'empty';
 
+/** Prototype-only switch for the type of viewer. Both types see the same view for now. */
+export type Audience = 'internal' | 'external';
+
 export interface ExportTable { title: string; columns: string[]; rows: (string | number)[][] }
 
 interface AppState {
@@ -34,6 +37,8 @@ interface AppState {
   trail: Route[];
   sim: SimState;
   specMode: boolean;
+  audience: Audience;
+  setAudience: (a: Audience) => void;
   /** RCM area filter: limits which metrics appear in scorecards and the catalog. */
   areas: RcmArea[];
   setAreas: (a: RcmArea[]) => void;
@@ -104,6 +109,7 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
   const [trail, setTrail] = useState<Route[]>([]);
   const [sim, setSim] = useState<SimState>('normal');
   const [specMode, setSpecMode] = useState(false);
+  const [audience, setAudience] = useState<Audience>('internal');
   const [areas, setAreas] = useState<RcmArea[]>([]);
   const [paneOpen, setPaneOpen] = useState(stored.paneOpen ?? true);
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
@@ -194,7 +200,7 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
     (p.endMi > ds.meta.endMonth - ds.meta.preliminaryMonths ? 'Preliminary' : 'Closed') as 'Preliminary' | 'Closed', [ds]);
 
   const value: AppState = {
-    ds, engine, sel, period, compare, route, trail, sim, specMode, paneOpen, areas, setAreas,
+    ds, engine, sel, period, compare, route, trail, sim, specMode, audience, setAudience, paneOpen, areas, setAreas,
     go, back, setPeriod, setPeriodKind, setCompare, toggle, selectOnly, clearField, clearAll,
     setSim, setSpecMode, setPaneOpen, toast, toasts, valueLabel, periodStatus, workEdits, editWork,
   };

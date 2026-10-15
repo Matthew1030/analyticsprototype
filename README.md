@@ -43,7 +43,12 @@ ELT Summary → click it (or its most affected hospital) → Denials Analytics, 
 → pick the denial category → **Work these claims in the Denials worklist** → the specific open claims,
 already filtered to that hospital and category. Breadcrumbs and Back keep the path in both directions.
 
-The three sections are the top-level navigation in the header. The full filter pane appears only in
+The three sections are separate dashboards. You select them under **Select dashboard** in the
+prototype controls bar at the top of the screen. This bar (striped, amber) is for the prototype only
+and is not part of the design. It also has a **User type** switch (Internal / External; both show the
+same view for now) and the **Prototype** state menu. The design starts below it, with a header that
+shows the title, scope, reporting period, data through date, last refresh and the user badge.
+Worklists are greyed out in the selector and marked **(v2)**. The full filter pane appears only in
 Analytics; the ELT Summary has a compact period and scope bar, and worklists have operational filters.
 
 ### 1. ELT Summary
@@ -155,7 +160,7 @@ the prototype are kept in the browser only.
 - **Investigation path** (A/R, Denials): shows the analyst's drill steps as they click.
 - **Every visual**: definition popover, show as table, focus (full screen), CSV export.
 - **States**: loading, no data for filters, measure not available by a filter, source unavailable,
-  error with retry, stale data, preliminary period. Switch them on with **Prototype** in the header.
+  error with retry, stale data, preliminary period. Switch them on with **Prototype** in the prototype controls bar.
   The same menu turns on build annotations (visual type, measures, dimensions, interaction) on each visual.
 
 ### Demo scenarios (planted in the data, documented under Definitions → Demo scenarios)
