@@ -1,9 +1,9 @@
 // Reusable analytical widgets built on the analytics service. Each one reads the global
 // filter context, so every page cross-filters the same way.
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { SelField, Selections } from '../engine/engine';
-import { METRIC_BY_ID, RCM_AREAS, type RcmArea } from '../engine/metrics';
+import { METRIC_BY_ID, RCM_AREAS, type RcmArea, type Unit } from '../engine/metrics';
 import { STATUS_RANK } from '../engine/status';
 import { fmt, fmtDelta } from '../format';
 import { breakdown, DIMENSION_LABEL, members, metricValue, trend } from '../services/analytics';
@@ -26,6 +26,39 @@ export function useMetric(id: string, trendMonths = 13, selOverride?: Selections
   const { engine, period, compare, sel } = useApp();
   const s = selOverride ?? sel;
   return useMemo(() => metricValue(engine, id, period, compare, s, trendMonths), [engine, id, period, compare, s, trendMonths]);
+}
+
+// ---------------------------------------------------------------- Measure switch
+
+const UNIT_LABEL: Record<Unit, string> = { usd: '$', count: '#', pct: '%', days: 'Days', sec: 'Sec', ratio: 'Ratio' };
+
+/**
+ * Lets the user show the same view as a different form of the measure ($, #, % or days), e.g.
+ * late charges $ or late charges % of gross. `alt` lists the alternative metric ids.
+ * Returns the active metric id and the switch control (null when there is no alternative).
+ */
+function useMeasure(id: string, alt?: string[]): [string, ReactNode] {
+  const [cur, setCur] = useState(id);
+  if (!alt?.length) return [id, null];
+  const ids = [id, ...alt];
+  const active = ids.includes(cur) ? cur : id;
+  const units = ids.map((x) => METRIC_BY_ID[x].unit);
+  // Different units: a compact $ / # / % switch. Same unit (e.g. two rates): a measure list.
+  if (new Set(units).size < ids.length) {
+    return [active, (
+      <select className="sel-xs" value={active} onChange={(e) => setCur(e.target.value)} aria-label="Measure">
+        {ids.map((x) => <option key={x} value={x}>{METRIC_BY_ID[x].short ?? METRIC_BY_ID[x].name}</option>)}
+      </select>
+    )];
+  }
+  return [active, (
+    <span className="seg seg-xs" role="radiogroup" aria-label="Measure">
+      {ids.map((x, i) => (
+        <button key={x} type="button" role="radio" aria-checked={x === active} className={x === active ? 'on' : ''}
+          onClick={() => setCur(x)} title={`Show ${METRIC_BY_ID[x].name}`}>{UNIT_LABEL[units[i]]}</button>
+      ))}
+    </span>
+  )];
 }
 
 // ---------------------------------------------------------------- KPI card
@@ -110,10 +143,11 @@ export function Scorecard({ ids, title, groupByArea = true, selOverride, spec, s
 
 // ---------------------------------------------------------------- Trend
 
-export function TrendVisual({ id, months = 18, title, height = 240, selOverride, compareSel, compareLabel }: {
-  id: string; months?: number; title?: string; height?: number; selOverride?: Selections; compareSel?: Selections; compareLabel?: string;
+export function TrendVisual({ id: idProp, alt, months = 18, title, height = 240, selOverride, compareSel, compareLabel }: {
+  id: string; alt?: string[]; months?: number; title?: string; height?: number; selOverride?: Selections; compareSel?: Selections; compareLabel?: string;
 }) {
   const { engine, period, sel, setPeriod } = useApp();
+  const [id, measure] = useMeasure(idProp, alt);
   const s = selOverride ?? sel;
   const m = METRIC_BY_ID[id];
   const [showPy, setShowPy] = useState(true);
@@ -136,6 +170,7 @@ export function TrendVisual({ id, months = 18, title, height = 240, selOverride,
       table={{ columns: ['Month', m.name, 'Target', 'Prior year', 'Rolling 3-month'], rows: t.map((x) => [x.label, fm(x.value), fm(x.target), fm(x.prior_year), fm(x.rolling_3)]) }}
       actions={(
         <span className="toggles">
+          {measure}
           <label><input type="checkbox" checked={showPy} onChange={(e) => setShowPy(e.target.checked)} /> PY</label>
           <label><input type="checkbox" checked={showR3} onChange={(e) => setShowR3(e.target.checked)} /> R3</label>
         </span>
@@ -150,8 +185,8 @@ export function TrendVisual({ id, months = 18, title, height = 240, selOverride,
 
 // ---------------------------------------------------------------- Breakdown (click to filter)
 
-export function BreakdownVisual({ id, dim: dimProp, dims, title, height, top, showCompare = true, sortBy = 'value', subtitle, onDrill, spec, filterField }: {
-  id: string; dim: DimensionId; dims?: DimensionId[]; title?: string; height?: number; top?: number; showCompare?: boolean;
+export function BreakdownVisual({ id: idProp, alt, dim: dimProp, dims, title, height, top, showCompare = true, sortBy = 'value', subtitle, onDrill, spec, filterField }: {
+  id: string; alt?: string[]; dim: DimensionId; dims?: DimensionId[]; title?: string; height?: number; top?: number; showCompare?: boolean;
   sortBy?: 'value' | 'natural' | 'change'; subtitle?: string; onDrill?: (key: number) => void; spec?: VisualSpec;
   /** Field that a click filters (defaults to the dimension). */
   filterField?: SelField;
@@ -159,6 +194,7 @@ export function BreakdownVisual({ id, dim: dimProp, dims, title, height, top, sh
   const { engine, period, compare, sel, toggle } = useApp();
   const [mode, setMode] = useState<'filter' | 'drill'>('filter');
   const [dim, setDim] = useState<DimensionId>(dimProp);
+  const [id, measure] = useMeasure(idProp, alt);
   const m = METRIC_BY_ID[id];
   const rows = useMemo(() => breakdown(engine, id, dim, period, compare, sel), [engine, id, dim, period, compare, sel]);
   let list = rows.filter((r) => r.value !== null);
@@ -177,7 +213,7 @@ export function BreakdownVisual({ id, dim: dimProp, dims, title, height, top, sh
   return (
     <Visual title={title ?? `${m.short ?? m.name} by ${DIMENSION_LABEL[dim].toLowerCase()}`} metricId={id} noData={noData}
       subtitle={subtitle ?? `${period.label} · click to ${mode === 'drill' ? 'drill through' : 'filter'}${more ? ` · top ${top} of ${top! + more}` : ''}`}
-      actions={dims ? (
+      actions={<>{measure}{dims ? (
         <select className="sel-xs" value={dim} onChange={(e) => setDim(e.target.value as DimensionId)} aria-label="Break down by">
           {dims.map((d) => <option key={d} value={d}>{DIMENSION_LABEL[d]}</option>)}
         </select>
@@ -186,7 +222,7 @@ export function BreakdownVisual({ id, dim: dimProp, dims, title, height, top, sh
           <button type="button" role="radio" aria-checked={mode === 'filter'} className={mode === 'filter' ? 'on' : ''} onClick={() => setMode('filter')} title="Click filters the page">Filter</button>
           <button type="button" role="radio" aria-checked={mode === 'drill'} className={mode === 'drill' ? 'on' : ''} onClick={() => setMode('drill')} title="Click opens the detail page"><Icon name="drill" size={11} /> Drill</button>
         </span>
-      )}
+      )}</>}
       table={{ columns: [DIMENSION_LABEL[dim], m.name, cmpName, 'Change', ...(m.unit === 'usd' || m.unit === 'count' ? ['Share'] : [])], rows: list.map((r) => [r.label, fm(r.value), fm(r.compare_value), fmtDelta(r.change, m.unit, m.digits), ...(r.share !== null ? [fmt(r.share, 'pct')] : [])]) }}
       spec={spec ?? { type: horizontal ? 'Bar chart (horizontal, sorted)' : 'Column chart', metrics: [id], dimensions: [DIMENSION_LABEL[dim]], interactions: `Click toggles a ${DIMENSION_LABEL[dim]} filter (cross-filters every visual)${onDrill ? '; Drill mode opens the detail page' : ''}` }}>
         <Chart height={height ?? (horizontal ? Math.max(150, list.length * (showCompare ? 30 : 24) + 44) : 230)} ariaLabel={`${m.name} by ${DIMENSION_LABEL[dim]}`}

@@ -23,8 +23,8 @@ export const STAGES: Stage[] = [
   { id: 'coding', name: 'Coding', page: 'midcycle', metrics: ['coding_tat', 'coding_denial_rate', 'dnfb_coding'] },
   { id: 'cdi', name: 'Clinical Documentation', page: 'midcycle', metrics: ['documentation_denial_rate', 'cdi_query_rate', 'dnfb_query'] },
   { id: 'billing', name: 'Billing', page: 'billing', metrics: ['clean_claim_rate', 'dnfb_days', 'billing_lag'] },
-  { id: 'ar', name: 'A/R', page: 'ar', metrics: ['net_ar_days', 'ar_gt90_pct', 'net_ar'] },
   { id: 'denials', name: 'Denials', page: 'denials', metrics: ['denial_rate', 'denial_dollars', 'appeal_success'] },
+  { id: 'ar', name: 'A/R', page: 'ar', metrics: ['net_ar_days', 'ar_gt90_pct', 'net_ar'] },
   { id: 'cash', name: 'Cash', page: 'cash', metrics: ['cash_pct_npsr', 'cash', 'net_collection_rate'] },
 ];
 

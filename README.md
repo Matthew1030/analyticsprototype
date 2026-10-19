@@ -109,22 +109,32 @@ sit far from target.
 
 | Page | Question it answers |
 |---|---|
-| Revenue Cycle Overview | Full enterprise scorecard (P1–P13 first, with codes), ranked hospital exceptions ("where to look first"), lifecycle stages (Patient Access → Charge Capture → Coding → CDI → Billing → A/R → Denials → Cash), hospital performance matrix |
-| A/R | Where is A/R accumulating, and why? (aging trend, hospital, payer, financial class, status, concentration, aging matrix, accounts) |
-| Denials | Which payers, hospitals, categories and root causes drive denials? (decomposition tree, drivers, payer × category) |
-| Cash | Are we on track for the cash goal? (month pace, YTD by hospital, payer collections) |
-| Patient Access | Eligibility, authorization, registration, financial clearance, scheduling, POS |
-| Mid-Cycle | Charge lag, late and missing charges, coding turnaround, CDI, documentation denials |
-| Billing / DNFB | DNFB $ and days, hold reasons, aging, clean claims, edits, billing lag |
+| Revenue Cycle Overview | Full enterprise scorecard (P1–P13 first, with codes), ranked hospital exceptions ("where to look first"), lifecycle stages (Patient Access → Charge Capture → Coding → CDI → Billing → Denials → A/R → Cash), hospital performance matrix |
+| Patient Access | Sections: contact center (all lines), scheduling (order outcomes, open orders > 24 h, lead time), pre-registration and financial clearance (72-hour windows), POS collections (yield and accuracy vs estimate), eligibility and Medicaid enrollment, registration quality |
+| Mid-Cycle | Charge lag, late charges ($ and %), missed charges, final coded volume, coding turnaround by type, CDI, documentation denials |
+| Billing / DNFB | DNFB $ and days, hold reasons, aging, claims exported (# and $), billed not exported, first pass yield, clean claims, edits, billing lag |
+| Denials | Which payers, hospitals, categories and root causes drive denials? (decomposition tree, drivers, payer × category, appeal volume, outcome and status) |
+| A/R | Where is A/R accumulating, and why? (aging trend, hospital, payer, financial class, status, credit balances, concentration, aging matrix, accounts) |
+| Cash | Are we on track for the cash goal? (month pace, YTD by hospital, payer collections, non-charge transactions, retractions, contractuals, life-to-date yield by service month) |
 | Payers | Mix, A/R days, denial rate, net collection, contractual adjustment, payment variance, underpayment flags |
 | Facilities | Sortable hospital comparison with status, trend and drill-through |
-| Definitions | Metric catalog, data sources and freshness, dimensions, demo scenarios, states, data contract |
+| Definitions | Metric catalog, client KPI coverage (every KPI on the client's inventory sheet and where to find it, or the data still needed), data sources and freshness, dimensions, demo scenarios, states, data contract |
 | *Metric Analysis* (drill-through) | Trend with target/PY/rolling-3, breakdowns, contribution to change, peer comparison, small multiples |
 | *Hospital Profile* (drill-through) | One hospital vs target, peers and system, by stage |
 | *Account Detail* (drill-through) | The accounts behind an aggregate (synthetic IDs, no patient data) |
 
 The A/R and Denials investigation paths, Billing / DNFB and Account Detail end in an **Act** step that
 opens the matching worklist with the current filters.
+
+Tabs follow the revenue cycle. Visuals with more than one form of a measure have a **measure switch**
+($ / # / %, or a list when the forms share a unit), for example late charges $ or % of gross charges.
+
+#### Client KPI inventory
+
+The client's KPI sheet (73 rows) is mapped in `src/config/kpiCoverage.ts` and shown under
+Definitions → Client KPI coverage. Each KPI is a catalog metric, a filter or view, a proxy, or needs a
+source the client must supply. The data columns added for it come from a second random stream in the
+generator, so all earlier columns, and the ELT Summary, are unchanged.
 
 ### 3. Worklists
 

@@ -2,8 +2,9 @@
 // contract, the visual states developers must build, and guided demo scenarios.
 
 import { useState } from 'react';
+import { KPI_COVERAGE, type Coverage, type KpiCoverage } from '../config/kpiCoverage';
 import type { SelField } from '../engine/engine';
-import { METRICS, type MetricDef } from '../engine/metrics';
+import { METRIC_BY_ID, METRICS, type MetricDef } from '../engine/metrics';
 import { CONFIG, staticTarget, watchFor } from '../engine/status';
 import { fmt, fmtDate, fmtDateTime } from '../format';
 import { DIMENSION_LABEL, members } from '../services/analytics';
@@ -14,7 +15,7 @@ import { Icon } from '../ui/icons';
 import { CanvasHeader } from '../ui/Shell';
 import { Skeleton, Visual } from '../ui/Visual';
 
-const TABS = ['Metric catalog', 'Data sources', 'Dimensions', 'Demo scenarios', 'States', 'Data contract'] as const;
+const TABS = ['Metric catalog', 'Client KPI coverage', 'Data sources', 'Dimensions', 'Demo scenarios', 'States', 'Data contract'] as const;
 type Tab = typeof TABS[number];
 
 export function Definitions() {
@@ -26,6 +27,7 @@ export function Definitions() {
         {TABS.map((t) => <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}
       </div>
       {tab === 'Metric catalog' && <Catalog />}
+      {tab === 'Client KPI coverage' && <KpiCoverageTable />}
       {tab === 'Data sources' && <Sources />}
       {tab === 'Dimensions' && <Dimensions />}
       {tab === 'Demo scenarios' && <Scenarios />}
@@ -59,6 +61,45 @@ function Catalog() {
       table={gridExport(cols, rows)}
       spec={{ type: 'Reference table', interactions: 'Search; RCM area filter applies; row click opens Metric Analysis' }}>
       <Grid caption="Metric catalog" columns={cols} rows={rows} dense onRowClick={(m) => go('metric', { id: m.id }, { drill: true })} />
+    </Visual>
+  );
+}
+
+const COVERAGE_ORDER: Coverage[] = ['Metric', 'Via filter or view', 'Proxy', 'Source needed', 'KPI not named'];
+const COVERAGE_CLASS: Record<Coverage, string> = {
+  Metric: 'ok', 'Via filter or view': 'ok', Proxy: 'watch', 'Source needed': 'off', 'KPI not named': 'none',
+};
+
+/** Every row of the client's KPI sheet, mapped to the metric or view that answers it. */
+function KpiCoverageTable() {
+  const { go } = useApp();
+  const [show, setShow] = useState<Coverage | 'All'>('All');
+  const counts = COVERAGE_ORDER.map((c) => KPI_COVERAGE.filter((k) => k.coverage === c).length);
+  const rows = KPI_COVERAGE.map((k, i) => ({ id: String(i), data: { ...k, n: i + 1 } })).filter((r) => show === 'All' || r.data.coverage === show);
+  type R = KpiCoverage & { n: number };
+  const cols: GridColumn<R>[] = [
+    { key: 'n', label: '#', value: (r) => r.n, width: 32 },
+    { key: 'kpi', label: 'Client KPI', value: (r) => r.kpi, align: 'left', width: 230, render: (r) => <span className="wrap"><b>{r.kpi}</b><br /><span className="muted small">{r.dashboard} · {r.stage}</span></span>, exportText: (r) => r.kpi },
+    { key: 'cov', label: 'Coverage', value: (r) => COVERAGE_ORDER.indexOf(r.coverage), align: 'left',
+      render: (r) => <span className={`status status-${COVERAGE_CLASS[r.coverage]}`}><span className="status-shape" />{r.coverage}</span>, exportText: (r) => r.coverage },
+    { key: 'metrics', label: 'Dashboard metric', value: (r) => r.metrics.map((id) => METRIC_BY_ID[id].name).join('; '), align: 'left',
+      render: (r) => <span className="wrap">{r.metrics.map((id) => METRIC_BY_ID[id].name).join(' · ') || <span className="muted">–</span>}</span> },
+    { key: 'how', label: 'Where to find it', value: (r) => r.how, align: 'left', render: (r) => <span className="wrap small">{r.how}</span> },
+    { key: 'src', label: 'Data the client must supply', value: (r) => r.source ?? '', align: 'left', render: (r) => <span className="wrap small">{r.source ?? ''}</span> },
+  ];
+  return (
+    <Visual title={`Client KPI coverage (${KPI_COVERAGE.length} KPIs on the client sheet)`}
+      subtitle={`${COVERAGE_ORDER.map((c, i) => `${counts[i]} ${c === 'KPI not named' ? c : c.toLowerCase()}`).join(' · ')} · click a row to analyze its metric`}
+      actions={(
+        <select className="sel-xs" value={show} onChange={(e) => setShow(e.target.value as Coverage | 'All')} aria-label="Coverage">
+          <option value="All">All coverage</option>
+          {COVERAGE_ORDER.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      )}
+      table={gridExport(cols, rows)}
+      spec={{ type: 'Reference table', interactions: 'Coverage filter; row click opens Metric Analysis for the main metric' }}>
+      <Grid caption="Client KPI coverage" columns={cols} rows={rows} dense
+        onRowClick={(r) => { if (r.metrics.length) go('metric', { id: r.metrics[0] }, { drill: true }); }} />
     </Visual>
   );
 }

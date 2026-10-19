@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import type { Selections } from '../engine/engine';
-import { evaluate, METRIC_BY_ID } from '../engine/metrics';
+import { APPEAL_STATUSES, appealStatusCounts, evaluate, METRIC_BY_ID } from '../engine/metrics';
 import { comparePeriod, trailingMonths } from '../engine/periods';
 import { fmt, fmtDelta, usd } from '../format';
 import { members } from '../services/analytics';
@@ -49,6 +49,12 @@ export function Denials() {
         <BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by category" />
       </div>
       <TopDrivers />
+      <KpiStrip ids={['appeals_filed', 'appeals_resolved', 'appeals_open', 'appeal_success', 'appeal_upheld_rate', 'denial_wo_pct_npsr']} />
+      <div className="row cols-3">
+        <AppealStatus />
+        <BreakdownVisual id="appeals_filed" alt={['appeal_rate']} dim="denialCategory" title="Appeals by denial category" subtitle="Clinical appeals: click Medical necessity and Documentation to filter" />
+        <BreakdownVisual id="appeal_upheld_rate" alt={['appeal_success']} dim="denialCategory" title="Appeal outcome by denial category" />
+      </div>
       <div className="row cols-2">
         <PayerCategoryMatrix />
         <Recoverability />
@@ -165,6 +171,22 @@ function Recoverability() {
       spec={{ type: 'Stacked bar chart (horizontal)', metrics: ['denial_dollars', 'recoverable_pct'], dimensions: ['Denial category', 'Recoverable flag'] }}>
       <Chart height={300} ariaLabel="Recoverable vs non-recoverable denials by category"
         option={barOption({ labels: data.map((d) => d.name), horizontal: true, stacked: true, fmt: usd, series: [{ name: 'Recoverable', data: data.map((d) => d.rec), color: SERIES[0] }, { name: 'Non-recoverable', data: data.map((d) => d.non), color: SERIES[1] }] })} />
+    </Visual>
+  );
+}
+
+/** Open denials by work status at period end: review, appeal levels and rework (client KPI: appeal status). */
+function AppealStatus() {
+  const { engine, period, sel } = useApp();
+  const day = Math.min(period.endDay, engine.lastDay);
+  const counts = useMemo(() => appealStatusCounts(engine, day, sel), [engine, day, sel]);
+  return (
+    <Visual title="Denial and appeal status" metricId="appeals_open" noData={counts.every((v) => v === 0) ? 'No open denials for the current filters.' : null}
+      subtitle={`Open denials at ${period.short} period end · filter the denial category for clinical appeals`}
+      table={{ columns: ['Status', 'Open denials'], rows: APPEAL_STATUSES.map((st, i) => [st, fmt(counts[i], 'count')]) }}
+      spec={{ type: 'Bar chart (horizontal, fixed status order)', metrics: ['appeals_open'], dimensions: ['Appeal status'] }}>
+      <Chart height={200} ariaLabel="Open denials by appeal status"
+        option={barOption({ labels: [...APPEAL_STATUSES], horizontal: true, fmt: (v) => fmt(v, 'count'), series: [{ name: 'Open denials', data: counts, color: SERIES[0] }], labels_on: true })} />
     </Visual>
   );
 }

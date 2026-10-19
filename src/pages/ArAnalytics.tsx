@@ -60,6 +60,10 @@ export function ArAnalytics() {
         <BreakdownVisual id={arId} dim="accountStatus" title="A/R by account status" subtitle="Where the open balance sits in the workflow · click to filter" />
         <Concentration basis={basis} />
       </div>
+      <div className="row cols-2">
+        <BreakdownVisual id="credit_balance_dollars" alt={['credit_balance_days']} dim="payer" title="Credit balances by payer" top={11} />
+        <TrendVisual id="credit_balance_dollars" months={18} title="Credit balances trend" />
+      </div>
       <AgingMatrix basis={basis} />
       <TopAccounts sel={sel} />
     </div>

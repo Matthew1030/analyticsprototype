@@ -10,7 +10,7 @@ import { fmt, fmtDelta, usd } from '../format';
 const relPct = (v: number | null) => (v === null ? '–' : `${v > 0 ? '+' : v < 0 ? '−' : '±'}${Math.abs(v * 100).toFixed(1)}%`);
 import { useApp } from '../state/AppState';
 import { Chart } from '../ui/Chart';
-import { COMPARE, lineOption, SERIES } from '../ui/charts';
+import { barOption, COMPARE, lineOption, SERIES } from '../ui/charts';
 import { StatusMark } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { CanvasHeader } from '../ui/Shell';
@@ -33,6 +33,16 @@ export function Cash() {
         <BreakdownVisual id="cash" dim="payer" title="Collections by payer" top={12} />
         <BreakdownVisual id="cash_pct_npsr" dim="facility" title="Cash % NPSR by hospital" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
         <BreakdownVisual id="net_collection_rate" dim="financialClass" title="Net collection rate by financial class" />
+      </div>
+      <KpiStrip ids={['patient_cash', 'refunds', 'retractions', 'retraction_pct_cash', 'contractual_adj_dollars', 'service_month_yield']} />
+      <div className="row cols-3">
+        <NonChargeTransactions />
+        <BreakdownVisual id="retractions" alt={['retraction_pct_cash']} dim="payer" title="Insurance retractions by payer" top={11} />
+        <BreakdownVisual id="contractual_adj_dollars" alt={['contractual_adj_pct']} dim="financialClass" title="Contractual adjustments by financial class" />
+      </div>
+      <div className="row cols-2">
+        <TrendVisual id="service_month_yield" months={18} title="Life-to-date yield by service month (recent months still maturing)" />
+        <BreakdownVisual id="cash" dim="financialClass" title="Cash by financial class" subtitle="Click Self Pay for patient cash" />
       </div>
       <div className="row cols-2">
         <TrendVisual id="cash_pct_npsr" months={18} />
@@ -124,6 +134,25 @@ function YtdByHospital() {
       spec={{ type: 'Matrix table: column groups, region subtotals, data bars, status text', metrics: ['cash', 'cash_goal', 'cash_pct_npsr'], dimensions: ['Region', 'Hospital'], interactions: 'Expand/collapse regions; sort; row click drills to Hospital Profile' }}>
       <Grid caption="Cash vs goal by hospital" columns={cols} rows={rows} total={total} defaultExpanded
         onRowClick={(r) => { if (!r.isRegion && r.key >= 0) go('facility', { id: String(r.key) }, { drill: true }); }} />
+    </Visual>
+  );
+}
+
+const NON_CHARGE = ['bad_debt', 'charity', 'denial_writeoffs', 'refunds', 'retractions'];
+const NON_CHARGE_LABEL = ['Bad debt', 'Charity', 'Denial W/O', 'Refunds', 'Retractions'];
+
+/** Non-charge transactions other than contractuals, in the period. Click a bar to analyze it. */
+function NonChargeTransactions() {
+  const { engine, period, sel, go } = useApp();
+  const vals = useMemo(() => NON_CHARGE.map((id) => evaluate(METRIC_BY_ID[id], engine, period, sel).value), [engine, period, sel]);
+  const labels = NON_CHARGE_LABEL;
+  return (
+    <Visual title="Non-charge transactions" subtitle={`${period.label} · contractuals shown separately · click to analyze`}
+      table={{ columns: ['Transaction', 'Amount'], rows: labels.map((l, i) => [l, usd(vals[i] ?? 0)]) }}
+      spec={{ type: 'Bar chart (horizontal)', metrics: NON_CHARGE, interactions: 'Click opens Metric Analysis' }}>
+      <Chart height={200} ariaLabel="Non-charge transactions"
+        option={barOption({ labels, horizontal: true, fmt: usd, series: [{ name: period.short, data: vals, color: SERIES[0] }], labels_on: true })}
+        onClick={(i) => go('metric', { id: NON_CHARGE[i] }, { drill: true })} />
     </Visual>
   );
 }
