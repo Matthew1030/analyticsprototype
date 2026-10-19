@@ -20,6 +20,11 @@
 // 7. Scheduling falls in the last 4 weeks at Valley Regional, Williamson Regional and Pine Ridge.
 // 8. Seasonality: winter volume peak, a March coding backlog at all sites, and a Q1 rise in
 //    self-pay after deductibles reset.
+//
+// Client KPI inventory extension: columns added for the client's KPI sheet (POS estimates,
+// retractions, appeal levels, 72-hour windows, order outcomes, call lines, Medicaid enrollment)
+// draw from a SECOND random stream (r2). The original stream is untouched, so every column that
+// existed before keeps exactly the same values (and the ELT Summary does not move).
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -85,6 +90,31 @@ function pick(weights: number[]) {
 const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
 /** Stochastic rounding keeps small daily counts unbiased. */
 const sround = (x: number) => Math.floor(x + rnd());
+
+/** Second, independent stream for the KPI inventory columns (see header). */
+const r2 = (() => {
+  const r = mulberry32(cfg.seed + 7919);
+  const chance2 = (p: number) => r() < p;
+  const uniform2 = (a: number, b: number) => a + (b - a) * r();
+  const normal2 = (mean = 0, sd = 1) => {
+    const u = 1 - r();
+    const v = r();
+    return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+  const poisson2 = (lambda: number) => {
+    if (lambda > 30) return Math.max(0, Math.round(normal2(lambda, Math.sqrt(lambda))));
+    const l = Math.exp(-lambda);
+    let k = 0;
+    let p = 1;
+    do { k++; p *= r(); } while (p > l);
+    return k - 1;
+  };
+  return {
+    chance: chance2, uniform: uniform2, normal: normal2, poisson: poisson2,
+    randInt: (a: number, b: number) => Math.floor(uniform2(a, b + 1)),
+    sround: (x: number) => Math.floor(x + r()),
+  };
+})();
 
 // ---------- calendar ----------
 const endMi = monthIndexOfKey(cfg.endMonth);
@@ -153,6 +183,7 @@ const SVC_CHARGE_CAH = [0.6, 0.75, 0.85, 0.8, 0.9, 0.95, 0.95, 0.95];
 const COLS = [
   'fac', 'payer', 'svc', 'dd', 'gross', 'net', 'chgLag', 'lateAmt', 'missAmt', 'codeL', 'qry', 'hold',
   'fbL', 'sbL', 'edit', 'rc', 'denL', 'apl', 'payL', 'payAmt', 'pos', 'woL', 'bdL', 'bdAmt', 'chr', 'pend',
+  'estLiab', 'retL', 'retAmt', 'aplLvl',
 ] as const;
 type Col = typeof COLS[number];
 const A: Record<Col, number[]> = Object.fromEntries(COLS.map((c) => [c, []])) as unknown as Record<Col, number[]>;
@@ -333,6 +364,24 @@ for (let day = genStartDay; day <= asOfDay; day++) {
       A.woL.push(denied ? lagOrNone(woD, denD) : -1);
       A.bdL.push(lagOrNone(bdD, sbd)); A.bdAmt.push(bdD !== -1 && bdD <= asOfDay ? bdAmt : 0);
       A.chr.push(chr); A.pend.push(pend);
+
+      // ----- KPI inventory columns (second stream) -----
+      // Patient liability estimate given at or before service (self-pay accounts in this data).
+      // Most estimates land within 10% of the final liability (expected net).
+      const estLiab = fc === FC_SELF_PAY && r2.chance(0.85)
+        ? Math.round(net * (r2.chance(0.78) ? r2.uniform(0.93, 1.07) : r2.uniform(0.6, 1.45))) : 0;
+      // Insurance retraction (recoupment) of part or all of a payment, 30–240 days after payment.
+      let retD = -1;
+      let retAmt = 0;
+      if (fc !== FC_SELF_PAY && payD !== -1 && payAmt > 0 && r2.chance(0.018)) {
+        retD = payD + r2.randInt(30, 240);
+        retAmt = Math.round(payAmt * r2.uniform(0.2, 1));
+      }
+      const retDone = retD !== -1 && retD <= asOfDay && payD <= asOfDay;
+      A.estLiab.push(estLiab);
+      A.retL.push(retDone ? retD - payD : -1); A.retAmt.push(retDone ? retAmt : 0);
+      // Appeal level reached: 2 = escalated to a second-level appeal.
+      A.aplLvl.push(denied && apl ? (r2.chance(0.3) ? 2 : 1) : 0);
       X.fbd.push(fbd); X.sbd.push(sbd); X.payD.push(payD); X.denD.push(denD); X.closeD.push(closeD); X.status.push(status);
     }
   }
@@ -401,6 +450,11 @@ const FE_COLS = [
   'preRegDue', 'preRegDone', 'eligDue', 'eligVerified', 'authRequired', 'authObtained', 'authPreService',
   'finClearDue', 'finCleared', 'callsOffered', 'callsAnswered', 'callsAbandoned', 'answerWaitSecs',
   'selfPayAccounts', 'screened', 'coverageFound',
+  // KPI inventory columns (second stream)
+  'callsOutbound', 'cboCallsOffered', 'cboCallsAnswered', 'cboCallsAbandoned',
+  'openOrders24hEod', 'ordersScheduled3Plus', 'scheduledUnder72h', 'preRegDone72', 'finCleared72',
+  'ordersDuplicate', 'ordersCancelled', 'ordersLeakage', 'ordersAlreadyScheduled',
+  'effortsExhausted', 'medicaidEligible', 'applicationsCompleted',
 ] as const;
 const FE: Record<string, number[]> = Object.fromEntries(FE_COLS.map((c) => [c, []]));
 const lastFourWeeks = asOfDay - 27;
@@ -420,7 +474,18 @@ for (const f of FACILITIES) {
       if (pr.schedDrop && day >= lastFourWeeks) rate -= 0.14;
       rate = clamp(rate, 0.4, 1);
       const scheduled = Math.min(open + received, sround(received * rate));
+      const openBefore = open;
       open = Math.max(0, sround(open + received - scheduled - open * 0.025));
+      // Orders closed without an appointment, split by final outcome.
+      let closed = Math.max(0, openBefore + received - scheduled - open);
+      const outcome = (share: number) => { const k = Math.min(closed, r2.sround(closed * share)); closed -= k; return k; };
+      row.ordersDuplicate = outcome(0.2);
+      row.ordersAlreadyScheduled = outcome(0.25);
+      row.ordersLeakage = outcome(0.4);
+      row.ordersCancelled = closed;
+      // Open orders in process for more than 24 hours: rises where scheduling falls behind.
+      const stale = clamp(r2.normal(0.5 - 0.08 * p + (pr.schedDrop && day >= lastFourWeeks ? 0.15 : 0), 0.03), 0.1, 0.95);
+      row.openOrders24hEod = r2.sround(open * stale);
       row.ordersReceived = received;
       row.ordersScheduled = scheduled;
       row.scheduleDaysSum = sround(scheduled * clamp(normal(6.5 - 2.5 * p, 0.5), 2, 12));
@@ -428,6 +493,11 @@ for (const f of FACILITIES) {
       const due = sround(scheduled * 0.9);
       row.preRegDue = due;
       row.preRegDone = sround(due * clamp(normal(0.94 + 0.02 * p, 0.012), 0.8, 1));
+      // Lead time: average falls over the window, so fewer appointments are booked 3+ days out.
+      const share3 = clamp(r2.normal(0.8 - 0.14 * p, 0.03), 0.3, 0.98);
+      row.ordersScheduled3Plus = r2.sround(scheduled * share3);
+      row.scheduledUnder72h = r2.sround(due * clamp(1 - share3 + r2.normal(0.02, 0.015), 0, 0.9));
+      row.preRegDone72 = r2.sround(row.preRegDone * clamp(r2.normal(0.86 + 0.04 * p, 0.02), 0.5, 1));
     }
     // Eligibility: all registrations. Lower at Pine Ridge (registration quality issue).
     const eligRate = f.key === 6 ? 0.9 : 0.965 + 0.01 * p;
@@ -440,6 +510,7 @@ for (const f of FACILITIES) {
     row.authPreService = sround(row.authObtained * clamp(normal(0.9, 0.02), 0.7, 1));
     row.finClearDue = sround(regs * 0.45);
     row.finCleared = sround(row.finClearDue * clamp(normal(0.86 + 0.04 * p - (f.key === 6 ? 0.07 : 0), 0.015), 0.6, 1));
+    row.finCleared72 = r2.sround(row.finCleared * clamp(r2.normal(0.83 + 0.05 * p - (f.key === 6 ? 0.05 : 0), 0.02), 0.4, 1));
     if (pr.hasCalls) {
       const offered = poisson(620 * pr.weight * wk * (moy <= 1 ? 1.15 : 1));
       const abandoned = sround(offered * clamp(normal(moy <= 1 ? 0.06 : 0.035, 0.008), 0.005, 0.15));
@@ -448,12 +519,24 @@ for (const f of FACILITIES) {
       row.callsAnswered = answered;
       row.callsAbandoned = abandoned;
       row.answerWaitSecs = sround(answered * clamp(normal(moy <= 1 ? 48 : 31, 6), 8, 120));
+      row.callsOutbound = r2.poisson(270 * pr.weight * wk);
     }
+    // Central business office (back-end) customer service line, allocated to the hospital it serves.
+    const cbo = r2.poisson(240 * pr.weight * wk * (moy <= 2 ? 1.2 : 1));
+    const cboAband = r2.sround(cbo * clamp(r2.normal(moy <= 2 ? 0.075 : 0.05, 0.01), 0.005, 0.2));
+    row.cboCallsOffered = cbo;
+    row.cboCallsAnswered = cbo - cboAband;
+    row.cboCallsAbandoned = cboAband;
     const sp = poisson(60 * pr.weight * wk * (pr.selfPay / 0.055) * (moy <= 2 ? 1.25 : 1));
     const screened = sround(sp * clamp(normal(0.6 + 0.2 * p, 0.04), 0.3, 0.98));
     row.selfPayAccounts = sp;
     row.screened = screened;
     row.coverageFound = sround(screened * clamp(normal(0.17, 0.03), 0.05, 0.4));
+    // Medicaid eligibility and enrollment: patients not screened after all contact efforts,
+    // patients likely eligible, and applications completed.
+    row.effortsExhausted = r2.sround((sp - screened) * clamp(r2.normal(0.4, 0.06), 0, 1));
+    row.medicaidEligible = r2.sround(screened * clamp(r2.normal(0.38, 0.04), 0.1, 0.8));
+    row.applicationsCompleted = r2.sround(row.medicaidEligible * clamp(r2.normal(0.66 + 0.12 * p, 0.05), 0.2, 1));
     for (const c of FE_COLS) FE[c].push(row[c] ?? -1);
   }
 }

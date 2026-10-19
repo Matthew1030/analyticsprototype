@@ -9,7 +9,10 @@ import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, KpiStrip, Scorecard, TrendVisual } from '../ui/widgets';
 
-const MID_IDS = ['charge_lag', 'late_charge_pct', 'missing_charges', 'charges_posted', 'coding_tat', 'coding_tat_ip', 'coding_denial_rate', 'dnfb_coding', 'cdi_query_rate', 'documentation_denial_rate', 'dnfb_query'];
+const MID_IDS = [
+  'charge_lag', 'late_charge_pct', 'late_charges_dollars', 'missing_charges', 'missed_charge_rate', 'charges_posted',
+  'coding_tat', 'coding_tat_ip', 'final_coded_volume', 'coding_denial_rate', 'dnfb_coding', 'cdi_query_rate', 'documentation_denial_rate', 'dnfb_query',
+];
 
 export function MidCycle() {
   const { go } = useApp();
@@ -22,13 +25,18 @@ export function MidCycle() {
         <Scorecard ids={MID_IDS} title="Mid-cycle scorecard" />
         <div className="stack">
           <TrendVisual id="coding_tat" months={18} height={200} />
-          <TrendVisual id="late_charge_pct" months={18} height={200} />
+          <TrendVisual id="late_charge_pct" alt={['late_charges_dollars']} months={18} height={200} />
         </div>
       </div>
       <div className="row cols-3">
         <BreakdownVisual id="charge_lag" dim="serviceLine" title="Charge lag by service line" />
-        <BreakdownVisual id="late_charge_pct" dim="facility" title="Late charges by hospital" onDrill={drill} />
+        <BreakdownVisual id="late_charge_pct" alt={['late_charges_dollars']} dim="facility" title="Late charges by hospital" onDrill={drill} />
         <BreakdownVisual id="coding_tat" dim="facility" title="Coding turnaround by hospital" onDrill={drill} />
+      </div>
+      <div className="row cols-3">
+        <BreakdownVisual id="final_coded_volume" dim="patientType" dims={['patientType', 'facility', 'serviceLine']} title="Final coded accounts" />
+        <BreakdownVisual id="coding_tat" dim="patientType" dims={['patientType', 'serviceLine', 'payer']} title="Coding turnaround by type" />
+        <BreakdownVisual id="missed_charge_rate" alt={['missing_charges']} dim="facility" title="Missed charges by hospital" onDrill={drill} />
       </div>
       <div className="row cols-2">
         <MidCycleHolds />

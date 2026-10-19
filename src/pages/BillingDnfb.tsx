@@ -32,6 +32,12 @@ export function BillingDnfb() {
         <BreakdownVisual id="dnfb_dollars" dim="dnfbHold" title="DNFB $ by hold reason" subtitle="Click to filter the hold reason (applies to DNFB measures)" />
         <BreakdownVisual id="clean_claim_rate" dim="facility" title="Clean claim rate by hospital" onDrill={drill} />
       </div>
+      <KpiStrip ids={['claims_submitted', 'claims_submitted_dollars', 'dnsp_dollars', 'dnsp_accounts', 'first_pass_yield', 'rework_claims']} />
+      <div className="row cols-3">
+        <BreakdownVisual id="claims_submitted_dollars" alt={['claims_submitted']} dim="facility" title="Claims exported to payers by hospital" onDrill={drill} />
+        <BreakdownVisual id="dnsp_dollars" alt={['dnsp_accounts', 'dnsp_days']} dim="facility" title="Billed, not exported (open edits) by hospital" onDrill={drill} />
+        <BreakdownVisual id="first_pass_yield" dim="payer" dims={['payer', 'facility', 'financialClass', 'patientType']} title="First pass yield" top={11} />
+      </div>
       <div className="row cols-2">
         <DnfbMatrix />
         <div className="stack">

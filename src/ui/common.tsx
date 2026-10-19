@@ -127,3 +127,8 @@ export function fmtMetric(id: string, v: number | null) {
   const m = METRIC_BY_ID[id];
   return fmt(v, m.unit, m.digits);
 }
+
+/** Section heading inside an analytics page (e.g. Contact center, Scheduling on Patient Access). */
+export function PageSection({ title, note }: { title: string; note?: string }) {
+  return <div className="page-sec"><h2>{title}</h2>{note && <span className="page-sec-note">{note}</span>}</div>;
+}

@@ -17,10 +17,10 @@ export type Direction = 'up' | 'down' | 'none';
 /** Revenue cycle area, in lifecycle order (plus enterprise financials). */
 export type RcmArea =
   | 'Patient Access' | 'Charge Capture' | 'Coding' | 'Clinical Documentation'
-  | 'Billing' | 'A/R' | 'Denials' | 'Cash' | 'Financial';
+  | 'Billing' | 'Denials' | 'A/R' | 'Cash' | 'Financial';
 
 export const RCM_AREAS: RcmArea[] = [
-  'Patient Access', 'Charge Capture', 'Coding', 'Clinical Documentation', 'Billing', 'A/R', 'Denials', 'Cash', 'Financial',
+  'Patient Access', 'Charge Capture', 'Coding', 'Clinical Documentation', 'Billing', 'Denials', 'A/R', 'Cash', 'Financial',
 ];
 
 /** A range of days. Periods and weeks both fit this shape. */
@@ -121,15 +121,29 @@ const endOf = (c: Ctx) => Math.min(c.r.endDay, c.e.lastDay);
  * overpayments, so the prototype models them: about 5% of paid insurance accounts carry a credit
  * of 10–50% of expected net from 3 days after payment until refund 15–165 days later.
  */
+const creditOf = (a: Engine['ds']['acc'], i: number) => {
+  if (a.fc[i] === 6 || a.payD[i] === -1) return null;
+  const id = a.id[i];
+  if (hash01(id, 21) >= 0.05) return null;
+  const start = a.payD[i] + 3;
+  const lag = 15 + Math.floor(hash01(id, 22) * 150);
+  return { start, refund: start + lag, amount: a.net[i] * (0.1 + 0.4 * hash01(id, 23)) };
+};
 const creditAt = (c: Ctx, day: number) => {
   const a = c.e.ds.acc;
   return c.e.accountTotal(`credit|${day}`, c.sel, 'none', (i) => {
-    if (a.fc[i] === 6 || a.payD[i] === -1) return 0;
-    const id = a.id[i];
-    if (hash01(id, 21) >= 0.05) return 0;
-    const start = a.payD[i] + 3;
-    const lag = 15 + Math.floor(hash01(id, 22) * 150);
-    return start <= day && day < start + lag ? a.net[i] * (0.1 + 0.4 * hash01(id, 23)) : 0;
+    const t = creditOf(a, i);
+    return t && t.start <= day && day < t.refund ? t.amount : 0;
+  });
+};
+/** Refunds of the modeled credit balances, on the day each credit is refunded. */
+const refundsIn = (c: Ctx) => {
+  const a = c.e.ds.acc;
+  const st = c.r.startDay;
+  const en = Math.min(c.r.endDay, c.e.lastDay);
+  return c.e.accountTotal(`refund|${st}|${en}`, c.sel, 'none', (i) => {
+    const t = creditOf(a, i);
+    return t && t.refund >= st && t.refund <= en ? t.amount : 0;
   });
 };
 /**
@@ -163,6 +177,35 @@ const staleDenialsAt = (c: Ctx, day: number) => {
 };
 const avoidableWo = (c: Ctx) => s(c, 'woAmt', 'woD', { detail: 'denial' });
 
+/** Final outcomes of orders closed without an appointment (client KPI: open-order categorization). */
+export const ORDER_OUTCOMES = [
+  { col: 'ordersDuplicate', name: 'Duplicate' }, { col: 'ordersAlreadyScheduled', name: 'Already scheduled' },
+  { col: 'ordersLeakage', name: 'Leakage' }, { col: 'ordersCancelled', name: 'Cancelled' },
+] as const;
+
+/** Denial work status at a day, for open denials and appeals (client KPI: clinical appeal status). */
+export const APPEAL_STATUSES = [
+  'To be reviewed', 'Reviewed, to be appealed', '1st level appeal', '2nd level appeal', 'Not appealed, in rework',
+] as const;
+/**
+ * Status of a denied account at a day, or -1 when the denial is not open. The prototype derives it
+ * from the denial date, the appeal flag and the appeal level; production reads the appeal tracking status.
+ */
+export function appealStatusOf(a: Engine['ds']['acc'], i: number, day: number): number {
+  const den = a.denD[i];
+  if (den < 0 || den > day) return -1;
+  if (a.closeD[i] !== -1 && a.closeD[i] <= day) return -1;
+  const age = day - den;
+  if (age < 7) return 0;
+  if (!a.apl[i]) return 4;
+  if (age < 20) return 1;
+  return a.aplLvl[i] === 2 && age >= 75 ? 3 : 2;
+}
+export function appealStatusCounts(e: Engine, day: number, sel: Selections): number[] {
+  const a = e.ds.acc;
+  return APPEAL_STATUSES.map((_, k) => e.accountTotal(`aplst|${day}|${k}`, sel, 'denial', (i) => (appealStatusOf(a, i, day) === k ? 1 : 0)));
+}
+
 export const METRICS: MetricDef[] = [
   // ================= Financial =================
   {
@@ -185,6 +228,13 @@ export const METRICS: MetricDef[] = [
     calculation: '1 − SUM(expected_net) / SUM(gross_charges), by discharge date',
     sourceFields: ['account.gross_charges', 'account.expected_net'], fact: 'acc',
     compute: (c) => { const g = gross(c); return g > 0 ? 1 - net(c) / g : null; },
+  },
+  {
+    id: 'contractual_adj_dollars', name: 'Contractual adjustments ($)', short: 'Contractual adj. $', area: 'Financial', unit: 'usd', direction: 'none', type: 'flow', page: 'cash',
+    definition: 'All contractual adjustments: gross charges less expected net reimbursement, for accounts discharged in the period. Excludes charity, bad debt and denial write-offs.',
+    calculation: 'SUM(gross_charges) − SUM(expected_net), by discharge date',
+    sourceFields: ['account.gross_charges', 'account.expected_net'], fact: 'acc',
+    compute: (c) => gross(c) - net(c),
   },
   {
     id: 'bad_debt', name: 'Bad debt write-offs', area: 'Financial', unit: 'usd', direction: 'down', type: 'flow', page: 'executive',
@@ -321,7 +371,49 @@ export const METRICS: MetricDef[] = [
     sourceFields: ['transaction.amount', 'account.expected_net'], fact: 'acc',
     compute: (c) => { const e = s(c, 'payExp', 'payD'); return e > 0 ? (s(c, 'payAmt', 'payD', { pred: 'insured' }) - e) / e : null; },
   },
+  {
+    id: 'patient_cash', name: 'Patient cash (self-pay)', short: 'Patient cash', area: 'Cash', unit: 'usd', direction: 'up', type: 'flow', page: 'cash',
+    definition: 'Payments from patients: point-of-service cash plus self-pay payments posted in the period. Prototype data has no patient payments on insured accounts; production includes them (payment source = patient).',
+    calculation: 'SUM(transaction.amount) WHERE type = PAYMENT AND payment_source = PATIENT AND post_date IN period',
+    sourceFields: ['transaction.amount', 'transaction.payment_source'], fact: 'acc',
+    compute: (c) => s(c, 'payAmt', 'payD', { pred: 'selfPay' }) + s(c, 'pos', 'dd'),
+  },
+  {
+    id: 'refunds', name: 'Refunds', area: 'Cash', unit: 'usd', direction: 'none', type: 'flow', page: 'cash',
+    definition: 'Credit balances refunded to payers or patients in the period. Prototype: the refunds of the modeled insurance credit balances (see P6).',
+    calculation: 'SUM(transaction.amount) WHERE type = REFUND AND post_date IN period',
+    sourceFields: ['transaction.amount', 'transaction.type'], fact: 'acc',
+    compute: (c) => refundsIn(c),
+  },
+  {
+    id: 'retractions', name: 'Insurance retractions', short: 'Retractions', area: 'Cash', unit: 'usd', direction: 'down', type: 'flow', page: 'cash',
+    definition: 'Insurance payments taken back by the payer (recoupments and takebacks) posted in the period.',
+    calculation: 'SUM(ABS(transaction.amount)) WHERE type = RETRACTION AND post_date IN period',
+    sourceFields: ['transaction.amount', 'transaction.type'], fact: 'acc',
+    compute: (c) => s(c, 'retAmt', 'retD', { pred: 'insured' }),
+  },
+  {
+    id: 'retraction_pct_cash', name: 'Insurance retractions % of total cash', short: 'Retractions % cash', area: 'Cash', unit: 'pct', direction: 'down', type: 'flow', page: 'cash', digits: 2,
+    definition: 'Insurance retractions as a share of total cash posted in the period.',
+    calculation: 'SUM(retractions) / SUM(cash posted), post date in period',
+    sourceFields: ['transaction.amount', 'transaction.type'], fact: 'acc',
+    compute: (c) => div(s(c, 'retAmt', 'retD', { pred: 'insured' }), cash(c)),
+  },
+  {
+    id: 'service_month_yield', name: 'Life-to-date yield by service month', short: 'LTD yield', area: 'Cash', unit: 'pct', direction: 'none', type: 'flow', page: 'cash',
+    definition: 'Payments to date on accounts discharged in the period, as a share of charges less contractual adjustments (expected net). Recent service months are still being paid, so their yield is low until they mature.',
+    calculation: 'SUM(payments to data date) / (SUM(gross_charges) − SUM(contractual adjustments)) WHERE discharge_date IN period',
+    sourceFields: ['transaction.amount', 'account.gross_charges', 'account.expected_net', 'account.discharge_date'], multiDef: true, fact: 'acc',
+    compute: (c) => div(s(c, 'payAmt', 'dd') + s(c, 'pos', 'dd'), net(c)),
+  },
   // ================= A/R =================
+  {
+    id: 'credit_balance_dollars', name: 'Credit balances ($)', short: 'Credit balance $', area: 'A/R', unit: 'usd', direction: 'down', type: 'balance', page: 'ar',
+    definition: 'Absolute value of accounts with a credit balance (overpayments awaiting refund) at period end. Prototype: modeled credits (see P6).',
+    calculation: 'ABS(SUM(account.balance WHERE balance < 0)) at period end',
+    sourceFields: ['account.balance'], fact: 'acc',
+    compute: (c) => Math.abs(creditAt(c, endOf(c))),
+  },
   {
     id: 'gross_ar', name: 'Gross A/R', area: 'A/R', unit: 'usd', direction: 'none', type: 'balance', page: 'ar',
     definition: 'Open debit balances (gross charges less payments) at the period-end snapshot.',
@@ -422,6 +514,37 @@ export const METRICS: MetricDef[] = [
     compute: (c) => div(s(c, 'aplOvt', 'closeD', { detail: 'denial' }), c.e.sum('acc', 'apl', 'closeD', c.r.startDay, c.r.endDay, c.sel, { detail: 'denial' })),
   },
   {
+    id: 'appeal_upheld_rate', name: 'Appeal upheld rate', short: 'Upheld rate', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials',
+    definition: 'Share of resolved appeals where the payer upheld the denial (not overturned). For clinical appeals, filter the denial category to Medical necessity and Documentation.',
+    calculation: 'COUNT(appeal WHERE resolved AND NOT overturned) / COUNT(appeal WHERE resolved), by resolution date',
+    sourceFields: ['appeal.status', 'appeal.outcome', 'appeal.resolved_date'], fact: 'acc',
+    compute: (c) => {
+      const res = c.e.sum('acc', 'apl', 'closeD', c.r.startDay, c.r.endDay, c.sel, { detail: 'denial' });
+      return div(res - s(c, 'aplOvt', 'closeD', { detail: 'denial' }), res);
+    },
+  },
+  {
+    id: 'appeals_filed', name: 'Appeals filed', area: 'Denials', unit: 'count', direction: 'none', type: 'flow', page: 'denials',
+    definition: 'Denials appealed, by denial date (new appeal volume). For clinical appeals, filter the denial category.',
+    calculation: 'COUNT(denial WHERE appealed), by denial date',
+    sourceFields: ['appeal.status', 'claim_denial.denial_date'], fact: 'acc',
+    compute: (c) => s(c, 'apl', 'denD', { detail: 'denial' }),
+  },
+  {
+    id: 'appeals_resolved', name: 'Appeals resolved', area: 'Denials', unit: 'count', direction: 'none', type: 'flow', page: 'denials',
+    definition: 'Appeals closed in the period (overturned or upheld).',
+    calculation: 'COUNT(appeal WHERE resolved_date IN period)',
+    sourceFields: ['appeal.resolved_date'], fact: 'acc',
+    compute: (c) => c.e.sum('acc', 'apl', 'closeD', c.r.startDay, c.r.endDay, c.sel, { detail: 'denial' }),
+  },
+  {
+    id: 'appeals_open', name: 'Open appeals', area: 'Denials', unit: 'count', direction: 'down', type: 'balance', page: 'denials',
+    definition: 'Denials marked for appeal and not yet resolved at period end (to be appealed, 1st and 2nd level).',
+    calculation: 'COUNT(appeal WHERE filed AND NOT resolved) at period end',
+    sourceFields: ['appeal.status'], fact: 'acc',
+    compute: (c) => { const st = appealStatusCounts(c.e, endOf(c), c.sel); return st[1] + st[2] + st[3]; },
+  },
+  {
     id: 'denial_writeoffs', name: 'Denial write-offs', area: 'Denials', unit: 'usd', direction: 'down', type: 'flow', page: 'denials',
     definition: 'Expected net revenue written off after a final denial, by write-off date.',
     calculation: 'SUM(transaction.amount) WHERE type = DENIAL_WRITE_OFF AND post_date IN period',
@@ -465,6 +588,20 @@ export const METRICS: MetricDef[] = [
     compute: (c) => s(c, '__one', 'sbd'),
   },
   {
+    id: 'claims_submitted_dollars', name: 'Claims submitted ($)', short: 'Submitted $', area: 'Billing', unit: 'usd', direction: 'none', type: 'flow', page: 'billing',
+    definition: 'Gross charges on claims exported from the scrubber to payers in the period.',
+    calculation: 'SUM(claim.gross_charges) WHERE submit_date IN period',
+    sourceFields: ['claim.gross_charges', 'claim.submit_date'], fact: 'acc',
+    compute: (c) => submittedGross(c),
+  },
+  {
+    id: 'first_pass_yield', name: 'First pass yield', short: 'First pass yield', area: 'Billing', unit: 'pct', direction: 'up', type: 'flow', page: 'billing',
+    definition: 'Share of adjudicated insurance claims that passed edits on the first submission, were not denied, and were paid. Prototype: a claim with no scrubber edit stands in for "no 277 rejection".',
+    calculation: 'COUNT(claim WHERE no edit AND no 277 rejection AND no denial AND paid) / COUNT(claim adjudicated), by submit date',
+    sourceFields: ['claim_edit.category', 'claim_status_277.status', 'claim_denial.denial_date', 'transaction.amount'], multiDef: true, fact: 'acc',
+    compute: (c) => div(s(c, 'fpy', 'sbd'), s(c, 'adjud', 'sbd')),
+  },
+  {
     id: 'billing_lag', name: 'Billing lag (final bill to submit)', short: 'Billing lag', area: 'Billing', unit: 'days', direction: 'down', type: 'flow', page: 'billing',
     definition: 'Average days from final bill to claim submission, for claims submitted in the period.',
     calculation: 'AVG(submit_date − final_bill_date) WHERE submit_date IN period',
@@ -492,6 +629,20 @@ export const METRICS: MetricDef[] = [
     calculation: 'DNSP $ (period end) / (SUM(gross_charges, last 90 days) / 90)',
     sourceFields: ['dnfb_snapshot.gross_amount', 'dnfb_snapshot.stage'], fact: 'dnfb',
     compute: (c) => { const v = dnfb(c, 1); return v === null ? null : div(v, adgr(c, dnfbDay(c)!)); },
+  },
+  {
+    id: 'dnsp_dollars', name: 'Billed not submitted ($)', short: 'DNSP $', area: 'Billing', unit: 'usd', direction: 'down', type: 'balance', page: 'billing',
+    definition: 'Gross charges on final-billed claims not yet exported to the payer (open scrubber edits) at period end.',
+    calculation: 'SUM(dnfb_snapshot.gross_amount) WHERE stage = DNSP AND snapshot_date = period end',
+    sourceFields: ['dnfb_snapshot.gross_amount', 'dnfb_snapshot.stage'], fact: 'dnfb',
+    compute: (c) => dnfb(c, 1),
+  },
+  {
+    id: 'dnsp_accounts', name: 'Billed claims not submitted', short: 'DNSP claims', area: 'Billing', unit: 'count', direction: 'down', type: 'balance', page: 'billing',
+    definition: 'Final-billed claims with no export to the payer (open scrubber edits) at period end.',
+    calculation: 'COUNT(dnfb_snapshot.account) WHERE stage = DNSP AND snapshot_date = period end',
+    sourceFields: ['dnfb_snapshot.stage'], fact: 'dnfb',
+    compute: (c) => dnfb(c, 1, { col: 'count' }),
   },
   {
     id: 'unbilled_accounts', name: 'Unbilled accounts (DNFB)', short: 'Unbilled accounts', area: 'Billing', unit: 'count', direction: 'down', type: 'balance', page: 'billing',
@@ -530,6 +681,20 @@ export const METRICS: MetricDef[] = [
     compute: (c) => s(c, 'missAmt', 'dd'),
   },
   {
+    id: 'late_charges_dollars', name: 'Late charges ($)', short: 'Late charges $', area: 'Charge Capture', unit: 'usd', direction: 'down', type: 'flow', page: 'midcycle',
+    definition: 'Charges posted after the final bill, for accounts discharged in the period.',
+    calculation: 'SUM(charge.amount WHERE post_date > final_bill_date), by discharge date',
+    sourceFields: ['charge.amount', 'charge.post_date', 'account.final_bill_date'], fact: 'acc',
+    compute: (c) => s(c, 'lateAmt', 'dd'),
+  },
+  {
+    id: 'missed_charge_rate', name: 'Missed charge rate', area: 'Charge Capture', unit: 'pct', direction: 'down', type: 'flow', page: 'midcycle', digits: 2,
+    definition: 'Charges found missing by charge reconciliation, as a share of gross charges.',
+    calculation: 'SUM(charge.amount WHERE source = RECONCILIATION) / SUM(gross_charges), by discharge date',
+    sourceFields: ['charge.amount', 'charge.source'], fact: 'acc',
+    compute: (c) => div(s(c, 'missAmt', 'dd'), gross(c)),
+  },
+  {
     id: 'charges_posted', name: 'Charges posted', area: 'Charge Capture', unit: 'usd', direction: 'none', type: 'flow', page: 'midcycle',
     definition: 'Gross charges captured for accounts discharged in the period.',
     calculation: 'SUM(charge.amount) WHERE discharge_date IN period',
@@ -550,6 +715,13 @@ export const METRICS: MetricDef[] = [
     calculation: 'AVG(coded_date − discharge_date) WHERE patient_type = Inpatient AND coded_date IN period',
     sourceFields: ['account.coded_date', 'account.patient_type'], fact: 'acc',
     compute: (c) => div(s(c, 'codeL', 'codeD', { pred: 'inpatient' }), s(c, '__one', 'codeD', { pred: 'inpatient' })),
+  },
+  {
+    id: 'final_coded_volume', name: 'Final coded accounts', short: 'Final coded', area: 'Coding', unit: 'count', direction: 'none', type: 'flow', page: 'midcycle',
+    definition: 'Accounts final coded in the period. Split by type with the patient type filter.',
+    calculation: 'COUNT(account) WHERE coded_date IN period',
+    sourceFields: ['account.coded_date'], fact: 'acc',
+    compute: (c) => s(c, '__one', 'codeD'),
   },
   {
     id: 'coding_denial_rate', name: 'Coding denial rate', area: 'Coding', unit: 'pct', direction: 'down', type: 'flow', page: 'midcycle', digits: 2,
@@ -598,11 +770,54 @@ export const METRICS: MetricDef[] = [
     sourceFields: ['claim_edit.category', 'claim.submit_date'], fact: 'acc',
     compute: (c) => { const n = s(c, '__one', 'sbd'); return n > 0 ? 1 - s(c, 'regErr', 'sbd') / n : null; },
   },
+  {
+    id: 'registration_edits', name: 'Registration edits', area: 'Patient Access', unit: 'count', direction: 'down', type: 'flow', page: 'access',
+    definition: 'Claims that failed a registration or demographic edit, by submit date. Stand-in for RQA edit volume until the registration quality (RQA) feed is loaded.',
+    calculation: 'COUNT(claim WHERE edit_category = Registration), by submit date',
+    sourceFields: ['claim_edit.category', 'claim.submit_date'], fact: 'acc',
+    compute: (c) => s(c, 'regErr', 'sbd'),
+  },
   feMetric('fin_clearance_rate', 'Financial clearance rate', 'Financial clearance', 'pct', 'up', 'Share of scheduled patients financially cleared (eligibility, benefits, estimate and authorization) before service.', 'finCleared', 'finClearDue'),
   feMetric('prereg_rate', 'Pre-registration rate', 'Pre-registration', 'pct', 'up', 'Share of scheduled encounters pre-registered at least 24 hours before service.', 'preRegDone', 'preRegDue'),
   feMetric('scheduled_rate', 'Order scheduling rate', 'Scheduled rate', 'pct', 'up', 'Share of received orders that are scheduled.', 'ordersScheduled', 'ordersReceived'),
   feCountMetric('scheduled_volume', 'Scheduled volume', 'Appointments scheduled from orders in the period.', 'ordersScheduled'),
   feCountMetric('orders_received', 'Orders received', 'Orders received for scheduled services.', 'ordersReceived'),
+  {
+    id: 'scheduled_rate_final', name: 'Order scheduling rate (final outcomes)', short: 'Scheduled rate (final)', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access',
+    definition: 'Orders scheduled, as a share of orders with a final outcome (scheduled, cancelled or leaked to another provider). Orders still in process, duplicates and orders already scheduled are left out.',
+    calculation: 'SUM(orders_scheduled) / SUM(orders_scheduled + orders_cancelled + orders_leakage), by date',
+    sourceFields: ['scheduling_daily.orders_scheduled', 'scheduling_daily.orders_cancelled', 'scheduling_daily.orders_leakage'], multiDef: true, fact: 'fe',
+    compute: (c) => (c.e.feHasCol('ordersCancelled', c.sel) ? div(fe(c, 'ordersScheduled'), fe(c, 'ordersScheduled') + fe(c, 'ordersCancelled') + fe(c, 'ordersLeakage')) : null),
+  },
+  {
+    id: 'orders_closed_unscheduled', name: 'Orders closed without scheduling', short: 'Closed unscheduled', area: 'Patient Access', unit: 'count', direction: 'none', type: 'flow', page: 'access',
+    definition: 'Orders closed with no appointment: duplicate, already scheduled, leaked to another provider, or cancelled.',
+    calculation: 'SUM(orders_duplicate + orders_already_scheduled + orders_leakage + orders_cancelled), by date',
+    sourceFields: ['scheduling_daily.order_outcome'], fact: 'fe',
+    compute: (c) => (c.e.feHasCol('ordersCancelled', c.sel) ? ORDER_OUTCOMES.reduce((t, o) => t + fe(c, o.col), 0) : null),
+  },
+  {
+    id: 'open_orders_24h_pct', name: 'Open orders in process > 24 hours', short: 'Open orders > 24h', area: 'Patient Access', unit: 'pct', direction: 'down', type: 'balance', page: 'access',
+    definition: 'Share of open orders (to be scheduled) that have been in process for more than 24 hours, at period end.',
+    calculation: 'open_orders_over_24h_eod / open_orders_eod on the last day of the period',
+    sourceFields: ['scheduling_daily.open_orders_over_24h_eod', 'scheduling_daily.open_orders_eod'], fact: 'fe',
+    compute: (c) => {
+      if (!c.e.feHasCol('openOrders24hEod', c.sel)) return null;
+      const d = Math.min(c.r.endDay, c.e.lastDay);
+      return div(c.e.snapshot('fe', 'openOrders24hEod', d, c.sel), c.e.snapshot('fe', 'openOrdersEod', d, c.sel));
+    },
+  },
+  {
+    id: 'schedule_lead_time', name: 'Average scheduling lead time', short: 'Lead time', area: 'Patient Access', unit: 'days', direction: 'none', type: 'flow', page: 'access',
+    definition: 'Average days from scheduling to the appointment, for appointments scheduled in the period.',
+    calculation: 'SUM(schedule_days) / SUM(orders_scheduled), by date',
+    sourceFields: ['scheduling_daily.schedule_days_sum', 'scheduling_daily.orders_scheduled'], fact: 'fe',
+    compute: (c) => feRatio(c, 'scheduleDaysSum', 'ordersScheduled'),
+  },
+  feMetric('lead_time_3plus_pct', '% scheduled with lead time 3+ days', 'Lead time 3+ days', 'pct', 'up', 'Share of appointments scheduled 3 or more days before the date of service.', 'ordersScheduled3Plus', 'ordersScheduled'),
+  feMetric('prereg_rate_72h', 'Pre-registration finalization rate (72 hours)', 'Pre-reg 72h', 'pct', 'up', 'Share of scheduled encounters with pre-registration finalized at least 72 hours before service.', 'preRegDone72', 'preRegDue'),
+  feMetric('scheduled_under_72h_pct', '% of accounts scheduled < 72 hours before service', 'Scheduled < 72h', 'pct', 'down', 'Share of scheduled encounters booked less than 72 hours before the date of service (too late for the 72-hour pre-registration and financial clearance windows).', 'scheduledUnder72h', 'preRegDue'),
+  feMetric('fin_clearance_rate_72h', 'Financial clearance rate (72 hours)', 'Fin. clearance 72h', 'pct', 'up', 'Share of scheduled patients financially cleared at least 72 hours before service.', 'finCleared72', 'finClearDue'),
   {
     id: 'open_orders', name: 'Open orders', area: 'Patient Access', unit: 'count', direction: 'down', type: 'balance', page: 'access',
     definition: 'Orders not yet scheduled at the end of the last day of the period.',
@@ -624,6 +839,44 @@ export const METRICS: MetricDef[] = [
     sourceFields: ['transaction.amount', 'account.expected_net', 'payer.financial_class'], fact: 'acc',
     compute: (c) => div(s(c, 'pos', 'dd'), s(c, 'net', 'dd', { pred: 'selfPay' })),
   },
+  {
+    id: 'pos_yield', name: 'POS collection yield (vs estimate)', short: 'POS yield', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access',
+    definition: 'Point-of-service cash as a share of the estimated patient liability, on accounts with an estimate. Prototype: estimates exist for self-pay accounts only.',
+    calculation: 'SUM(POS cash WHERE estimate exists) / SUM(estimated patient liability), by service date',
+    sourceFields: ['transaction.amount', 'transaction.pos_flag', 'estimate.patient_liability'], fact: 'acc',
+    compute: (c) => div(s(c, 'posEst', 'dd'), s(c, 'estLiab', 'dd')),
+  },
+  {
+    id: 'pos_estimate_accuracy', name: 'POS estimate accuracy', short: 'Estimate accuracy', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access',
+    definition: 'Share of patient liability estimates within 10% of the final patient liability.',
+    calculation: 'COUNT(estimate WHERE ABS(estimate − final liability) ≤ 10% × final liability) / COUNT(estimate), by service date',
+    sourceFields: ['estimate.patient_liability', 'account.patient_liability'], multiDef: true, fact: 'acc',
+    compute: (c) => div(s(c, 'estOk', 'dd'), s(c, 'estCnt', 'dd')),
+  },
+  {
+    id: 'pos_missed_residual_pct', name: 'Missed POS opportunity (known residual)', short: 'Missed POS %', area: 'Patient Access', unit: 'pct', direction: 'down', type: 'flow', page: 'access',
+    definition: 'Known patient liability (estimate) not collected at the point of service, as a share of the estimate.',
+    calculation: 'SUM(MAX(0, estimate − POS cash)) / SUM(estimate), by service date',
+    sourceFields: ['estimate.patient_liability', 'transaction.amount', 'transaction.pos_flag'], multiDef: true, fact: 'acc',
+    compute: (c) => div(s(c, 'estResid', 'dd'), s(c, 'estLiab', 'dd')),
+  },
+  { ...feCountMetric('call_volume', 'Inbound calls (patient access)', 'Inbound calls offered to the patient access line.', 'callsOffered'), short: 'Inbound calls' },
+  { ...feCountMetric('calls_outbound', 'Outbound calls (patient access)', 'Outbound calls made by patient access staff.', 'callsOutbound'), short: 'Outbound calls' },
+  {
+    id: 'call_volume_total', name: 'Total call volume (all lines, inbound + outbound)', short: 'Total calls', area: 'Patient Access', unit: 'count', direction: 'none', type: 'flow', page: 'access',
+    definition: 'Inbound and outbound calls on all in-scope lines: patient access (front end) and the business office customer service line (back end).',
+    calculation: 'SUM(calls_offered + calls_outbound + cbo_calls_offered), by date',
+    sourceFields: ['contact_center_daily.calls_offered', 'contact_center_daily.calls_outbound', 'contact_center_daily.line'], fact: 'fe',
+    compute: (c) => fe(c, 'callsOffered') + fe(c, 'callsOutbound') + fe(c, 'cboCallsOffered'),
+  },
+  {
+    id: 'call_abandon_rate_all', name: 'Call abandonment rate (all lines)', short: 'Abandonment (all)', area: 'Patient Access', unit: 'pct', direction: 'down', type: 'flow', page: 'access',
+    definition: 'Share of inbound calls on all in-scope lines (front end and back end) that end before an answer.',
+    calculation: 'SUM(calls_abandoned) / SUM(calls_offered), all lines, by date',
+    sourceFields: ['contact_center_daily.calls_abandoned', 'contact_center_daily.calls_offered', 'contact_center_daily.line'], fact: 'fe',
+    compute: (c) => div(fe(c, 'callsAbandoned') + fe(c, 'cboCallsAbandoned'), fe(c, 'callsOffered') + fe(c, 'cboCallsOffered')),
+  },
+  feMetric('cbo_call_abandon_rate', 'Call abandonment rate (business office line)', 'Abandonment (CBO)', 'pct', 'down', 'Share of calls to the business office customer service line (back end) that end before an answer.', 'cboCallsAbandoned', 'cboCallsOffered'),
   feMetric('call_abandon_rate', 'Call abandonment rate', 'Call abandonment', 'pct', 'down', 'Share of calls to the patient access line that end before an answer.', 'callsAbandoned', 'callsOffered'),
   {
     id: 'asa', name: 'Average speed to answer', short: 'Speed to answer', area: 'Patient Access', unit: 'sec', direction: 'down', type: 'flow', page: 'access',
@@ -632,6 +885,15 @@ export const METRICS: MetricDef[] = [
     sourceFields: ['contact_center_daily.answer_wait_seconds', 'contact_center_daily.calls_answered'], fact: 'fe',
     compute: (c) => feRatio(c, 'answerWaitSecs', 'callsAnswered'),
   },
+  { ...feCountMetric('medicaid_in_scope', 'Uninsured accounts in scope (Medicaid E&E)', 'Self-pay (uninsured) accounts in scope for Medicaid eligibility screening.', 'selfPayAccounts'), short: 'Uninsured in scope' },
+  {
+    id: 'medicaid_screening_rate', name: 'Medicaid screening rate', short: 'Screening rate', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access',
+    definition: 'Share of in-scope uninsured accounts screened for Medicaid eligibility, excluding accounts where all contact efforts are exhausted.',
+    calculation: 'SUM(screened) / (SUM(self_pay_accounts) − SUM(efforts_exhausted)), by date',
+    sourceFields: ['eligibility_screening.screened', 'eligibility_screening.self_pay_accounts', 'eligibility_screening.efforts_exhausted'], fact: 'fe',
+    compute: (c) => div(fe(c, 'screened'), fe(c, 'selfPayAccounts') - fe(c, 'effortsExhausted')),
+  },
+  feMetric('medicaid_eligible_completion', 'Medicaid eligible completion rate', 'Eligible completion', 'pct', 'up', 'Share of patients likely eligible for Medicaid whose application was completed.', 'applicationsCompleted', 'medicaidEligible'),
   feMetric('coverage_found_rate', 'Coverage discovery rate', 'Coverage found', 'pct', 'none', 'Share of screened self-pay accounts where insurance or program coverage was found.', 'coverageFound', 'screened'),
 ];
 

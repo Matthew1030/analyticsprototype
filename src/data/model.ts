@@ -46,14 +46,20 @@ export type AccCol =
   | 'fbd' | 'sbd' | 'sbL' | 'edit' | 'clean' | 'regErr'
   | 'rc' | 'cat' | 'recov' | 'denD' | 'denAmt' | 'denNet' | 'apl' | 'aplOvt' | 'ovt'
   | 'payD' | 'payAmt' | 'payExp' | 'pos' | 'woD' | 'woAmt' | 'bdD' | 'bdAmt' | 'chD' | 'chAmt'
-  | 'closeD' | 'pend';
+  | 'closeD' | 'pend'
+  // Client KPI inventory: POS estimates, first pass yield, retractions, appeal level.
+  | 'estLiab' | 'estCnt' | 'estOk' | 'posEst' | 'estResid' | 'fpy' | 'adjud' | 'retD' | 'retAmt' | 'aplLvl';
 export type ArCol = 'day' | 'fac' | 'payer' | 'svc' | 'age' | 'status' | 'gross' | 'net' | 'count';
 export type DnfbCol = 'day' | 'fac' | 'svc' | 'hold' | 'age' | 'stage' | 'amount' | 'count';
 export type FeCol =
   | 'day' | 'fac' | 'ordersReceived' | 'ordersScheduled' | 'scheduleDaysSum' | 'openOrdersEod'
   | 'preRegDue' | 'preRegDone' | 'eligDue' | 'eligVerified' | 'authRequired' | 'authObtained' | 'authPreService'
   | 'finClearDue' | 'finCleared' | 'callsOffered' | 'callsAnswered' | 'callsAbandoned' | 'answerWaitSecs'
-  | 'selfPayAccounts' | 'screened' | 'coverageFound';
+  | 'selfPayAccounts' | 'screened' | 'coverageFound'
+  | 'callsOutbound' | 'cboCallsOffered' | 'cboCallsAnswered' | 'cboCallsAbandoned'
+  | 'openOrders24hEod' | 'ordersScheduled3Plus' | 'scheduledUnder72h' | 'preRegDone72' | 'finCleared72'
+  | 'ordersDuplicate' | 'ordersCancelled' | 'ordersLeakage' | 'ordersAlreadyScheduled'
+  | 'effortsExhausted' | 'medicaidEligible' | 'applicationsCompleted';
 export type OpsCol = 'day' | 'fac' | 'rcmCost';
 
 export interface Dataset {
@@ -90,6 +96,7 @@ function expandAccounts(raw: Record<string, number[]>, dims: Dims): Fact<AccCol>
     'id', 'fac', 'payer', 'fc', 'svc', 'pt', 'dd', 'gross', 'net', 'chgLag', 'lateAmt', 'missAmt', 'codeD', 'codeL',
     'qry', 'hold', 'fbd', 'sbd', 'sbL', 'edit', 'clean', 'regErr', 'rc', 'cat', 'recov', 'denD', 'denAmt', 'denNet',
     'apl', 'aplOvt', 'ovt', 'payD', 'payAmt', 'payExp', 'pos', 'woD', 'woAmt', 'bdD', 'bdAmt', 'chD', 'chAmt', 'closeD', 'pend',
+    'estLiab', 'estCnt', 'estOk', 'posEst', 'estResid', 'fpy', 'adjud', 'retD', 'retAmt', 'aplLvl',
   ];
   const o = Object.fromEntries(cols.map((c) => [c, new Float64Array(n)])) as Record<AccCol, Float64Array>;
   const ptIndex = (svc: number) => dims.patientTypes.indexOf(dims.serviceLines[svc].patientType);
@@ -131,6 +138,20 @@ function expandAccounts(raw: Record<string, number[]>, dims: Dims): Fact<AccCol>
     // Self-pay accounts close at the bad debt or charity transfer; insured accounts at payment or write-off.
     o.closeD[i] = woD >= 0 ? woD : relD >= 0 ? relD : !selfPay && payD >= 0 ? payD : -1;
     o.pend[i] = raw.pend[i];
+    // POS estimates: yield, accuracy (within 10% of the final liability) and the residual not collected.
+    const est = raw.estLiab?.[i] ?? 0;
+    o.estLiab[i] = est; o.estCnt[i] = est > 0 ? 1 : 0;
+    o.estOk[i] = est > 0 && Math.abs(est - raw.net[i]) <= 0.1 * raw.net[i] ? 1 : 0;
+    o.posEst[i] = est > 0 ? raw.pos[i] : 0;
+    o.estResid[i] = est > 0 ? Math.max(0, est - raw.pos[i]) : 0;
+    // First pass yield: insurance claims adjudicated (paid or denied) by the data date, and those
+    // that passed edits, were not denied and were paid on the first submission.
+    const adjud = !selfPay && sbd >= 0 && (payD >= 0 || denD >= 0);
+    o.adjud[i] = adjud ? 1 : 0;
+    o.fpy[i] = adjud && o.clean[i] === 1 && denD < 0 && payD >= 0 ? 1 : 0;
+    const retL = raw.retL?.[i] ?? -1;
+    o.retD[i] = at(payD, retL); o.retAmt[i] = o.retD[i] >= 0 ? raw.retAmt[i] : 0;
+    o.aplLvl[i] = raw.aplLvl?.[i] ?? 0;
   }
   return { n, ...o } as Fact<AccCol>;
 }
