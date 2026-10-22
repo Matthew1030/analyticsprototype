@@ -3,9 +3,13 @@
 // (loading, no data, filtered to zero, source unavailable, error) the same way everywhere.
 
 import { useEffect, useState, type ReactNode } from 'react';
+import { visualItemId } from '../config/priorities';
 import { useApp } from '../state/AppState';
+import { usePriorities, usePriorityItem } from '../state/Priorities';
 import { InfoIcon } from './common';
 import { Icon } from './icons';
+import { PriorityPicker } from './Priority';
+import { PAGE_BY_ID } from './Shell';
 import { VisualContext } from './visualContext';
 
 export interface TableData { columns: string[]; rows: (string | number | null)[][] }
@@ -20,6 +24,8 @@ export interface VisualSpec {
 
 interface Props {
   title: string;
+  /** Stable name for release prioritization when the title changes (period, counts, metric). Defaults to the title. */
+  pid?: string;
   subtitle?: ReactNode;
   metricId?: string;
   info?: ReactNode;
@@ -34,8 +40,12 @@ interface Props {
   children: ReactNode;
 }
 
-export function Visual({ title, subtitle, metricId, info, spec, table, actions, noData, source, className, children }: Props) {
-  const { sim, specMode, clearAll, toast, sel } = useApp();
+export function Visual({ title, pid, subtitle, metricId, info, spec, table, actions, noData, source, className, children }: Props) {
+  const { sim, specMode, clearAll, toast, sel, route } = useApp();
+  const { on: prioOn } = usePriorities();
+  const prioName = pid ?? title;
+  const prioId = visualItemId(route.page, prioName);
+  const prio = usePriorityItem({ id: prioId, kind: 'visual', label: prioName, group: PAGE_BY_ID[route.page]?.label ?? route.page, page: route.page });
   const [focus, setFocus] = useState(false);
   const [asTable, setAsTable] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -81,12 +91,13 @@ export function Visual({ title, subtitle, metricId, info, spec, table, actions, 
   return (
     <VisualContext.Provider value={{ focus }}>
       {focus && <div className="focus-backdrop" onClick={() => setFocus(false)} />}
-      <section className={`visual ${focus ? 'visual-focus' : ''} ${className ?? ''}`} aria-label={title}>
+      <section className={`visual ${focus ? 'visual-focus' : ''} ${prio.cls} ${className ?? ''}`} aria-label={title}>
         <header className="visual-head">
           <div className="visual-titles">
             <h3>{title}</h3>
             {subtitle && <div className="visual-sub">{subtitle}</div>}
           </div>
+          {prioOn && <PriorityPicker id={prioId} label={prioName} tier={prio.tier} inherited={prio.inherited} />}
           <div className="visual-tools no-print">
             {actions}
             {(metricId || info) && <InfoIcon metricId={metricId} text={info} title={title} />}

@@ -143,8 +143,8 @@ export function Scorecard({ ids, title, groupByArea = true, selOverride, spec, s
 
 // ---------------------------------------------------------------- Trend
 
-export function TrendVisual({ id: idProp, alt, months = 18, title, height = 240, selOverride, compareSel, compareLabel }: {
-  id: string; alt?: string[]; months?: number; title?: string; height?: number; selOverride?: Selections; compareSel?: Selections; compareLabel?: string;
+export function TrendVisual({ id: idProp, alt, months = 18, title, pid, height = 240, selOverride, compareSel, compareLabel }: {
+  id: string; alt?: string[]; months?: number; title?: string; pid?: string; height?: number; selOverride?: Selections; compareSel?: Selections; compareLabel?: string;
 }) {
   const { engine, period, sel, setPeriod } = useApp();
   const [id, measure] = useMeasure(idProp, alt);
@@ -165,7 +165,7 @@ export function TrendVisual({ id: idProp, alt, months = 18, title, height = 240,
   const sIdx = t.findIndex((x) => x.period === `${Math.floor(period.endMi / 12)}-${String((period.endMi % 12) + 1).padStart(2, '0')}`);
   const noData = t.every((x) => x.value === null) ? 'No data for the current filters.' : null;
   return (
-    <Visual title={title ?? `${m.name} trend`} metricId={id} noData={noData}
+    <Visual title={title ?? `${m.name} trend`} pid={pid ?? title ?? `${METRIC_BY_ID[idProp].name} trend`} metricId={id} noData={noData}
       subtitle={`Monthly, ${t.length} months to ${period.short} · click a month to set the period`}
       table={{ columns: ['Month', m.name, 'Target', 'Prior year', 'Rolling 3-month'], rows: t.map((x) => [x.label, fm(x.value), fm(x.target), fm(x.prior_year), fm(x.rolling_3)]) }}
       actions={(
@@ -185,8 +185,8 @@ export function TrendVisual({ id: idProp, alt, months = 18, title, height = 240,
 
 // ---------------------------------------------------------------- Breakdown (click to filter)
 
-export function BreakdownVisual({ id: idProp, alt, dim: dimProp, dims, title, height, top, showCompare = true, sortBy = 'value', subtitle, onDrill, spec, filterField }: {
-  id: string; alt?: string[]; dim: DimensionId; dims?: DimensionId[]; title?: string; height?: number; top?: number; showCompare?: boolean;
+export function BreakdownVisual({ id: idProp, alt, dim: dimProp, dims, title, pid, height, top, showCompare = true, sortBy = 'value', subtitle, onDrill, spec, filterField }: {
+  id: string; alt?: string[]; dim: DimensionId; dims?: DimensionId[]; title?: string; pid?: string; height?: number; top?: number; showCompare?: boolean;
   sortBy?: 'value' | 'natural' | 'change'; subtitle?: string; onDrill?: (key: number) => void; spec?: VisualSpec;
   /** Field that a click filters (defaults to the dimension). */
   filterField?: SelField;
@@ -211,7 +211,8 @@ export function BreakdownVisual({ id: idProp, alt, dim: dimProp, dims, title, he
   const noData = list.length === 0 ? (evaluateReason(rows) ?? 'No data for the current filters.') : null;
   const cmpName = compare === 'py' ? 'Prior year' : 'Prior period';
   return (
-    <Visual title={title ?? `${m.short ?? m.name} by ${DIMENSION_LABEL[dim].toLowerCase()}`} metricId={id} noData={noData}
+    <Visual title={title ?? `${m.short ?? m.name} by ${DIMENSION_LABEL[dim].toLowerCase()}`} metricId={id}
+      pid={pid ?? title ?? `${METRIC_BY_ID[idProp].short ?? METRIC_BY_ID[idProp].name} by ${DIMENSION_LABEL[dimProp].toLowerCase()}`} noData={noData}
       subtitle={subtitle ?? `${period.label} · click to ${mode === 'drill' ? 'drill through' : 'filter'}${more ? ` · top ${top} of ${top! + more}` : ''}`}
       actions={<>{measure}{dims ? (
         <select className="sel-xs" value={dim} onChange={(e) => setDim(e.target.value as DimensionId)} aria-label="Break down by">

@@ -75,7 +75,7 @@ function MonthPace() {
   const pct = goal ? end / goal : null;
   const st = statusOf(end, goal, 'up', goal * 0.97);
   return (
-    <Visual title={`Month-to-date pace, ${cur.label}`} metricId="cash"
+    <Visual title={`Month-to-date pace, ${cur.label}`} pid="Month-to-date pace" metricId="cash"
       subtitle={<>Cumulative cash by day of month · {usd(end)} of {usd(goal)} goal ({fmt(pct, 'pct', 1)}) <StatusMark status={st} /></>}
       table={{ columns: ['Day', cur.short, prev.short, 'Goal pace'], rows: labels.map((l, i) => [l, usd(series.cur[i] ?? 0), usd(series.prev[i] ?? 0), usd(pace[i])]) }}
       spec={{ type: 'Cumulative line chart vs goal pace', metrics: ['cash', 'cash_goal'], dimensions: ['Day of month'], interactions: 'Follows the report month; hover for daily values' }}>

@@ -184,6 +184,37 @@ the prototype are kept in the browser only.
 4. **DNFB**: coding backlog at Riverbend; unassigned holds and late charges at Lakeside General.
 5. **Cash**: cash runs below goal as A/R builds; YTD by hospital shows who is behind.
 
+## Release prioritization (facilitated session)
+
+A prototype-only tool to decide, live with business leaders, what goes into each release. One person
+(the facilitator) drives the screen. The scale combines release and MoSCoW:
+
+| Choice | Release | MoSCoW |
+|---|---|---|
+| v1 | v1 (MVP) | Must |
+| v2 | v2 | Should |
+| v3+ | v3+ | Could |
+| Won't | Not planned | Won't |
+
+1. Click **Prioritize** in the prototype controls bar. Each visual and each ELT Summary section gets a
+   release picker; unrated items have a dashed outline. A second click on the current choice clears it.
+2. The floating **Release priorities** dock rates **this page**. A visual with no rating of its own takes
+   its page's rating (shown as a pale choice); a rating on the visual overrides it.
+3. KPIs: the ELT framework metrics (ELT Summary › Performance vs. Target) and every row of
+   Definitions › Client KPI coverage get a picker. Product capabilities (drill-through, CSV export,
+   bookmarks, Internal / External views, data states and more) are in **Summary › Capabilities**.
+4. **Preview release** (v1, v1–v2, v1–v3+) dims the visuals outside that release, or hides them with
+   **Hide others**, so leaders see what the release looks like. The preview stays on when Prioritize is off.
+5. **Summary** shows the page rollup (counts per release for each page, KPI group and capability group),
+   every item with a note field, and the file actions. Visual counts include only the visuals opened so
+   far; **Open every page once** lists them all (visuals behind a sub-tab or switch need a manual visit).
+
+Saving: every change is saved in the browser at once, so a page refresh keeps it. The browser warns
+before you close or reload the tab when there are changes that are not exported. Use **Export (JSON)**
+or **Export (CSV)** (opens in Excel) to keep a copy outside the browser, and **Load file…** to load
+either file again, for example on another computer. Load replaces the current decisions. **Reset**
+clears everything back to the start: all unset, except the three worklists and worklist actions (v2).
+
 ## Code structure
 
 ```
@@ -201,6 +232,8 @@ src/services/       contracts.ts  response shapes the UI expects from a data ser
                     worklists.ts  worklist items, priority rules, simulated work fields
 src/ui/             Shell, Visual container, Grid (analytical table), charts, widgets
                     (KPI card, scorecard, trend, breakdown, decomposition tree), investigation path
+                    Priority (release prioritization: picker, dock, summary)
+src/config/         priorities.ts  release prioritization model, capability list, export / import formats
 src/pages/          One file per screen (EltSummary, analytics pages, Worklist)
 tests/              Data, reconciliation, planted-pattern and contract tests
 ```

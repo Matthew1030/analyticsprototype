@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { KPI_COVERAGE, type Coverage, type KpiCoverage } from '../config/kpiCoverage';
+import { kpiItemId } from '../config/priorities';
 import type { SelField } from '../engine/engine';
 import { METRIC_BY_ID, METRICS, type MetricDef } from '../engine/metrics';
 import { CONFIG, staticTarget, watchFor } from '../engine/status';
@@ -10,8 +11,10 @@ import { fmt, fmtDate, fmtDateTime } from '../format';
 import { DIMENSION_LABEL, members } from '../services/analytics';
 import type { DimensionId } from '../services/contracts';
 import { useApp, type PageId } from '../state/AppState';
+import { usePriorities } from '../state/Priorities';
 import { Grid, gridExport, type GridColumn } from '../ui/Grid';
 import { Icon } from '../ui/icons';
+import { PriorityPicker } from '../ui/Priority';
 import { CanvasHeader } from '../ui/Shell';
 import { Skeleton, Visual } from '../ui/Visual';
 
@@ -56,7 +59,7 @@ function Catalog() {
   const rows = list.map((m) => ({ id: m.id, data: m }));
   const g = CONFIG.governance;
   return (
-    <Visual title={`Metric catalog (${list.length} metrics)`} subtitle={`Draft definitions · owner ${g.owner} · version ${g.version} · changed ${g.changeDate} · click a metric to analyze it`}
+    <Visual pid="Metric catalog" title={`Metric catalog (${list.length} metrics)`} subtitle={`Draft definitions · owner ${g.owner} · version ${g.version} · changed ${g.changeDate} · click a metric to analyze it`}
       actions={<span className="search-inline"><Icon name="search" size={12} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search metrics" aria-label="Search metrics" /></span>}
       table={gridExport(cols, rows)}
       spec={{ type: 'Reference table', interactions: 'Search; RCM area filter applies; row click opens Metric Analysis' }}>
@@ -73,6 +76,7 @@ const COVERAGE_CLASS: Record<Coverage, string> = {
 /** Every row of the client's KPI sheet, mapped to the metric or view that answers it. */
 function KpiCoverageTable() {
   const { go } = useApp();
+  const { on: prioOn, decisions } = usePriorities();
   const [show, setShow] = useState<Coverage | 'All'>('All');
   const counts = COVERAGE_ORDER.map((c) => KPI_COVERAGE.filter((k) => k.coverage === c).length);
   const rows = KPI_COVERAGE.map((k, i) => ({ id: String(i), data: { ...k, n: i + 1 } })).filter((r) => show === 'All' || r.data.coverage === show);
@@ -86,9 +90,12 @@ function KpiCoverageTable() {
       render: (r) => <span className="wrap">{r.metrics.map((id) => METRIC_BY_ID[id].name).join(' · ') || <span className="muted">–</span>}</span> },
     { key: 'how', label: 'Where to find it', value: (r) => r.how, align: 'left', render: (r) => <span className="wrap small">{r.how}</span> },
     { key: 'src', label: 'Data the client must supply', value: (r) => r.source ?? '', align: 'left', render: (r) => <span className="wrap small">{r.source ?? ''}</span> },
+    ...(prioOn ? [{ key: 'prio', label: 'Release', align: 'left' as const, width: 150, sortable: false,
+      value: (r: R) => decisions[kpiItemId(r.dashboard, r.kpi)]?.tier ?? '',
+      render: (r: R) => <PriorityPicker id={kpiItemId(r.dashboard, r.kpi)} label={r.kpi} tier={decisions[kpiItemId(r.dashboard, r.kpi)]?.tier} /> }] : []),
   ];
   return (
-    <Visual title={`Client KPI coverage (${KPI_COVERAGE.length} KPIs on the client sheet)`}
+    <Visual pid="Client KPI coverage" title={`Client KPI coverage (${KPI_COVERAGE.length} KPIs on the client sheet)`}
       subtitle={`${COVERAGE_ORDER.map((c, i) => `${counts[i]} ${c === 'KPI not named' ? c : c.toLowerCase()}`).join(' · ')} · click a row to analyze its metric`}
       actions={(
         <select className="sel-xs" value={show} onChange={(e) => setShow(e.target.value as Coverage | 'All')} aria-label="Coverage">

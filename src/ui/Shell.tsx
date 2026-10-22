@@ -11,6 +11,7 @@ import { fmtDate, fmtDateTime } from '../format';
 import { DIMENSION_LABEL, members } from '../services/analytics';
 import { scopeText, useApp, type Audience, type PageId, type Route, type SimState } from '../state/AppState';
 import { Icon } from './icons';
+import { PriorityToggle } from './Priority';
 
 /** The three product experiences: See (ELT Summary), Understand (Analytics), Act (Worklists). */
 export type Section = 'elt' | 'analytics' | 'worklists';
@@ -71,6 +72,7 @@ export function PrototypeBar() {
               title={a.note} onClick={() => setAudience(a.v)}>{a.label}</button>
           ))}
         </div>
+        <PriorityToggle />
         <PrototypeMenu />
       </div>
     </div>

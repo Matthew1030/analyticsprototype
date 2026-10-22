@@ -73,7 +73,7 @@ export function AccountDetail() {
         <div className="kpi static"><div className="kpi-top"><span className="kpi-name">Average days from discharge</span></div><div className="kpi-value">{fmt(avgAge, 'days', 0)}</div></div>
         <div className="kpi static"><div className="kpi-top"><span className="kpi-name">Filters applied</span></div><div className="kpi-row small">{filters.length ? filters.join(' · ') : 'None (all accounts)'}</div></div>
       </div>
-      <Visual title={MODE_LABEL[mode]} subtitle="Sorted by balance · click a row for the account summary · columns sort"
+      <Visual title={MODE_LABEL[mode]} pid="Account list" subtitle="Sorted by balance · click a row for the account summary · columns sort"
         table={gridExport(COLS, rows.map((r) => ({ id: r.account_id, data: r })))}
         noData={rows.length ? null : 'No accounts match the current filters.'}
         info="The prototype stores a 1-in-10 sample of accounts, so this list shows sampled accounts. Aggregate measures elsewhere are scaled to the full population. In production this list is the full set, paged from the data service."
