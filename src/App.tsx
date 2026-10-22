@@ -16,6 +16,8 @@ import { Payers } from './pages/Payers';
 import { RevenueCycle } from './pages/RevenueCycle';
 import { Worklist } from './pages/Worklist';
 import { AppProvider, useApp } from './state/AppState';
+import { PriorityProvider, usePriorities } from './state/Priorities';
+import { PriorityDock } from './ui/Priority';
 import { FilterPane, Header, NavTabs, PrototypeBar, sectionOf, StaleBanner, StatusBar, Toasts } from './ui/Shell';
 
 export default function App() {
@@ -56,18 +58,21 @@ export default function App() {
   }
   return (
     <AppProvider ds={ds}>
-      <Workspace />
+      <PriorityProvider>
+        <Workspace />
+      </PriorityProvider>
     </AppProvider>
   );
 }
 
 function Workspace() {
   const { route, audience } = useApp();
+  const prio = usePriorities();
   // Only Analytics carries the full filter pane. The ELT Summary has a compact period and scope
   // bar; worklists have their own operational filters.
   const section = sectionOf(route.page);
   return (
-    <div className={`app app-${section}`} data-audience={audience}>
+    <div className={`app app-${section} ${prio.on ? 'prio-on' : ''} ${prio.preview !== 'all' ? `prio-preview ${prio.hide ? 'prio-hide' : ''}` : ''}`} data-audience={audience}>
       <PrototypeBar />
       <Header />
       <NavTabs />
@@ -79,6 +84,7 @@ function Workspace() {
         </main>
       </div>
       <StatusBar />
+      <PriorityDock />
       <Toasts />
     </div>
   );

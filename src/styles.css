@@ -665,3 +665,87 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
   .visual { break-inside: avoid; }
   body { background: #fff; }
 }
+
+/* ---------- release prioritization (prototype only, not part of the design) ---------- */
+:root { --p-v1: #5b3cc4; --p-v1-bg: #ece7fb; --p-v2: #0f7486; --p-v2-bg: #e1f2f5; --p-v3: #8a6416; --p-v3-bg: #f6eedb; --p-wont: #5d6470; --p-wont-bg: #e9ebee; }
+.prio-pick { display: inline-flex; flex: none; border: 1px solid var(--line-2); border-radius: var(--r); overflow: hidden; background: var(--surface); vertical-align: middle; }
+.prio-opt { border: none; border-right: 1px solid var(--line); background: transparent; padding: 1px 6px; font-size: 10.5px; line-height: 16px; color: var(--muted); white-space: nowrap; }
+.prio-opt:last-child { border-right: none; }
+.prio-opt:hover { background: var(--surface-2); color: var(--ink); }
+.prio-opt.on, .prio-opt.inh { font-weight: 700; }
+.prio-opt-v1.on { background: var(--p-v1); color: #fff; }
+.prio-opt-v2.on { background: var(--p-v2); color: #fff; }
+.prio-opt-v3.on { background: var(--p-v3); color: #fff; }
+.prio-opt-wont.on { background: var(--p-wont); color: #fff; }
+.prio-opt-v1.inh { background: var(--p-v1-bg); color: var(--p-v1); }
+.prio-opt-v2.inh { background: var(--p-v2-bg); color: var(--p-v2); }
+.prio-opt-v3.inh { background: var(--p-v3-bg); color: var(--p-v3); }
+.prio-opt-wont.inh { background: var(--p-wont-bg); color: var(--p-wont); }
+.visual-head .prio-pick { margin-top: 1px; }
+.elt-sec-head .prio-pick { margin-right: auto; align-self: center; }
+
+/* Colored edge on each rated item; dashed edge on unrated items. */
+.prio-item { box-shadow: -3px 0 0 0 var(--prio-edge, transparent); }
+.visual.prio-unset, .elt-sec.prio-unset { outline: 1px dashed #b7bec9; outline-offset: 1px; }
+.prio-v1 { --prio-edge: var(--p-v1); }
+.prio-v2 { --prio-edge: var(--p-v2); }
+.prio-v3 { --prio-edge: var(--p-v3); }
+.prio-wont { --prio-edge: var(--p-wont); }
+
+/* Release preview: items outside the release are dimmed or hidden. */
+.prio-preview .prio-out { opacity: .16; filter: grayscale(1); transition: opacity .15s; }
+.prio-preview .prio-out:hover { opacity: .45; }
+.prio-preview.prio-hide .prio-out { display: none; }
+
+/* Facilitator dock */
+.prio-on .canvas { padding-bottom: 64px; }
+.prio-dock { position: fixed; z-index: 45; left: 50%; bottom: 32px; transform: translateX(-50%); max-width: calc(100vw - 24px);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px 10px; font-size: 11.5px; color: #4a3b12;
+  background: repeating-linear-gradient(-45deg, #fbefc9 0 10px, #f7e6b2 10px 20px); border: 2px dashed #c79a2b; border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(16,24,32,.22); }
+.prio-dock-title { font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 10.5px; background: #4a3b12; color: #fbefc9; padding: 2px 8px; border-radius: var(--r); white-space: nowrap; }
+.prio-dock-group { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.prio-dock-label { font-weight: 600; }
+.prio-seg button { font-size: 11px; padding: 1px 8px; }
+.prio-check { display: inline-flex; align-items: center; gap: 3px; }
+.prio-counts { display: inline-flex; gap: 4px; }
+.prio-count { padding: 1px 6px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line-2); white-space: nowrap; }
+.prio-count.prio-opt-v1 { color: var(--p-v1); } .prio-count.prio-opt-v2 { color: var(--p-v2); }
+.prio-count.prio-opt-v3 { color: var(--p-v3); } .prio-count.prio-opt-wont { color: var(--p-wont); }
+.prio-count-unset { color: var(--muted); }
+.prio-save { font-size: 10.5px; color: #6b5a24; }
+.prio-save.warn { color: var(--off); font-weight: 600; }
+
+/* Summary drawer */
+.prio-drawer-wrap { position: fixed; inset: 0; z-index: 70; }
+.prio-drawer-backdrop { position: absolute; inset: 0; background: rgba(16,24,32,.28); }
+.prio-drawer { position: absolute; top: 0; right: 0; bottom: 0; width: min(760px, 100vw); background: var(--surface); box-shadow: -8px 0 28px rgba(16,24,32,.25);
+  display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; overflow: hidden; }
+.prio-drawer-head { display: flex; justify-content: space-between; gap: 12px; }
+.prio-drawer-head h2 { font-size: 15px; margin: 0 0 2px; }
+.prio-drawer-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.prio-filter { display: flex; gap: 6px; }
+.prio-search { font-size: 12px; padding: 2px 6px; border: 1px solid var(--line-2); border-radius: var(--r); flex: 1; min-width: 0; }
+.prio-list, .prio-rollup { overflow: auto; flex: 1; min-height: 0; display: grid; gap: 10px; align-content: start; }
+.prio-list h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 4px 0; position: sticky; top: 0; background: var(--surface); padding: 2px 0; }
+.prio-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(120px, 200px); align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.prio-row-page { background: var(--surface-2); font-weight: 600; }
+.prio-kind { display: inline-block; min-width: 70px; margin-right: 6px; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-weight: 400; }
+.prio-note { font-size: 11.5px; padding: 2px 5px; border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.prio-empty { padding: 12px 0; }
+.prio-table { width: 100%; }
+.prio-table td, .prio-table th { padding: 3px 6px; }
+.prio-num { font-weight: 700; }
+.prio-num.prio-opt-v1 { color: var(--p-v1); } .prio-num.prio-opt-v2 { color: var(--p-v2); }
+.prio-num.prio-opt-v3 { color: var(--p-v3); } .prio-num.prio-opt-wont { color: var(--p-wont); }
+@media (max-width: 860px) {
+  .prio-dock { bottom: 8px; }
+  .prio-row { grid-template-columns: minmax(0, 1fr); }
+}
+@media print { .prio-pick, .prio-dock, .prio-drawer-wrap { display: none !important; } }
+.prio-select { font-size: 11px; padding: 0 2px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--surface); color: var(--muted); }
+.prio-select.on { font-weight: 700; color: #fff; }
+.prio-select.prio-opt-v1 { background: var(--p-v1); } .prio-select.prio-opt-v2 { background: var(--p-v2); }
+.prio-select.prio-opt-v3 { background: var(--p-v3); } .prio-select.prio-opt-wont { background: var(--p-wont); }
+.prio-select option { background: var(--surface); color: var(--ink); font-weight: 400; }
+.prio-table th:first-child, .prio-table td:first-child, .prio-table th:nth-child(2), .prio-table td:nth-child(2) { text-align: left; }

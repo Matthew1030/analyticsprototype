@@ -58,11 +58,11 @@ export function MetricAnalysis() {
         )} />
       <div className="row cols-4-8">
         <MetricSummary id={id} />
-        <TrendVisual id={id} months={18} height={250} />
+        <TrendVisual id={id} pid="Metric trend" months={18} height={250} />
       </div>
       <div className="row cols-2">
-        <BreakdownVisual id={id} dim="facility" title={`${m.short ?? m.name} by hospital`} onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
-        <BreakdownVisual key={id} id={id} dim={dims.includes('payer') ? 'payer' : dims[1]} dims={dims.filter((d) => d !== 'facility')} top={12} />
+        <BreakdownVisual id={id} dim="facility" title={`${m.short ?? m.name} by hospital`} pid="Metric by hospital" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
+        <BreakdownVisual key={id} id={id} pid="Metric breakdown" dim={dims.includes('payer') ? 'payer' : dims[1]} dims={dims.filter((d) => d !== 'facility')} top={12} />
       </div>
       <div className="row cols-2">
         {isAdditive ? <ContributionBridge id={id} /> : <ChangeByHospital id={id} />}
@@ -89,7 +89,7 @@ function MetricSummary({ id }: { id: string }) {
     ...(m.type === 'flow' ? [['Year to date', fm(ytd)] as [string, React.ReactNode], ['Prior year to date', fm(pyYtd)] as [string, React.ReactNode]] : []),
   ];
   return (
-    <Visual title={`${period.label}`} subtitle={`${m.area} · ${m.type === 'balance' ? 'balance at period end' : 'activity in period'}`} metricId={id}
+    <Visual title={`${period.label}`} pid="Period summary" subtitle={`${m.area} · ${m.type === 'balance' ? 'balance at period end' : 'activity in period'}`} metricId={id}
       table={{ columns: ['Measure', 'Value'], rows: [['Actual', fm(v.value)], ...rows.map(([k, x]) => [k, typeof x === 'string' ? x : ''])] }}
       spec={{ type: 'KPI summary panel', metrics: [id], interactions: 'Values follow the filter pane' }}>
       <div className="summary">
@@ -218,7 +218,7 @@ function SmallMultiples({ id }: { id: string }) {
   })), [engine, id, period.endMi, sel, ds, facs]);
   const chosen = sel.facility ?? [];
   return (
-    <Visual title={`${m.short ?? m.name}: 13-month trend by hospital`} metricId={id} subtitle="Small multiples, each on its own scale · dashed line = target · click to filter"
+    <Visual title={`${m.short ?? m.name}: 13-month trend by hospital`} pid="13-month trend by hospital" metricId={id} subtitle="Small multiples, each on its own scale · dashed line = target · click to filter"
       table={{ columns: ['Hospital', ...(data[0]?.t.map((x) => x.label) ?? [])], rows: data.map((d) => [d.f.short, ...d.t.map((x) => fmtMetric(id, x.value))]) }}
       spec={{ type: 'Small multiples (sparkline grid)', metrics: [id], dimensions: ['Hospital', 'Month'], interactions: 'Click toggles the hospital filter' }}>
       <div className="multiples">

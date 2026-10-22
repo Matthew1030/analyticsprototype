@@ -7,7 +7,8 @@
 // Sections: Key Performance Indicators · Performance Trends · Performance vs. Target (the full
 // P1–P13 framework) · Areas of Focus · Performance Highlights. Every metric drills into Analytics.
 
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
+import { visualItemId } from '../config/priorities';
 import { FIELD_LABEL, type SelField } from '../engine/engine';
 import { FRAMEWORK, FRAMEWORK_BY_ID } from '../engine/framework';
 import { evaluate, METRIC_BY_ID } from '../engine/metrics';
@@ -17,10 +18,12 @@ import { fmt, fmtDelta } from '../format';
 import { metricValue } from '../services/analytics';
 import type { MetricValue } from '../services/contracts';
 import { scopeText, useApp, type PageId } from '../state/AppState';
+import { usePriorities, usePriorityItem } from '../state/Priorities';
 import { Chart } from '../ui/Chart';
 import { eltTrendOption } from '../ui/charts';
 import { fmtMetric, InfoIcon, Sparkline, StatusMark } from '../ui/common';
 import { Icon } from '../ui/icons';
+import { PriorityPicker } from '../ui/Priority';
 
 /** Headline KPIs and trend charts (framework codes P1, P4, P5, P8, P10). */
 export const ELT_KPIS = ['gross_ar_days', 'cash_pct_npsr', 'denial_dollar_rate', 'dnfb_days', 'ar_gt90_pct'];
@@ -64,34 +67,29 @@ export function EltSummary() {
     <div className="elt">
       <EltHeader />
 
-      <section className="elt-sec" aria-labelledby="elt-kpi">
-        <SecHead id="elt-kpi" title="Key Performance Indicators" meta={period.label} />
+      <Sec id="elt-kpi" title="Key Performance Indicators" meta={period.label}>
         <div className="elt-kpis">
           {ELT_KPIS.map((id) => <KpiCard key={id} r={rows[id]} onOpen={() => open(id)} />)}
         </div>
-      </section>
+      </Sec>
 
-      <section className="elt-sec" aria-labelledby="elt-trend">
-        <SecHead id="elt-trend" title="Performance Trends" meta={`12 months ending ${period.short}`} />
+      <Sec id="elt-trend" title="Performance Trends" meta={`12 months ending ${period.short}`}>
         <div className="elt-trends">
           {ELT_TRENDS.map((id) => <TrendCard key={id} r={rows[id]} onOpen={() => go('metric', { id }, { drill: true })} />)}
         </div>
-      </section>
+      </Sec>
 
       <div className="elt-split">
-        <section className="elt-sec" aria-labelledby="elt-target">
-          <SecHead id="elt-target" title="Performance vs. Target" meta={period.label} />
+        <Sec id="elt-target" title="Performance vs. Target" meta={period.label}>
           <TargetTable rows={rows} onOpen={open} />
-        </section>
+        </Sec>
         <div className="elt-stack">
-          <section className="elt-sec" aria-labelledby="elt-focus">
-            <SecHead id="elt-focus" title="Areas of Focus" meta="Largest unfavorable variance" />
+          <Sec id="elt-focus" title="Areas of Focus" meta="Largest unfavorable variance">
             <Focus rows={rows} onOpen={open} />
-          </section>
-          <section className="elt-sec" aria-labelledby="elt-good">
-            <SecHead id="elt-good" title="Performance Highlights" meta="Largest favorable variance" />
+          </Sec>
+          <Sec id="elt-good" title="Performance Highlights" meta="Largest favorable variance">
             <Highlights rows={rows} onOpen={open} />
-          </section>
+          </Sec>
         </div>
       </div>
     </div>
@@ -162,12 +160,20 @@ function EltSlicers() {
   );
 }
 
-function SecHead({ id, title, meta }: { id: string; title: string; meta?: string }) {
+/** One ELT section. In prioritization mode it carries a release picker, like a visual. */
+function Sec({ id, title, meta, children }: { id: string; title: string; meta?: string; children: ReactNode }) {
+  const { on } = usePriorities();
+  const itemId = visualItemId('executive', title);
+  const prio = usePriorityItem({ id: itemId, kind: 'visual', label: title, group: 'ELT Summary', page: 'executive' });
   return (
-    <div className="elt-sec-head">
-      <h2 id={id}>{title}</h2>
-      {meta && <span className="elt-meta">{meta}</span>}
-    </div>
+    <section className={`elt-sec ${prio.cls}`} aria-labelledby={id}>
+      <div className="elt-sec-head">
+        <h2 id={id}>{title}</h2>
+        {on && <PriorityPicker id={itemId} label={title} tier={prio.tier} inherited={prio.inherited} />}
+        {meta && <span className="elt-meta">{meta}</span>}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -234,6 +240,7 @@ function TrendCard({ r, onOpen }: { r: Row; onOpen: () => void }) {
 // ---------------------------------------------------------------- performance vs. target
 
 function TargetTable({ rows, onOpen }: { rows: Record<string, Row>; onOpen: (id: string) => void }) {
+  const { on: prioOn, decisions } = usePriorities();
   return (
     <div className="elt-table">
       <table>
@@ -250,7 +257,8 @@ function TargetTable({ rows, onOpen }: { rows: Record<string, Row>; onOpen: (id:
               const r = rows[f.id];
               return (
                 <tr key={f.id} className="clickable" tabIndex={0} onClick={() => onOpen(f.id)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(f.id); }} title={`Analyze ${METRIC_BY_ID[f.id].name}`}>
-                  <td className="al-left elt-mname">{label(f.id)}<span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={f.id} /></span></td>
+                  <td className="al-left elt-mname">{label(f.id)}<span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={f.id} /></span>
+                    {prioOn && <> <PriorityPicker id={`kpi:elt:${f.code}`} label={`${f.code} ${f.label}`} tier={decisions[`kpi:elt:${f.code}`]?.tier} compact /></>}</td>
                   <td><b>{fmtMetric(f.id, r.v.value)}</b></td>
                   <td className="muted">{fmtMetric(f.id, r.v.target)}</td>
                   <td><Variance r={r} /></td>
