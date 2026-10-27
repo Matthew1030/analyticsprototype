@@ -1,0 +1,3165 @@
+{
+ "pages": [
+  {
+   "page": "cycle",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Enterprise scorecard",
+     "pid": "Enterprise scorecard",
+     "metric": "",
+     "spec": {
+      "type": "Scorecard table (grouped, expandable)",
+      "metrics": [
+       "gross_ar_days",
+       "ar_gt90_pct",
+       "credit_balance_days",
+       "pos_pct_net",
+       "net_to_gross",
+       "dnfb_days",
+       "cash_pct_npsr",
+       "bad_debt_pct_gross",
+       "denial_dollar_rate",
+       "bad_debt_unrealized_pct",
+       "avoidable_wo_pct_net",
+       "avoidable_wo_unrealized_pct",
+       "net_ar_days",
+       "gross_ar",
+       "net_ar",
+       "npsr",
+       "cash",
+       "clean_claim_rate",
+       "dnfb_dollars",
+       "bad_debt_pct",
+       "charity_pct",
+       "cost_to_collect"
+      ],
+      "interactions": "Row click opens Metric Analysis (drill-through)"
+     },
+     "subtitle": "Sep 2026 vs Aug 2026 · click a metric to analyze it",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Where to look first",
+     "pid": "Where to look first",
+     "metric": "",
+     "spec": {
+      "type": "Exception table (ranked)",
+      "metrics": [
+       "net_ar_days",
+       "cash_pct_npsr",
+       "denial_rate",
+       "clean_claim_rate",
+       "dnfb_days",
+       "ar_gt90_pct",
+       "cost_to_collect"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Row click filters to the hospital and opens Metric Analysis"
+     },
+     "subtitle": "Hospital metrics off target in Sep 2026, ranked by gap × hospital size · click to analyze",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "Cash: metrics",
+     "pid": "Cash: metrics",
+     "metric": "",
+     "spec": {
+      "type": "Scorecard table (grouped, expandable)",
+      "metrics": [
+       "cash_pct_npsr",
+       "cash",
+       "net_collection_rate"
+      ],
+      "interactions": "Row click opens Metric Analysis (drill-through)"
+     },
+     "subtitle": "Sep 2026 vs Aug 2026 · click a metric to analyze it",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 3,
+     "title": "Cash as % of net revenue trend",
+     "pid": "Cash as % of net revenue trend",
+     "metric": "cash_pct_npsr",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "cash_pct_npsr"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 4,
+     "title": "Cash % net rev by hospital",
+     "pid": "Cash % net rev by hospital",
+     "metric": "cash_pct_npsr",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "cash_pct_npsr"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 5,
+     "title": "Stage status by hospital",
+     "pid": "Stage status by hospital",
+     "metric": "",
+     "spec": {
+      "type": "Status matrix (hospital × stage)",
+      "dimensions": [
+       "Hospital",
+       "RCM stage"
+      ],
+      "interactions": "Cell click filters hospital and selects stage"
+     },
+     "subtitle": "Worst status among each stage's metrics · click a cell to filter the hospital and open the stage",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 6,
+     "title": "Hospital performance matrix",
+     "pid": "Hospital performance matrix",
+     "metric": "",
+     "spec": {
+      "type": "Matrix table with conditional formatting, grouped by region (expand/collapse, subtotals)",
+      "metrics": [
+       "net_ar_days",
+       "cash_pct_npsr",
+       "denial_rate",
+       "clean_claim_rate",
+       "dnfb_days",
+       "ar_gt90_pct",
+       "cost_to_collect"
+      ],
+      "dimensions": [
+       "Region",
+       "Hospital"
+      ],
+      "interactions": "Row click drills through to Hospital Profile; sort any column; compare = prior"
+     },
+     "subtitle": "Sep 2026 · cell color = status against target · click a hospital to open its profile",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [
+    [
+     "npsr",
+     "cash",
+     "cash_pct_npsr",
+     "net_ar_days",
+     "denial_rate",
+     "clean_claim_rate",
+     "dnfb_days"
+    ]
+   ],
+   "headings": []
+  },
+  {
+   "page": "access",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Patient access scorecard",
+     "pid": "Patient access scorecard",
+     "metric": "",
+     "spec": {
+      "type": "Scorecard table (grouped, expandable)",
+      "metrics": [
+       "eligibility_rate",
+       "auth_rate",
+       "preservice_auth_rate",
+       "registration_accuracy",
+       "registration_edits",
+       "call_volume_total",
+       "call_abandon_rate_all",
+       "call_abandon_rate",
+       "cbo_call_abandon_rate",
+       "asa",
+       "scheduled_rate",
+       "scheduled_rate_final",
+       "scheduled_volume",
+       "open_orders",
+       "open_orders_24h_pct",
+       "lead_time_3plus_pct",
+       "prereg_rate",
+       "prereg_rate_72h",
+       "fin_clearance_rate",
+       "fin_clearance_rate_72h",
+       "scheduled_under_72h_pct",
+       "pos_collections",
+       "pos_rate",
+       "pos_yield",
+       "pos_estimate_accuracy",
+       "pos_missed_residual_pct",
+       "medicaid_in_scope",
+       "medicaid_screening_rate",
+       "medicaid_eligible_completion",
+       "coverage_found_rate",
+       "front_end_denial_rate"
+      ],
+      "interactions": "Row click opens Metric Analysis (drill-through)"
+     },
+     "subtitle": "Sep 2026 vs Aug 2026 · click a metric to analyze it",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Front-end denial rate trend",
+     "pid": "Front-end denial rate trend",
+     "metric": "front_end_denial_rate",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "front_end_denial_rate"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "Scheduling, weekly",
+     "pid": "Scheduling, weekly",
+     "metric": "scheduled_rate",
+     "spec": {
+      "type": "Two aligned charts (line + columns), shared week axis",
+      "metrics": [
+       "scheduled_rate",
+       "scheduled_volume"
+      ],
+      "dimensions": [
+       "Week"
+      ]
+     },
+     "subtitle": "13 weeks to 09/26 · scheduled rate (top) and appointments scheduled (bottom)",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 3,
+     "title": "Call abandonment by hospital",
+     "pid": "Call abandonment by hospital",
+     "metric": "call_abandon_rate_all",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "call_abandon_rate_all"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "Abandonment (all)",
+       "Call abandonment",
+       "Abandonment (CBO)"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 4,
+     "title": "Call volume and abandonment, all lines",
+     "pid": "Call volume and abandonment, all lines",
+     "metric": "call_volume_total",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "call_volume_total"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [
+      "#",
+      "%"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "#",
+       "metric": "call_volume_total",
+       "spec": {
+        "type": "Line chart with target and comparison overlays",
+        "metrics": [
+         "call_volume_total"
+        ],
+        "dimensions": [
+         "Month"
+        ],
+        "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+       }
+      },
+      {
+       "label": "%",
+       "metric": "call_abandon_rate_all",
+       "spec": {
+        "type": "Line chart with target and comparison overlays",
+        "metrics": [
+         "call_abandon_rate_all"
+        ],
+        "dimensions": [
+         "Month"
+        ],
+        "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+       }
+      }
+     ]
+    },
+    {
+     "i": 5,
+     "title": "Orders closed without scheduling",
+     "pid": "Orders closed without scheduling",
+     "metric": "orders_closed_unscheduled",
+     "spec": {
+      "type": "Stacked bar chart (horizontal)",
+      "metrics": [
+       "orders_closed_unscheduled"
+      ],
+      "dimensions": [
+       "Hospital",
+       "Order outcome"
+      ],
+      "interactions": "Click filters the hospital"
+     },
+     "subtitle": "Sep 2026 · final outcome by hospital · click a hospital to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 6,
+     "title": "Open orders in process > 24 hours by hospital",
+     "pid": "Open orders in process > 24 hours by hospital",
+     "metric": "open_orders_24h_pct",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "open_orders_24h_pct"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [
+      "%",
+      "#"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "%",
+       "metric": "open_orders_24h_pct",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "open_orders_24h_pct"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      },
+      {
+       "label": "#",
+       "metric": "open_orders",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "open_orders"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      }
+     ]
+    },
+    {
+     "i": 7,
+     "title": "Scheduling lead time by hospital",
+     "pid": "Scheduling lead time by hospital",
+     "metric": "lead_time_3plus_pct",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "lead_time_3plus_pct"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [
+      "%",
+      "Days"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "%",
+       "metric": "lead_time_3plus_pct",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "lead_time_3plus_pct"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      },
+      {
+       "label": "Days",
+       "metric": "schedule_lead_time",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "schedule_lead_time"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      }
+     ]
+    },
+    {
+     "i": 8,
+     "title": "Pre-registration by hospital",
+     "pid": "Pre-registration by hospital",
+     "metric": "prereg_rate_72h",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "prereg_rate_72h"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "Pre-reg 72h",
+       "Pre-registration"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 9,
+     "title": "Financial clearance by hospital",
+     "pid": "Financial clearance by hospital",
+     "metric": "fin_clearance_rate_72h",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "fin_clearance_rate_72h"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "Fin. clearance 72h",
+       "Financial clearance"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 10,
+     "title": "Accounts scheduled < 72 hours before service",
+     "pid": "Accounts scheduled < 72 hours before service",
+     "metric": "scheduled_under_72h_pct",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "scheduled_under_72h_pct"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 11,
+     "title": "POS collections by hospital",
+     "pid": "POS collections by hospital",
+     "metric": "pos_collections",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "pos_collections"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 12,
+     "title": "POS yield by hospital",
+     "pid": "POS yield by hospital",
+     "metric": "pos_yield",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "pos_yield"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "POS yield",
+       "Missed POS %"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 13,
+     "title": "Estimate accuracy by hospital",
+     "pid": "Estimate accuracy by hospital",
+     "metric": "pos_estimate_accuracy",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "pos_estimate_accuracy"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 14,
+     "title": "Eligibility rate by hospital",
+     "pid": "Eligibility rate by hospital",
+     "metric": "eligibility_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "eligibility_rate"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 15,
+     "title": "Medicaid screening by hospital",
+     "pid": "Medicaid screening by hospital",
+     "metric": "medicaid_screening_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "medicaid_screening_rate"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [
+      "%",
+      "#"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "%",
+       "metric": "medicaid_screening_rate",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "medicaid_screening_rate"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      },
+      {
+       "label": "#",
+       "metric": "medicaid_in_scope",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "medicaid_in_scope"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      }
+     ]
+    },
+    {
+     "i": 16,
+     "title": "Medicaid application completion by hospital",
+     "pid": "Medicaid application completion by hospital",
+     "metric": "medicaid_eligible_completion",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "medicaid_eligible_completion"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "Eligible completion",
+       "Coverage found"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 17,
+     "title": "Registration quality by hospital",
+     "pid": "Registration quality by hospital",
+     "metric": "registration_accuracy",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "registration_accuracy"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [
+      "%",
+      "#"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "%",
+       "metric": "registration_accuracy",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "registration_accuracy"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      },
+      {
+       "label": "#",
+       "metric": "registration_edits",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "registration_edits"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      }
+     ]
+    },
+    {
+     "i": 18,
+     "title": "Pre-service authorization by hospital",
+     "pid": "Pre-service authorization by hospital",
+     "metric": "preservice_auth_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "preservice_auth_rate"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 19,
+     "title": "Front-end denial rate by payer",
+     "pid": "Front-end denial rate by payer",
+     "metric": "front_end_denial_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "front_end_denial_rate"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter · top 11 of 12",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [
+    [
+     "eligibility_rate",
+     "auth_rate",
+     "preservice_auth_rate",
+     "registration_accuracy",
+     "fin_clearance_rate",
+     "pos_rate",
+     "front_end_denial_rate"
+    ],
+    [
+     "call_volume_total",
+     "call_volume",
+     "calls_outbound",
+     "call_abandon_rate_all",
+     "call_abandon_rate",
+     "cbo_call_abandon_rate",
+     "asa"
+    ],
+    [
+     "scheduled_rate",
+     "scheduled_rate_final",
+     "orders_received",
+     "open_orders",
+     "open_orders_24h_pct",
+     "lead_time_3plus_pct",
+     "schedule_lead_time"
+    ],
+    [
+     "prereg_rate",
+     "prereg_rate_72h",
+     "fin_clearance_rate",
+     "fin_clearance_rate_72h",
+     "scheduled_under_72h_pct"
+    ],
+    [
+     "pos_collections",
+     "pos_rate",
+     "pos_yield",
+     "pos_estimate_accuracy",
+     "pos_missed_residual_pct",
+     "pos_pct_net"
+    ],
+    [
+     "eligibility_rate",
+     "medicaid_in_scope",
+     "medicaid_screening_rate",
+     "coverage_found_rate",
+     "medicaid_eligible_completion"
+    ]
+   ],
+   "headings": [
+    "Contact center",
+    "Scheduling",
+    "Pre-registration and financial clearance",
+    "Point-of-service collections",
+    "Eligibility and enrollment",
+    "Registration quality and authorization"
+   ]
+  },
+  {
+   "page": "midcycle",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Mid-cycle scorecard",
+     "pid": "Mid-cycle scorecard",
+     "metric": "",
+     "spec": {
+      "type": "Scorecard table (grouped, expandable)",
+      "metrics": [
+       "charge_lag",
+       "late_charge_pct",
+       "late_charges_dollars",
+       "missing_charges",
+       "missed_charge_rate",
+       "charges_posted",
+       "coding_tat",
+       "coding_tat_ip",
+       "final_coded_volume",
+       "coding_denial_rate",
+       "dnfb_coding",
+       "cdi_query_rate",
+       "documentation_denial_rate",
+       "dnfb_query"
+      ],
+      "interactions": "Row click opens Metric Analysis (drill-through)"
+     },
+     "subtitle": "Sep 2026 vs Aug 2026 · click a metric to analyze it",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Coding turnaround trend",
+     "pid": "Coding turnaround trend",
+     "metric": "coding_tat",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "coding_tat"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "Late charges trend",
+     "pid": "Late charges trend",
+     "metric": "late_charge_pct",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "late_charge_pct"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [
+      "%",
+      "$"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "%",
+       "metric": "late_charge_pct",
+       "spec": {
+        "type": "Line chart with target and comparison overlays",
+        "metrics": [
+         "late_charge_pct"
+        ],
+        "dimensions": [
+         "Month"
+        ],
+        "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+       }
+      },
+      {
+       "label": "$",
+       "metric": "late_charges_dollars",
+       "spec": {
+        "type": "Line chart with target and comparison overlays",
+        "metrics": [
+         "late_charges_dollars"
+        ],
+        "dimensions": [
+         "Month"
+        ],
+        "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+       }
+      }
+     ]
+    },
+    {
+     "i": 3,
+     "title": "Charge lag by service line",
+     "pid": "Charge lag by service line",
+     "metric": "charge_lag",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "charge_lag"
+      ],
+      "dimensions": [
+       "Service line"
+      ],
+      "interactions": "Click toggles a Service line filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 4,
+     "title": "Late charges by hospital",
+     "pid": "Late charges by hospital",
+     "metric": "late_charge_pct",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "late_charge_pct"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [
+      "%",
+      "$"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "%",
+       "metric": "late_charge_pct",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "late_charge_pct"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      },
+      {
+       "label": "$",
+       "metric": "late_charges_dollars",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "late_charges_dollars"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      }
+     ]
+    },
+    {
+     "i": 5,
+     "title": "Coding turnaround by hospital",
+     "pid": "Coding turnaround by hospital",
+     "metric": "coding_tat",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "coding_tat"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 6,
+     "title": "Final coded accounts",
+     "pid": "Final coded accounts",
+     "metric": "final_coded_volume",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "final_coded_volume"
+      ],
+      "dimensions": [
+       "Patient type"
+      ],
+      "interactions": "Click toggles a Patient type filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "Patient type",
+       "Hospital",
+       "Service line"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 7,
+     "title": "Coding turnaround by type",
+     "pid": "Coding turnaround by type",
+     "metric": "coding_tat",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "coding_tat"
+      ],
+      "dimensions": [
+       "Patient type"
+      ],
+      "interactions": "Click toggles a Patient type filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "Patient type",
+       "Service line",
+       "Payer"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 8,
+     "title": "Missed charges by hospital",
+     "pid": "Missed charges by hospital",
+     "metric": "missed_charge_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "missed_charge_rate"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [
+      "%",
+      "$"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "%",
+       "metric": "missed_charge_rate",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "missed_charge_rate"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      },
+      {
+       "label": "$",
+       "metric": "missing_charges",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "missing_charges"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      }
+     ]
+    },
+    {
+     "i": 9,
+     "title": "DNFB held by mid-cycle reasons",
+     "pid": "DNFB held by mid-cycle reasons",
+     "metric": "",
+     "spec": {
+      "type": "Stacked bar chart (horizontal)",
+      "metrics": [
+       "dnfb_coding",
+       "dnfb_query"
+      ],
+      "dimensions": [
+       "Hospital",
+       "DNFB hold reason"
+      ],
+      "interactions": "Click filters the hospital"
+     },
+     "subtitle": "By hospital at Sep 26 month end · click a hospital to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 10,
+     "title": "Documentation-related denial rate by payer",
+     "pid": "Documentation-related denial rate by payer",
+     "metric": "documentation_denial_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "documentation_denial_rate"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter · top 11 of 12",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [
+    [
+     "charge_lag",
+     "late_charge_pct",
+     "missing_charges",
+     "coding_tat",
+     "coding_tat_ip",
+     "cdi_query_rate",
+     "documentation_denial_rate"
+    ]
+   ],
+   "headings": []
+  },
+  {
+   "page": "billing",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "DNFB by age, weekly",
+     "pid": "DNFB by age, weekly",
+     "metric": "",
+     "spec": {
+      "type": "Stacked columns + aligned line chart (separate axes, shared weeks)",
+      "metrics": [
+       "dnfb_dollars",
+       "dnfb_days"
+      ],
+      "dimensions": [
+       "Week",
+       "DNFB age"
+      ]
+     },
+     "subtitle": "Saturday snapshots, 13 weeks to 09/26 · days from discharge",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Days in DNFB trend",
+     "pid": "Days in DNFB trend",
+     "metric": "dnfb_days",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "dnfb_days"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "DNFB $ by hospital",
+     "pid": "DNFB $ by hospital",
+     "metric": "dnfb_dollars",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "dnfb_dollars"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 3,
+     "title": "DNFB $ by hold reason",
+     "pid": "DNFB $ by hold reason",
+     "metric": "dnfb_dollars",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "dnfb_dollars"
+      ],
+      "dimensions": [
+       "DNFB hold reason"
+      ],
+      "interactions": "Click toggles a DNFB hold reason filter (cross-filters every visual)"
+     },
+     "subtitle": "Click to filter the hold reason (applies to DNFB measures)",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 4,
+     "title": "Clean claim rate by hospital",
+     "pid": "Clean claim rate by hospital",
+     "metric": "clean_claim_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "clean_claim_rate"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 5,
+     "title": "Claims exported to payers by hospital",
+     "pid": "Claims exported to payers by hospital",
+     "metric": "claims_submitted_dollars",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "claims_submitted_dollars"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [
+      "$",
+      "#"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "$",
+       "metric": "claims_submitted_dollars",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "claims_submitted_dollars"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      },
+      {
+       "label": "#",
+       "metric": "claims_submitted",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "claims_submitted"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      }
+     ]
+    },
+    {
+     "i": 6,
+     "title": "Billed, not exported (open edits) by hospital",
+     "pid": "Billed, not exported (open edits) by hospital",
+     "metric": "dnsp_dollars",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "dnsp_dollars"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [
+      "$",
+      "#",
+      "Days"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "$",
+       "metric": "dnsp_dollars",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "dnsp_dollars"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      },
+      {
+       "label": "#",
+       "metric": "dnsp_accounts",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "dnsp_accounts"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      },
+      {
+       "label": "Days",
+       "metric": "dnsp_days",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "dnsp_days"
+        ],
+        "dimensions": [
+         "Hospital"
+        ],
+        "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+       }
+      }
+     ]
+    },
+    {
+     "i": 7,
+     "title": "First pass yield",
+     "pid": "First pass yield",
+     "metric": "first_pass_yield",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "first_pass_yield"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "Payer",
+       "Hospital",
+       "Financial class",
+       "Patient type"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 8,
+     "title": "DNFB by hospital and hold reason",
+     "pid": "DNFB by hospital and hold reason",
+     "metric": "",
+     "spec": {
+      "type": "Matrix (pivot) table with hierarchy and heat",
+      "metrics": [
+       "dnfb_dollars",
+       "dnfb_days"
+      ],
+      "dimensions": [
+       "Hospital",
+       "Hold reason",
+       "DNFB age"
+      ],
+      "interactions": "Expand/collapse; row click filters hospital (and hold reason)"
+     },
+     "subtitle": "Sep 26 month-end snapshot · expand a hospital for hold reasons · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 9,
+     "title": "Claims failing edits by edit category",
+     "pid": "Claims failing edits by edit category",
+     "metric": "rework_claims",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "rework_claims"
+      ],
+      "dimensions": [
+       "Edit category"
+      ],
+      "interactions": "Click toggles a Edit category filter (cross-filters every visual)"
+     },
+     "subtitle": "Click to filter the edit category (applies to edit measures)",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 10,
+     "title": "Billing lag by hospital",
+     "pid": "Billing lag by hospital",
+     "metric": "billing_lag",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "billing_lag"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [
+    [
+     "dnfb_dollars",
+     "dnfb_days",
+     "unbilled_accounts",
+     "dnfb_15plus_pct",
+     "dnsp_days",
+     "clean_claim_rate",
+     "billing_lag"
+    ],
+    [
+     "claims_submitted",
+     "claims_submitted_dollars",
+     "dnsp_dollars",
+     "dnsp_accounts",
+     "first_pass_yield",
+     "rework_claims"
+    ]
+   ],
+   "headings": []
+  },
+  {
+   "page": "denials",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Denial decomposition",
+     "pid": "Denial decomposition",
+     "metric": "denial_dollars",
+     "spec": {
+      "type": "Decomposition tree",
+      "metrics": [
+       "denial_dollars"
+      ],
+      "dimensions": [
+       "Payer",
+       "Hospital",
+       "Denial category",
+       "Root cause",
+       "Financial class",
+       "Service line",
+       "Patient type"
+      ],
+      "interactions": "Click node to expand; choose the split dimension per level; apply path as filters"
+     },
+     "subtitle": "Initial denials ($), Sep 2026: $16.2M · click a node to split it by the next dimension",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Initial denial rate trend",
+     "pid": "Initial denial rate trend",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "Denied claims by category, monthly",
+     "pid": "Denied claims by category, monthly",
+     "metric": "",
+     "spec": {
+      "type": "Stacked column chart",
+      "metrics": [
+       "denied_claims"
+      ],
+      "dimensions": [
+       "Month",
+       "Denial category"
+      ],
+      "interactions": "Click a segment filters the category"
+     },
+     "subtitle": "Claim count by denial date · click a segment to filter the category",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 3,
+     "title": "Denial rate by payer",
+     "pid": "Denial rate by payer",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter · top 11 of 12",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 4,
+     "title": "Denial rate by hospital",
+     "pid": "Denial rate by hospital",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 5,
+     "title": "Denied $ by category",
+     "pid": "Denied $ by category",
+     "metric": "denial_dollars",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "denial_dollars"
+      ],
+      "dimensions": [
+       "Denial category"
+      ],
+      "interactions": "Click toggles a Denial category filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 6,
+     "title": "Top denial drivers",
+     "pid": "Top denial drivers",
+     "metric": "",
+     "spec": {
+      "type": "Ranked analytical table with data bars and heat",
+      "metrics": [
+       "denial_dollars",
+       "denied_claims",
+       "appeal_rate",
+       "denial_writeoffs"
+      ],
+      "dimensions": [
+       "Root cause",
+       "Category"
+      ],
+      "interactions": "Row click toggles the root cause filter"
+     },
+     "subtitle": "Root causes, Sep 2026 · sorted by denied $ · click a row to filter the root cause",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 7,
+     "title": "Denial and appeal status",
+     "pid": "Denial and appeal status",
+     "metric": "appeals_open",
+     "spec": {
+      "type": "Bar chart (horizontal, fixed status order)",
+      "metrics": [
+       "appeals_open"
+      ],
+      "dimensions": [
+       "Appeal status"
+      ]
+     },
+     "subtitle": "Open denials at Sep 26 period end · filter the denial category for clinical appeals",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 8,
+     "title": "Appeals by denial category",
+     "pid": "Appeals by denial category",
+     "metric": "appeals_filed",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "appeals_filed"
+      ],
+      "dimensions": [
+       "Denial category"
+      ],
+      "interactions": "Click toggles a Denial category filter (cross-filters every visual)"
+     },
+     "subtitle": "Clinical appeals: click Medical necessity and Documentation to filter",
+     "measures": [
+      "#",
+      "%"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "#",
+       "metric": "appeals_filed",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "appeals_filed"
+        ],
+        "dimensions": [
+         "Denial category"
+        ],
+        "interactions": "Click toggles a Denial category filter (cross-filters every visual)"
+       }
+      },
+      {
+       "label": "%",
+       "metric": "appeal_rate",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "appeal_rate"
+        ],
+        "dimensions": [
+         "Denial category"
+        ],
+        "interactions": "Click toggles a Denial category filter (cross-filters every visual)"
+       }
+      }
+     ]
+    },
+    {
+     "i": 9,
+     "title": "Appeal outcome by denial category",
+     "pid": "Appeal outcome by denial category",
+     "metric": "appeal_upheld_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "appeal_upheld_rate"
+      ],
+      "dimensions": [
+       "Denial category"
+      ],
+      "interactions": "Click toggles a Denial category filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "Upheld rate",
+       "Appeal success"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 10,
+     "title": "Payer × category",
+     "pid": "Payer × category",
+     "metric": "",
+     "spec": {
+      "type": "Heat matrix (pivot)",
+      "metrics": [
+       "denial_dollars",
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Payer",
+       "Denial category"
+      ],
+      "interactions": "Row click filters the payer"
+     },
+     "subtitle": "Denied $, Sep 2026 · darker = more dollars · click a row to filter the payer",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 11,
+     "title": "Recoverable vs non-recoverable",
+     "pid": "Recoverable vs non-recoverable",
+     "metric": "recoverable_pct",
+     "spec": {
+      "type": "Stacked bar chart (horizontal)",
+      "metrics": [
+       "denial_dollars",
+       "recoverable_pct"
+      ],
+      "dimensions": [
+       "Denial category",
+       "Recoverable flag"
+      ]
+     },
+     "subtitle": "Denied $ by category, split by whether the root cause is usually recoverable",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [
+    [
+     "denial_rate",
+     "denial_dollars",
+     "denial_pct_npsr",
+     "appeal_rate",
+     "appeal_success",
+     "denial_writeoffs",
+     "recoverable_pct"
+    ],
+    [
+     "appeals_filed",
+     "appeals_resolved",
+     "appeals_open",
+     "appeal_success",
+     "appeal_upheld_rate",
+     "denial_wo_pct_npsr"
+    ]
+   ],
+   "headings": []
+  },
+  {
+   "page": "ar",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Net A/R days trend",
+     "pid": "Net A/R days trend",
+     "metric": "net_ar_days",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "net_ar_days"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Aging trend",
+     "pid": "Aging trend",
+     "metric": "",
+     "spec": {
+      "type": "Stacked column chart (ordinal color ramp)",
+      "metrics": [
+       "net_ar"
+      ],
+      "dimensions": [
+       "Month",
+       "Aging bucket"
+      ],
+      "interactions": "Click a segment to filter the aging bucket"
+     },
+     "subtitle": "Net A/R by days from discharge, month end · click a segment to filter the bucket",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "Net A/R by hospital",
+     "pid": "Net A/R by hospital",
+     "metric": "net_ar",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "net_ar"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 3,
+     "title": "Aging",
+     "pid": "Aging",
+     "metric": "net_ar",
+     "spec": {
+      "type": "Column chart",
+      "metrics": [
+       "net_ar"
+      ],
+      "dimensions": [
+       "Aging bucket"
+      ],
+      "interactions": "Click toggles a Aging bucket filter (cross-filters every visual)"
+     },
+     "subtitle": "Days from discharge · current vs comparison · click a bucket to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 4,
+     "title": "Net A/R by payer",
+     "pid": "Net A/R by payer",
+     "metric": "net_ar",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "net_ar"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 5,
+     "title": "A/R by financial class",
+     "pid": "A/R by financial class",
+     "metric": "net_ar",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "net_ar"
+      ],
+      "dimensions": [
+       "Financial class"
+      ],
+      "interactions": "Click toggles a Financial class filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 6,
+     "title": "A/R by account status",
+     "pid": "A/R by account status",
+     "metric": "net_ar",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "net_ar"
+      ],
+      "dimensions": [
+       "Account status"
+      ],
+      "interactions": "Click toggles a Account status filter (cross-filters every visual)"
+     },
+     "subtitle": "Where the open balance sits in the workflow · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 7,
+     "title": "A/R concentration by payer",
+     "pid": "A/R concentration by payer",
+     "metric": "",
+     "spec": {
+      "type": "Pareto chart (bars + cumulative line, one % axis)",
+      "metrics": [
+       "net_ar"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click filters the payer"
+     },
+     "subtitle": "Top 3 payers hold 48% of A/R · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 8,
+     "title": "Credit balances by payer",
+     "pid": "Credit balances by payer",
+     "metric": "credit_balance_dollars",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "credit_balance_dollars"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter · top 11 of 12",
+     "measures": [
+      "$",
+      "Days"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "$",
+       "metric": "credit_balance_dollars",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "credit_balance_dollars"
+        ],
+        "dimensions": [
+         "Payer"
+        ],
+        "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+       }
+      },
+      {
+       "label": "Days",
+       "metric": "credit_balance_days",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "credit_balance_days"
+        ],
+        "dimensions": [
+         "Payer"
+        ],
+        "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+       }
+      }
+     ]
+    },
+    {
+     "i": 9,
+     "title": "Credit balances trend",
+     "pid": "Credit balances trend",
+     "metric": "credit_balance_dollars",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "credit_balance_dollars"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 10,
+     "title": "A/R aging matrix",
+     "pid": "A/R aging matrix",
+     "metric": "",
+     "spec": {
+      "type": "Matrix (pivot) table: hierarchical rows, column group, subtotals, heat formatting",
+      "metrics": [
+       "net_ar",
+       "ar_gt90_pct"
+      ],
+      "dimensions": [
+       "Hospital",
+       "Payer",
+       "Aging bucket"
+      ],
+      "interactions": "Expand/collapse; sort within level; row click filters hospital (and payer)"
+     },
+     "subtitle": "Net A/R at Sep 26 month end · expand a hospital to see payers · click a row to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 11,
+     "title": "Largest open accounts",
+     "pid": "Largest open accounts",
+     "metric": "",
+     "spec": {
+      "type": "Detail table (drill-through preview)",
+      "dimensions": [
+       "Account"
+      ],
+      "interactions": "Opens Account Detail with the same filters"
+     },
+     "subtitle": "Top 15 by open balance for the current filters (sample of $180.5M net A/R) · synthetic account numbers",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [
+    [
+     "net_ar_days",
+     "net_ar",
+     "gross_ar",
+     "gross_ar_days",
+     "ar_gt90_pct",
+     "ar_gt180_pct"
+    ]
+   ],
+   "headings": []
+  },
+  {
+   "page": "cash",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Cash collected vs cash goal",
+     "pid": "Cash collected vs cash goal",
+     "metric": "cash",
+     "spec": {
+      "type": "Column chart with goal line (single $ axis)",
+      "metrics": [
+       "cash",
+       "cash_goal"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the period"
+     },
+     "subtitle": "Monthly · goal = 98% of lagged NPSR · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Month-to-date pace, Sep 2026",
+     "pid": "Month-to-date pace",
+     "metric": "cash",
+     "spec": {
+      "type": "Cumulative line chart vs goal pace",
+      "metrics": [
+       "cash",
+       "cash_goal"
+      ],
+      "dimensions": [
+       "Day of month"
+      ],
+      "interactions": "Follows the report month; hover for daily values"
+     },
+     "subtitle": "Cumulative cash by day of month · $78.7M of $84.7M goal (92.9%) Off target",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "Cash vs goal by hospital: month and year to date",
+     "pid": "Cash vs goal by hospital: month and year to date",
+     "metric": "",
+     "spec": {
+      "type": "Matrix table: column groups, region subtotals, data bars, status text",
+      "metrics": [
+       "cash",
+       "cash_goal",
+       "cash_pct_npsr"
+      ],
+      "dimensions": [
+       "Region",
+       "Hospital"
+      ],
+      "interactions": "Expand/collapse regions; sort; row click drills to Hospital Profile"
+     },
+     "subtitle": "Grouped by region with subtotals · Watch = within 3% of goal · click a hospital to open its profile",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 3,
+     "title": "Collections by payer",
+     "pid": "Collections by payer",
+     "metric": "cash",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "cash"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 4,
+     "title": "Cash % NPSR by hospital",
+     "pid": "Cash % NPSR by hospital",
+     "metric": "cash_pct_npsr",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "cash_pct_npsr"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 5,
+     "title": "Net collection rate by financial class",
+     "pid": "Net collection rate by financial class",
+     "metric": "net_collection_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "net_collection_rate"
+      ],
+      "dimensions": [
+       "Financial class"
+      ],
+      "interactions": "Click toggles a Financial class filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 6,
+     "title": "Non-charge transactions",
+     "pid": "Non-charge transactions",
+     "metric": "",
+     "spec": {
+      "type": "Bar chart (horizontal)",
+      "metrics": [
+       "bad_debt",
+       "charity",
+       "denial_writeoffs",
+       "refunds",
+       "retractions"
+      ],
+      "interactions": "Click opens Metric Analysis"
+     },
+     "subtitle": "Sep 2026 · contractuals shown separately · click to analyze",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 7,
+     "title": "Insurance retractions by payer",
+     "pid": "Insurance retractions by payer",
+     "metric": "retractions",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "retractions"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter · top 11 of 12",
+     "measures": [
+      "$",
+      "%"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "$",
+       "metric": "retractions",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "retractions"
+        ],
+        "dimensions": [
+         "Payer"
+        ],
+        "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+       }
+      },
+      {
+       "label": "%",
+       "metric": "retraction_pct_cash",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "retraction_pct_cash"
+        ],
+        "dimensions": [
+         "Payer"
+        ],
+        "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+       }
+      }
+     ]
+    },
+    {
+     "i": 8,
+     "title": "Contractual adjustments by financial class",
+     "pid": "Contractual adjustments by financial class",
+     "metric": "contractual_adj_dollars",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "contractual_adj_dollars"
+      ],
+      "dimensions": [
+       "Financial class"
+      ],
+      "interactions": "Click toggles a Financial class filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [
+      "$",
+      "%"
+     ],
+     "selects": [],
+     "kpis": [],
+     "alt": [
+      {
+       "label": "$",
+       "metric": "contractual_adj_dollars",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "contractual_adj_dollars"
+        ],
+        "dimensions": [
+         "Financial class"
+        ],
+        "interactions": "Click toggles a Financial class filter (cross-filters every visual)"
+       }
+      },
+      {
+       "label": "%",
+       "metric": "contractual_adj_pct",
+       "spec": {
+        "type": "Bar chart (horizontal, sorted)",
+        "metrics": [
+         "contractual_adj_pct"
+        ],
+        "dimensions": [
+         "Financial class"
+        ],
+        "interactions": "Click toggles a Financial class filter (cross-filters every visual)"
+       }
+      }
+     ]
+    },
+    {
+     "i": 9,
+     "title": "Life-to-date yield by service month (recent months still maturing)",
+     "pid": "Life-to-date yield by service month (recent months still maturing)",
+     "metric": "service_month_yield",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "service_month_yield"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 10,
+     "title": "Cash by financial class",
+     "pid": "Cash by financial class",
+     "metric": "cash",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "cash"
+      ],
+      "dimensions": [
+       "Financial class"
+      ],
+      "interactions": "Click toggles a Financial class filter (cross-filters every visual)"
+     },
+     "subtitle": "Click Self Pay for patient cash",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 11,
+     "title": "Cash as % of net revenue trend",
+     "pid": "Cash as % of net revenue trend",
+     "metric": "cash_pct_npsr",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "cash_pct_npsr"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 12,
+     "title": "Net collection rate trend",
+     "pid": "Net collection rate trend",
+     "metric": "net_collection_rate",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "net_collection_rate"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [
+    [
+     "cash",
+     "cash_pct_npsr",
+     "net_collection_rate",
+     "payment_variance_pct",
+     "pos_collections",
+     "cost_to_collect"
+    ],
+    [
+     "patient_cash",
+     "refunds",
+     "retractions",
+     "retraction_pct_cash",
+     "contractual_adj_dollars",
+     "service_month_yield"
+    ]
+   ],
+   "headings": []
+  },
+  {
+   "page": "payers",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Payer performance",
+     "pid": "Payer performance",
+     "metric": "",
+     "spec": {
+      "type": "Matrix table: grouped rows, column groups, heat formatting, flags, totals",
+      "metrics": [
+       "gross_charges",
+       "net_ar",
+       "gross_ar_days",
+       "ar_gt90_pct",
+       "denial_rate",
+       "net_collection_rate",
+       "contractual_adj_pct",
+       "payment_variance"
+      ],
+      "dimensions": [
+       "Financial class",
+       "Payer"
+      ],
+      "interactions": "Expand/collapse; sort within level; row click toggles payer filter; header info opens definitions"
+     },
+     "subtitle": "Grouped by financial class with subtotals · shading = worse relative to other payers · click a payer to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Denials vs days in A/R",
+     "pid": "Denials vs days in A/R",
+     "metric": "",
+     "spec": {
+      "type": "Scatter / bubble chart with median reference lines",
+      "metrics": [
+       "gross_ar_days",
+       "denial_rate",
+       "net_ar"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles the payer filter"
+     },
+     "subtitle": "Each bubble is a payer (size = net A/R) · dashed lines = medians · top right = slow and denying",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "Payment variance by payer",
+     "pid": "Payment variance by payer",
+     "metric": "payment_variance_pct",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted) with threshold line",
+      "metrics": [
+       "payment_variance_pct"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles the payer filter"
+     },
+     "subtitle": "Paid vs expected reimbursement · below −2% flags possible underpayment · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 3,
+     "title": "Payer mix (gross charges by financial class)",
+     "pid": "Payer mix (gross charges by financial class)",
+     "metric": "gross_charges",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "gross_charges"
+      ],
+      "dimensions": [
+       "Financial class"
+      ],
+      "interactions": "Click toggles a Financial class filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [
+    [
+     "payment_variance",
+     "payment_variance_pct",
+     "contractual_adj_pct",
+     "denial_rate",
+     "net_collection_rate",
+     "gross_ar_days"
+    ]
+   ],
+   "headings": []
+  },
+  {
+   "page": "facilities",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Hospital comparison",
+     "pid": "Hospital comparison",
+     "metric": "",
+     "spec": {
+      "type": "Sortable comparison table: region groups, status text, data bars, sparklines",
+      "metrics": [
+       "net_ar_days",
+       "cash_pct_npsr",
+       "denial_rate",
+       "dnfb_days",
+       "clean_claim_rate",
+       "net_ar",
+       "npsr"
+      ],
+      "dimensions": [
+       "Region",
+       "Hospital"
+      ],
+      "interactions": "Row click drills through to Hospital Profile; sort; expand/collapse"
+     },
+     "subtitle": "Sep 2026 · grouped by region with subtotals · sort any column · click a hospital to open its profile",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Hospital ranking: Net A/R days",
+     "pid": "Hospital ranking: Net A/R days",
+     "metric": "net_ar_days",
+     "spec": {
+      "type": "Ranked bar chart with metric selector",
+      "metrics": [
+       "net_ar_days",
+       "cash_pct_npsr",
+       "denial_rate",
+       "dnfb_days",
+       "clean_claim_rate",
+       "ar_gt90_pct",
+       "cost_to_collect",
+       "coding_tat",
+       "eligibility_rate"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Choose metric; click filters; Drill mode opens Hospital Profile"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "Ranking metric",
+     "pid": "Ranking metric",
+     "metric": "",
+     "spec": null,
+     "subtitle": "Choose the metric used to rank hospitals",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [],
+   "headings": []
+  },
+  {
+   "page": "definitions",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Metric catalog (111 metrics)",
+     "pid": "Metric catalog",
+     "metric": "",
+     "spec": {
+      "type": "Reference table",
+      "interactions": "Search; RCM area filter applies; row click opens Metric Analysis"
+     },
+     "subtitle": "Draft definitions · owner Revenue Cycle Analytics (placeholder) · version 0.2-draft · changed 2026-10-08 · click a metric to analyze it",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [],
+   "headings": []
+  },
+  {
+   "page": "metric",
+   "id": "denial_rate",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Sep 2026",
+     "pid": "Period summary",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "KPI summary panel",
+      "metrics": [
+       "denial_rate"
+      ],
+      "interactions": "Values follow the filter pane"
+     },
+     "subtitle": "Denials · activity in period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Initial denial rate trend",
+     "pid": "Metric trend",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "Denial rate by hospital",
+     "pid": "Metric by hospital",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Click toggles a Hospital filter (cross-filters every visual); Drill mode opens the detail page"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 3,
+     "title": "Denial rate by payer",
+     "pid": "Metric breakdown",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "Region",
+       "Financial class",
+       "Payer",
+       "Service line",
+       "Patient type",
+       "Denial category",
+       "Root cause"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 4,
+     "title": "Change by hospital",
+     "pid": "Change by hospital",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "Diverging bar chart with horizon selector",
+      "metrics": [
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Hospital"
+      ],
+      "interactions": "Choose horizon; click filters to the hospital"
+     },
+     "subtitle": "Sep 26 vs Aug 26 · positive = worse · click to filter",
+     "measures": [],
+     "selects": [
+      [
+       "vs comparison period",
+       "vs 3 months earlier",
+       "vs 6 months earlier",
+       "vs 12 months earlier"
+      ]
+     ],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 5,
+     "title": "Peer comparison",
+     "pid": "Peer comparison",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "Table with conditional formatting",
+      "metrics": [
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Hospital",
+       "Facility type"
+      ],
+      "interactions": "Row click drills through to Hospital Profile"
+     },
+     "subtitle": "Hospital vs peer group (same facility type) and system · click to open the hospital profile",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 6,
+     "title": "Denial rate: 13-month trend by hospital",
+     "pid": "13-month trend by hospital",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "Small multiples (sparkline grid)",
+      "metrics": [
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Hospital",
+       "Month"
+      ],
+      "interactions": "Click toggles the hospital filter"
+     },
+     "subtitle": "Small multiples, each on its own scale · dashed line = target · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [],
+   "headings": []
+  },
+  {
+   "page": "facility",
+   "id": "0",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Hospital vs target, peers and system",
+     "pid": "Hospital vs target, peers and system",
+     "metric": "",
+     "spec": {
+      "type": "Grouped comparison table",
+      "dimensions": [
+       "RCM stage",
+       "Metric"
+      ],
+      "interactions": "Row click opens Metric Analysis with the hospital filter"
+     },
+     "subtitle": "Sep 2026 · grouped by revenue cycle stage · click a metric to analyze it",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 1,
+     "title": "Net A/R days: hospital vs system",
+     "pid": "Net A/R days: hospital vs system",
+     "metric": "net_ar_days",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "net_ar_days"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 2,
+     "title": "Denial rate: hospital vs system",
+     "pid": "Denial rate: hospital vs system",
+     "metric": "denial_rate",
+     "spec": {
+      "type": "Line chart with target and comparison overlays",
+      "metrics": [
+       "denial_rate"
+      ],
+      "dimensions": [
+       "Month"
+      ],
+      "interactions": "Click a month to set the report period; PY and rolling-3 toggles"
+     },
+     "subtitle": "Monthly, 18 months to Sep 26 · click a month to set the period",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 3,
+     "title": "Net A/R aging",
+     "pid": "Net A/R aging",
+     "metric": "net_ar",
+     "spec": {
+      "type": "Column chart",
+      "metrics": [
+       "net_ar"
+      ],
+      "dimensions": [
+       "Aging bucket"
+      ],
+      "interactions": "Click toggles a Aging bucket filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 4,
+     "title": "Net A/R by payer",
+     "pid": "Net A/R by payer",
+     "metric": "net_ar",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "net_ar"
+      ],
+      "dimensions": [
+       "Payer"
+      ],
+      "interactions": "Click toggles a Payer filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter · top 10 of 12",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    },
+    {
+     "i": 5,
+     "title": "Denied $ by category",
+     "pid": "Denied $ by category",
+     "metric": "denial_dollars",
+     "spec": {
+      "type": "Bar chart (horizontal, sorted)",
+      "metrics": [
+       "denial_dollars"
+      ],
+      "dimensions": [
+       "Denial category"
+      ],
+      "interactions": "Click toggles a Denial category filter (cross-filters every visual)"
+     },
+     "subtitle": "Sep 2026 · click to filter",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [
+    [
+     "npsr",
+     "cash_pct_npsr",
+     "net_ar_days",
+     "denial_rate",
+     "clean_claim_rate",
+     "dnfb_days",
+     "cost_to_collect"
+    ]
+   ],
+   "headings": []
+  },
+  {
+   "page": "accounts",
+   "id": "",
+   "visuals": [
+    {
+     "i": 0,
+     "title": "Open A/R accounts",
+     "pid": "Account list",
+     "metric": "",
+     "spec": {
+      "type": "Detail table (paged, sortable, row detail panel)",
+      "dimensions": [
+       "Account"
+      ],
+      "interactions": "Sort, page, row click opens summary; export respects filters"
+     },
+     "subtitle": "Sorted by balance · click a row for the account summary · columns sort",
+     "measures": [],
+     "selects": [],
+     "kpis": [],
+     "alt": []
+    }
+   ],
+   "strips": [
+    []
+   ],
+   "headings": []
+  }
+ ],
+ "errors": [
+  "Error\n    at assert (http://localhost:5199/node_modules/.vite/deps/echarts.js?v=7abac0c8:491:24)\n    at IntervalScale.setConfig (http://localhost:5199/node_modules/.vite/deps/echarts.js?v=7abac0c8:27589:4)\n    at updateIntervalOrLogScaleForNiceOrAligned (http://localhost:5199/node_modules/.vite/deps/echarts.js?v=7abac0c8:28302:15)\n    at Object.calcNiceForIntervalOrLogScale (http://localhost:5199/"
+ ]
+}
