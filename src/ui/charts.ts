@@ -1,6 +1,8 @@
 // ECharts option builders. One builder per visual type; pages pass data, never raw options.
 // Palette: validated reference categorical order (fixed order, never cycled). Status colors are
-// reserved for status and never used as series colors. One value axis per chart (no dual axes).
+// reserved for status and never used as series colors. One value axis per chart (no dual axes),
+// with one exception by client decision: the ELT selected-metric trend (multiTrendOption) puts a
+// second unit on a right axis. It allows two units at most.
 
 import type { EChartsOption } from 'echarts';
 
@@ -330,5 +332,44 @@ export function eltTrendOption(o: { labels: string[]; values: (number | null)[];
       markArea: missZone,
       markPoint: o.values[last] == null ? undefined : { symbol: 'circle', symbolSize: 8, silent: true, itemStyle: { color: SERIES[0], borderColor: '#fff', borderWidth: 2 }, label: { show: false }, data: [{ coord: [last, o.values[last]] }] },
     }],
+  } as EChartsOption;
+}
+
+export interface UnitAxis { name: string; fmt: (v: number) => string }
+export interface TrendLine extends Series { color: string; axis: 0 | 1; target?: (number | null)[] }
+
+/**
+ * ELT selected-metric trend: one line per metric in its fixed color, with an optional dashed
+ * target line in the same color. Metrics in the first unit use the left axis; metrics in the
+ * second unit use the right axis (two units at most). Legend always shown (one entry per metric).
+ */
+export function multiTrendOption(o: { labels: string[]; lines: TrendLine[]; axes: UnitAxis[]; showTargets: boolean }): EChartsOption {
+  const fmtOf = (axis: number) => o.axes[axis]?.fmt ?? String;
+  const hasValues = (axis: number) => o.lines.some((l) => l.axis === axis && [...l.data, ...(o.showTargets ? l.target ?? [] : [])].some((v) => v != null));
+  const series = o.lines.flatMap((l) => [
+    {
+      name: l.name, type: 'line' as const, yAxisIndex: l.axis, data: l.data, connectNulls: false, showSymbol: o.labels.length <= 14, symbol: 'circle', symbolSize: 8,
+      lineStyle: { width: 2, color: l.color }, itemStyle: { color: l.color, borderColor: '#fff', borderWidth: 2 },
+      tooltip: { valueFormatter: (v: unknown) => (v == null ? '–' : fmtOf(l.axis)(v as number)) },
+    },
+    ...(o.showTargets && l.target?.some((t) => t !== null) ? [{
+      name: `${l.name} target`, type: 'line' as const, yAxisIndex: l.axis, data: l.target, showSymbol: false, silent: true,
+      lineStyle: { width: 1, type: 'dashed' as const, color: l.color, opacity: 0.7 }, itemStyle: { color: l.color },
+      tooltip: { valueFormatter: (v: unknown) => (v == null ? '–' : fmtOf(l.axis)(v as number)) },
+    }] : []),
+  ]);
+  return {
+    ...base,
+    grid: { left: 8, right: 8, top: 52, bottom: 4, containLabel: true },
+    legend: { top: 0, left: 0, icon: 'roundRect', itemWidth: 12, itemHeight: 3, textStyle: { color: INK.secondary, fontSize: 11 }, data: o.lines.map((l) => l.name) },
+    tooltip: { ...tooltipBase, trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: INK.axis } } },
+    xAxis: catAxis(o.labels, { boundaryGap: false }),
+    yAxis: o.axes.map((a, i) => valueAxis(a.fmt, {
+      name: a.name, nameTextStyle: { color: INK.muted, fontSize: 10, align: i === 0 ? 'left' : 'right' }, scale: true, position: i === 0 ? 'left' : 'right',
+      ...(i === 1 ? { splitLine: { show: false } } : {}),
+      // An axis whose metrics have no values at this time scale needs a fixed range.
+      ...(hasValues(i) ? {} : { min: 0, max: 1, axisLabel: { show: false } }),
+    })),
+    series,
   } as EChartsOption;
 }

@@ -10,7 +10,7 @@ import { members } from '../services/analytics';
 import { useApp } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { barOption, SERIES, stackedColumnsOption } from '../ui/charts';
-import { fmtMetric } from '../ui/common';
+import { fmtMetric, snapshotLabel } from '../ui/common';
 import { Grid, gridExport, type GridColumn } from '../ui/Grid';
 import { InvestigationPath } from '../ui/InvestigationPath';
 import { CanvasHeader } from '../ui/Shell';
@@ -182,7 +182,7 @@ function AppealStatus() {
   const counts = useMemo(() => appealStatusCounts(engine, day, sel), [engine, day, sel]);
   return (
     <Visual title="Denial and appeal status" metricId="appeals_open" noData={counts.every((v) => v === 0) ? 'No open denials for the current filters.' : null}
-      subtitle={`Open denials at ${period.short} period end · filter the denial category for clinical appeals`}
+      subtitle={`Open denials at ${snapshotLabel(day)} · filter the denial category for clinical appeals`}
       table={{ columns: ['Status', 'Open denials'], rows: APPEAL_STATUSES.map((st, i) => [st, fmt(counts[i], 'count')]) }}
       spec={{ type: 'Bar chart (horizontal, fixed status order)', metrics: ['appeals_open'], dimensions: ['Appeal status'] }}>
       <Chart height={200} ariaLabel="Open denials by appeal status"

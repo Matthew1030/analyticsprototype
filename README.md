@@ -55,42 +55,47 @@ Analytics; the ELT Summary has a compact period and scope bar, and worklists hav
 ### 1. ELT Summary
 
 The executive view, built only from standard BI components (KPI cards, trend charts, a metric table
-with conditional formatting, ranked variance tables, slicers, tooltips, drill-through) and no
-explanatory prose. Slicers: period type, period and hospital (or region).
+with conditional formatting, a period-by-period table, a multi-metric trend, slicers, tooltips,
+drill-through) and no explanatory prose. Slicers: period type (day, week, month, quarter, year to
+date, rolling 12 months), period and hospital (or region).
 
 | Section | Content |
 |---|---|
 | Key Performance Indicators | AR-06, CA-03, DN-04, BL-08, AR-07: actual, target, variance, 3-month change, 12-month sparkline |
 | Performance Trends | AR-06, CA-03, DN-04 monthly for 12 months, with target line and off-target range |
-| Performance vs. Target | All 12 framework metrics, grouped as Balance Sheet and Income Statement: actual, target, variance, status, 3-month change, 12-month trend, benchmark |
-| Areas of Focus | Up to 5 off-target metrics with the largest unfavorable variance (relative to target), with the key driver hospital |
-| Performance Highlights | Up to 3 on-target metrics with the largest favorable variance, with the leading hospital |
+| Performance vs. Target | All 12 framework metrics, grouped as Balance Sheet and Income Statement. **Summary** view: actual, target, variance to target, status, 3-month change, 12-month trend, benchmark. **Table** view: one metric per row, one column per period of the chosen time scale (Daily 14 days, Weekly 13 weeks, Monthly 12 months, Quarterly 8 quarters, Yearly every year in the window), actual values only; **Export** downloads it as a CSV for Excel, with the scope and time scale |
+| Selected Metric Trends | One line per metric checked in Performance vs. Target (default: AR-06), on the same time scale, with dashed target lines (switch off with *Targets*). A metric keeps its color while it is checked. Two units at most: the first unit on the left axis, the second on the right axis; a metric in a third unit cannot be checked until one unit is cleared |
 
-Variance and change colors follow each metric's direction (higher Gross AR Days is unfavorable;
-higher Cash as % of Net Revenue is favorable). Every metric row and card drills into its analytical
+The time scale starts from the period type (day → Daily, week → Weekly, quarter → Quarterly,
+others → Monthly) and the user can change it. Columns end with the selected period: a quarter or year
+that is not complete runs to the selected month and is marked QTD or YTD.
+
+Variance and change colors follow each metric's direction (higher Gross A/R days is unfavorable;
+higher Cash as % of net revenue is favorable). Every metric row and card drills into its analytical
 page (AR-06, AR-07, AR-01 → A/R; BL-08 → Billing / DNFB; CA-03 → Cash; DN-04, DN-01, DN-02 → Denials; others → Metric
 Analysis). A hospital link applies that hospital as a filter first.
 
 #### ELT metric framework
 
 Client definitions, benchmarks and targets. `src/engine/framework.ts` maps each framework metric to
-the catalog metric; the code is the catalog code (see Metric codes below); targets are in `config/targets.config.json`. Watch thresholds (the line between
+the catalog metric; the code and the name are the catalog code and name (see Metric codes below), so
+the ELT Summary uses the same names as every other view; targets are in `config/targets.config.json`. Watch thresholds (the line between
 Watch and Off target) are prototype choices, not client values.
 
 | Group | Code | Metric | Calculation | Target | Watch |
 |---|---|---|---|---|---|
-| Balance Sheet | AR-06 | Gross AR Days | Ending gross AR ÷ (trailing 90-day gross revenue ÷ 90) | 45 | 50 |
-| Balance Sheet | AR-07 | % of AR Over 90 Days | Billed gross AR in 91+ buckets ÷ total billed gross AR | 20% | 25% |
-| Balance Sheet | AR-01 | Credit Balance Days | \|Month-end credit balance AR\| ÷ (trailing 90-day net revenue ÷ 90) ¹ | 1.0 | 1.5 |
-| Balance Sheet | PA-01 | POS Collections % Net Rev | Patient POS payments ÷ net revenue | 2% | 1% |
-| Income Statement | FN-10 | Net to Gross Ratio | Net revenue ÷ gross revenue | none (mix dependent) | – |
-| Income Statement | BL-08 | DNFB / Unbilled Days | Month-end DNFB gross $ ÷ (trailing 90-day gross revenue ÷ 90) | bill hold + 1.5 ² | 5.5 |
-| Income Statement | CA-03 | Cash as % of Net Revenue | Cash ÷ average monthly net revenue, most recent 3 months ³ | 100% | 95% |
-| Income Statement | FN-11 | Bad Debt % Gross Rev | Bad debt provision ÷ gross revenue ⁴ | 2% | 5% |
-| Income Statement | DN-04 | Initial Denial Rate (claim $) | Gross charges denied ÷ gross charges submitted ⁵ | 5% | 6% |
-| Income Statement | FN-12 | Bad Debt incl. Unrealized | (Provision + unrealized bad debt) ÷ gross revenue ⁶ | 3% | 3.5% |
-| Income Statement | DN-01 | Avoidable Write-Offs % Net | Net avoidable write-offs ÷ average monthly net revenue ⁷ | 0.5% | 0.75% |
-| Income Statement | DN-02 | Avoidable W/O incl. Unreal. | (Avoidable write-offs + unrealized) ÷ average monthly net revenue ⁸ | 1% | 1.5% |
+| Balance Sheet | AR-06 | Gross A/R days | Ending gross AR ÷ (trailing 90-day gross revenue ÷ 90) | 45 | 50 |
+| Balance Sheet | AR-07 | A/R > 90 days | Billed gross AR in 91+ buckets ÷ total billed gross AR | 20% | 25% |
+| Balance Sheet | AR-01 | Net days in credit balance | \|Month-end credit balance AR\| ÷ (trailing 90-day net revenue ÷ 90) ¹ | 1.0 | 1.5 |
+| Balance Sheet | PA-01 | Point-of-service cash % of net revenue | Patient POS payments ÷ net revenue | 2% | 1% |
+| Income Statement | FN-10 | Net to gross ratio | Net revenue ÷ gross revenue | none (mix dependent) | – |
+| Income Statement | BL-08 | Days in DNFB | Month-end DNFB gross $ ÷ (trailing 90-day gross revenue ÷ 90) | bill hold + 1.5 ² | 5.5 |
+| Income Statement | CA-03 | Cash as % of net revenue | Cash ÷ average monthly net revenue, most recent 3 months ³ | 100% | 95% |
+| Income Statement | FN-11 | Bad debt as % of gross revenue | Bad debt provision ÷ gross revenue ⁴ | 2% | 5% |
+| Income Statement | DN-04 | Initial denial rate (claim dollars) | Gross charges denied ÷ gross charges submitted ⁵ | 5% | 6% |
+| Income Statement | FN-12 | Bad debt incl. unrealized as % of gross revenue | (Provision + unrealized bad debt) ÷ gross revenue ⁶ | 3% | 3.5% |
+| Income Statement | DN-01 | Avoidable write-offs as % of net revenue | Net avoidable write-offs ÷ average monthly net revenue ⁷ | 0.5% | 0.75% |
+| Income Statement | DN-02 | Avoidable write-offs incl. unrealized as % of net revenue | (Avoidable write-offs + unrealized) ÷ average monthly net revenue ⁸ | 1% | 1.5% |
 
 Prototype assumptions (confirm with the client):
 ¹ Credit balances are modeled; the synthetic data has no overpayments.
@@ -159,9 +164,12 @@ the prototype are kept in the browser only.
 
 ### Interaction model
 
-- **Global filter pane** (Analytics): date (month, quarter, YTD, rolling 12), comparison (prior period / prior year),
+- **Global filter pane** (Analytics): date (day, week, month, quarter, YTD, rolling 12), comparison (prior period / prior year),
   region, facility type, hospital, financial class, payer, patient type, service line, RCM area, plus
   page-level fields (aging bucket, account status, denial category, root cause, DNFB hold, edit category).
+  A week runs Sunday to Saturday; only complete weeks are listed. A day has a date field. For days and
+  weeks, prior year = the same weekday 52 weeks earlier. Monthly visuals (trends, month-end snapshots)
+  show the month that holds the selected day or week, and say which snapshot date they use.
   Multi-select, search, select all, clear, applied-filter chips, Clear all. Filters persist in the browser.
 - **Click-to-filter / cross-filtering**: clicking a bar, segment, row or point filters every visual.
   Unselected members fade.
@@ -204,9 +212,23 @@ The codes replace the client's former ELT framework codes (P1–P13). Release pr
 exported with the old codes still load (`LEGACY_FRAMEWORK_CODE` in `src/engine/framework.ts`).
 
 **Metric Dictionary** in the prototype controls bar (after Worklists, marked *prototype only*) lists every
-metric: code, name, RCM category, definition, calculation in plain terms (`formula` on the metric, for
-example "Appealed denials / denials"), unit, direction, target, flow or balance, time recency
-(H/D/W/M/Y, `recency` on the metric, not set yet) and the views where the metric appears.
+metric: code, name, short name, RCM category, definition, calculation in plain terms (`formula` on the
+metric, for example "Appealed denials / denials"), unit, direction, target, flow or balance, shortest
+period, time recency (H/D/W/M/Y, `recency` on the metric, not set yet) and the views where the metric
+appears.
+
+**One name per metric.** The dictionary name (`name`) and the approved short name (`short`, at most one,
+for compact places such as KPI cards and chart legends) are the only names any view uses for a metric,
+the ELT Summary included. Visual titles such as "Cash % net rev by hospital" are built from the catalog,
+so they follow a measure switch. Tests check table column labels and renamed visuals. Release priority
+ratings saved under a former visual title still load (`LEGACY_VISUAL_TITLE` in `src/config/priorities.ts`).
+The client KPI inventory (`src/config/kpiCoverage.ts`) keeps the client's own KPI names, because it
+records the client sheet.
+
+**Shortest period** (`finest` on the metric): the shortest period type the metric is calculated for.
+Day by default. Week for DNFB metrics (weekly Saturday snapshots). Month for metrics that read month-end
+A/R snapshots, monthly costs, monthly revenue averages (CA-03, DN-01, DN-02) or monthly cohorts, and for
+the cash goal. For a shorter period these metrics show "–" with the reason in a tooltip.
 **Export to Excel (CSV)** downloads all metrics. The views are read from the page source files
 (`src/config/metricDictionary.ts`), so the export follows the prototype as it changes. Every metric is
 also on Metric Analysis (drill-through), which has a selector over the whole catalog. A new page file

@@ -62,7 +62,7 @@ export function MetricDictionary() {
         <header className="visual-head">
           <div className="visual-titles">
             <h3>Metric dictionary ({list.length === all.length ? `${all.length} metrics` : `${list.length} of ${all.length} metrics`})</h3>
-            <div className="visual-sub">Code = RCM category prefix and number · Time recency is not set yet · click a row to analyze the metric</div>
+            <div className="visual-sub">Code = RCM category prefix and number · views use only the metric name or its short name · shortest period = the shortest period type the metric is calculated for · Time recency is not set yet · click a row to analyze the metric</div>
           </div>
           <div className="visual-tools dict-tools">
             <label className="fld inline">RCM category

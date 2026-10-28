@@ -3,13 +3,13 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BRAND } from '../config/brand';
-import { isoDay } from '../data/dates';
 import { FIELD_LABEL, type SelField } from '../engine/engine';
 import { METRIC_BY_ID, RCM_AREAS } from '../engine/metrics';
-import { availablePeriods, COMPARE_LABEL, comparePeriod, PERIOD_KIND_LABEL, type PeriodKind } from '../engine/periods';
+import { COMPARE_LABEL, comparePeriod, PERIOD_KIND_LABEL, periodDates, type PeriodKind } from '../engine/periods';
 import { fmtDate, fmtDateTime } from '../format';
 import { DIMENSION_LABEL, members } from '../services/analytics';
 import { scopeText, useApp, type Audience, type PageId, type Route, type SimState } from '../state/AppState';
+import { PeriodInput } from './common';
 import { Icon } from './icons';
 import { PriorityToggle } from './Priority';
 
@@ -305,8 +305,7 @@ function AreaSlicer() {
 }
 
 export function FilterPane() {
-  const { ds, period, setPeriod, setPeriodKind, compare, setCompare, clearAll, sel, paneOpen, setPaneOpen, route, areas } = useApp();
-  const periods = availablePeriods(period.kind, ds.meta.windowStartMonth, ds.meta.endMonth);
+  const { period, setPeriodKind, compare, setCompare, clearAll, sel, paneOpen, setPaneOpen, route, areas } = useApp();
   const active = Object.values(sel).reduce((a, v) => a + (v?.length ? 1 : 0), 0) + (areas.length ? 1 : 0);
   const pageFilters = PAGE_BY_ID[route.page]?.pageFilters ?? [];
   if (!paneOpen) {
@@ -336,11 +335,9 @@ export function FilterPane() {
             </select>
           </label>
           <label className="fld">Period
-            <select value={period.key} onChange={(e) => setPeriod(period.kind, Number(e.target.value))}>
-              {periods.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
-            </select>
+            <PeriodInput />
           </label>
-          <div className="fld-note">{isoDay(period.startDay)} to {isoDay(period.endDay)}</div>
+          <div className="fld-note">{periodDates(period)}</div>
           <label className="fld">Compare to
             <select value={compare} onChange={(e) => setCompare(e.target.value as 'prior' | 'py')}>
               {(['prior', 'py'] as const).map((c) => <option key={c} value={c}>{COMPARE_LABEL[c]} ({comparePeriod(period, c).short})</option>)}

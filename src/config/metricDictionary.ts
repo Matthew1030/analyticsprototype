@@ -1,11 +1,12 @@
 // Metric dictionary (prototype only, not part of the design): one row per catalog metric with its
-// code, plain-language calculation, target and the views where it appears, for export to Excel.
+// code, name, approved short name, plain-language calculation, target and the views where it
+// appears, for export to Excel. The name and the short name are the only names a view may use.
 // The views are read from the page source files, so the dictionary follows the prototype as it
 // changes: a metric id named in a page file (KPI strip, trend, breakdown, scorecard, measure
 // switch, build annotation) puts the metric on that page.
 
 import { FRAMEWORK_METRICS } from '../engine/framework';
-import { METRIC_BY_ID, METRICS, type Direction, type MetricDef, type Unit } from '../engine/metrics';
+import { GRAIN_LABEL, METRIC_BY_ID, METRICS, UNIT_LABEL, type Direction, type MetricDef } from '../engine/metrics';
 import { staticTarget } from '../engine/status';
 import { fmt } from '../format';
 import { EXEC_KPIS } from '../pages/EnterpriseOverview';
@@ -77,12 +78,13 @@ export async function loadMetricViews(sources: Record<string, () => Promise<stri
 
 // ---------------------------------------------------------------- rows and export
 
-export const UNIT_LABEL: Record<Unit, string> = { pct: '%', days: 'Days', usd: '$', count: 'Count', sec: 'Seconds', ratio: 'Ratio' };
+export { UNIT_LABEL };
 export const DIRECTION_LABEL: Record<Direction, string> = { up: 'Higher is better', down: 'Lower is better', none: 'No direction' };
 
 export interface DictionaryRow {
   code: string;
   name: string;
+  short: string;
   area: string;
   definition: string;
   formula: string;
@@ -90,6 +92,7 @@ export interface DictionaryRow {
   direction: string;
   target: string;
   type: string;
+  finest: string;
   recency: string;
   views: string;
   id: string;
@@ -108,6 +111,7 @@ export function dictionaryRows(views: Record<string, PageId[]>): DictionaryRow[]
   return [...METRICS].sort((a, b) => a.code.localeCompare(b.code)).map((m) => ({
     code: m.code,
     name: m.name,
+    short: m.short ?? '',
     area: m.area,
     definition: m.definition,
     formula: m.formula,
@@ -115,6 +119,7 @@ export function dictionaryRows(views: Record<string, PageId[]>): DictionaryRow[]
     direction: DIRECTION_LABEL[m.direction],
     target: targetText(m),
     type: m.type === 'balance' ? 'Balance' : 'Flow',
+    finest: GRAIN_LABEL[m.finest ?? 'day'],
     recency: m.recency ?? '',
     views: (views[m.id] ?? []).map((p) => VIEW_LABEL[p]).join('; '),
     id: m.id,
@@ -124,6 +129,7 @@ export function dictionaryRows(views: Record<string, PageId[]>): DictionaryRow[]
 export const DICTIONARY_COLUMNS: { key: keyof DictionaryRow; label: string }[] = [
   { key: 'code', label: 'Code' },
   { key: 'name', label: 'Metric' },
+  { key: 'short', label: 'Short name' },
   { key: 'area', label: 'RCM category' },
   { key: 'definition', label: 'Definition' },
   { key: 'formula', label: 'Calculation' },
@@ -131,6 +137,7 @@ export const DICTIONARY_COLUMNS: { key: keyof DictionaryRow; label: string }[] =
   { key: 'direction', label: 'Direction' },
   { key: 'target', label: 'Target' },
   { key: 'type', label: 'Flow / balance' },
+  { key: 'finest', label: 'Shortest period' },
   { key: 'recency', label: 'Time recency (H/D/W/M/Y)' },
   { key: 'views', label: 'Views' },
   { key: 'id', label: 'Catalog ID' },

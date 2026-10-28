@@ -1,9 +1,9 @@
 // Metric codes, plain-language calculations and the metric dictionary (views and CSV export).
 
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseCsv } from '../src/config/priorities';
+import { LEGACY_VISUAL_TITLE, parseCsv } from '../src/config/priorities';
 import {
   DICTIONARY_COLUMNS, dictionaryCsv, dictionaryRows, FILE_PAGE, FILES_WITHOUT_VIEWS, loadMetricViews, metricIdsIn,
 } from '../src/config/metricDictionary';
@@ -86,5 +86,38 @@ describe('metric dictionary export', () => {
     expect(gross[head.indexOf('Direction')]).toBe('Lower is better');
     expect(gross[head.indexOf('Flow / balance')]).toBe('Balance');
     expect(body.find((r) => r[head.indexOf('Catalog ID')] === 'cash')![head.indexOf('Target')]).toBe('Calculated (cash goal)');
+  });
+});
+
+describe('one name per metric (terminology)', () => {
+  const pagesDir = join(__dirname, '..', 'src', 'pages');
+  const names = new Set(METRICS.flatMap((m) => [m.name, ...(m.short ? [m.short] : [])]));
+
+  it('lists the approved short name in the dictionary and its export', () => {
+    expect(DICTIONARY_COLUMNS.map((c) => c.key)).toContain('short');
+    const rows = dictionaryRows({});
+    expect(rows.find((r) => r.id === 'dnfb_days')?.short).toBe('DNFB days');
+  });
+
+  it('keeps a short name only when it differs from the name', () => {
+    for (const m of METRICS) if (m.short) expect(m.short, m.id).not.toBe(m.name);
+  });
+
+  it('labels a table column for a metric with its name or short name', () => {
+    for (const f of readdirSync(pagesDir)) {
+      const src = readFileSync(join(pagesDir, f), 'utf8');
+      for (const m of src.matchAll(/\{[^{}\n]*?label: '([^']*)'[^\n]*?metricId: '([a-z0-9_]+)'/g)) {
+        const def = METRICS.find((x) => x.id === m[2])!;
+        // A period qualifier in parentheses may follow, e.g. "(YTD)".
+        expect([def.name, def.short], `${f}: column "${m[1]}" for ${m[2]}`).toContain(m[1].replace(/ \((YTD|MTD)\)$/, ''));
+      }
+    }
+  });
+
+  it('renames visuals to a metric name or short name ("<metric> by <dimension>")', () => {
+    for (const [, , title] of LEGACY_VISUAL_TITLE) {
+      const lead = title.replace(/ (by|trend|vs) .*$/, '').replace(/ trend$/, '');
+      expect(names.has(lead), title).toBe(true);
+    }
   });
 });

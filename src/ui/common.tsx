@@ -3,6 +3,9 @@ import { METRIC_BY_ID, type MetricDef, type Unit } from '../engine/metrics';
 import { CONFIG, staticTarget, watchFor, type Change, type Status } from '../engine/status';
 import { fmt, fmtDelta } from '../format';
 import { FRAMEWORK_BY_ID } from '../engine/framework';
+import { dayOf, isoDay, monthEndDay, monthStartDay } from '../data/dates';
+import { availablePeriods, longDayLabel } from '../engine/periods';
+import { useApp } from '../state/AppState';
 import { Icon } from './icons';
 
 /** Info button: opens the definition and calculation of a metric, or a free text note. */
@@ -50,7 +53,7 @@ export function MetricInfo({ m }: { m: MetricDef }) {
         {t !== null && <> · Target {m.direction === 'up' ? '≥' : '≤'} {fmt(t, m.unit, m.digits)} · Watch to {fmt(w, m.unit, m.digits)}</>}
         {m.target && <> · Target is calculated (cash goal)</>}
       </span>
-      {FRAMEWORK_BY_ID[m.id] && <><span className="info-label">ELT framework</span><span className="info-row">{FRAMEWORK_BY_ID[m.id].name} · Benchmark {FRAMEWORK_BY_ID[m.id].benchmark}</span></>}
+      {FRAMEWORK_BY_ID[m.id] && <><span className="info-label">ELT framework</span><span className="info-row">Benchmark {FRAMEWORK_BY_ID[m.id].benchmark}</span></>}
       {m.multiDef && <span className="info-row note">More than one definition is common in the industry. Confirm this one with Finance.</span>}
       <span className="info-label">Source fields</span>
       <span className="info-row small mono">{m.sourceFields.join(', ')}</span>
@@ -131,4 +134,33 @@ export function fmtMetric(id: string, v: number | null) {
 /** Section heading inside an analytics page (e.g. Contact center, Scheduling on Patient Access). */
 export function PageSection({ title, note }: { title: string; note?: string }) {
   return <div className="page-sec"><h2>{title}</h2>{note && <span className="page-sec-note">{note}</span>}</div>;
+}
+
+/** Period control: a date field for days, a list for the other period types. */
+export function PeriodInput({ ariaLabel }: { ariaLabel?: string }) {
+  const { ds, period, setPeriod } = useApp();
+  if (period.kind === 'day') {
+    const min = isoDay(monthStartDay(ds.meta.windowStartMonth));
+    const max = isoDay(monthEndDay(ds.meta.endMonth));
+    return (
+      <input type="date" aria-label={ariaLabel} value={isoDay(period.key)} min={min} max={max} required
+        onChange={(e) => {
+          const [y, m, d] = e.target.value.split('-').map(Number);
+          if (!y || !m || !d) return;
+          const day = dayOf(y, m, d);
+          if (e.target.value >= min && e.target.value <= max) setPeriod('day', day);
+        }} />
+    );
+  }
+  const periods = availablePeriods(period.kind, ds.meta.windowStartMonth, ds.meta.endMonth);
+  return (
+    <select aria-label={ariaLabel} value={period.key} onChange={(e) => setPeriod(period.kind, Number(e.target.value))}>
+      {periods.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+    </select>
+  );
+}
+
+/** Date of the snapshot a visual reads (A/R at month end, DNFB weekly), e.g. "Sep 30, 2026". */
+export function snapshotLabel(day: number | null): string {
+  return day === null ? 'no snapshot' : longDayLabel(day);
 }

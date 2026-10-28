@@ -4,6 +4,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { SelField, Selections } from '../engine/engine';
 import { METRIC_BY_ID, RCM_AREAS, type RcmArea, type Unit } from '../engine/metrics';
+import { comparePeriod, monthPeriod } from '../engine/periods';
 import { STATUS_RANK } from '../engine/status';
 import { fmt, fmtDelta } from '../format';
 import { breakdown, DIMENSION_LABEL, members, metricValue, trend } from '../services/analytics';
@@ -64,7 +65,7 @@ function useMeasure(id: string, alt?: string[]): [string, ReactNode] {
 // ---------------------------------------------------------------- KPI card
 
 export function KpiCard({ id, onOpen, selOverride }: { id: string; onOpen?: () => void; selOverride?: Selections }) {
-  const { go, compare } = useApp();
+  const { go, compare, period } = useApp();
   const m = METRIC_BY_ID[id];
   const v = useMetric(id, 13, selOverride);
   const open = onOpen ?? (() => go('metric', { id }, { drill: true }));
@@ -89,7 +90,7 @@ export function KpiCard({ id, onOpen, selOverride }: { id: string; onOpen?: () =
             <StatusMark status={v.status} compact />
           </div>
           <div className="kpi-row">
-            <Delta d={v.change} unit={m.unit} kind={v.change_kind} digits={m.digits} suffix={`vs ${compare === 'py' ? 'PY' : v.compare_period}`} />
+            <Delta d={v.change} unit={m.unit} kind={v.change_kind} digits={m.digits} suffix={`vs ${compare === 'py' ? 'PY' : comparePeriod(period, compare).short}`} />
           </div>
         </>
       )}
@@ -116,7 +117,7 @@ export function Scorecard({ ids, title, groupByArea = true, selOverride, spec, s
       : <b>{r.label}</b> },
     { key: 'actual', label: period.short, text: period.label, value: (r) => r.v.value, format: (v, r) => (r.v.metric ? <b>{f(r.v.metric)(v)}</b> : ''), exportText: (r) => (r.v.metric ? f(r.v.metric)(r.v.value) : '') },
     { key: 'target', label: 'Target', value: (r) => r.v.target, format: (v, r) => (r.v.metric ? f(r.v.metric)(v) : ''), exportText: (r) => (r.v.metric ? f(r.v.metric)(r.v.target) : '') },
-    { key: 'var', label: 'Var. to target', value: (r) => r.v.variance_to_target, status: (r) => r.v.status,
+    { key: 'var', label: 'Variance to target', value: (r) => r.v.variance_to_target, status: (r) => r.v.status,
       format: (v, r) => (r.v.metric ? fmtDelta(v, METRIC_BY_ID[r.v.metric].unit, METRIC_BY_ID[r.v.metric].digits) : '') },
     { key: 'status', label: 'Status', value: (r) => (r.v.status ? STATUS_RANK[r.v.status] : null), render: (r) => (r.v.metric ? <StatusMark status={r.v.status} compact /> : null), exportText: (r) => r.v.status ?? '', align: 'center', info: 'Circle = on target, triangle = watch, diamond = off target. Hover for the label.' },
     { key: 'cmp', label: cmpLabel, value: (r) => r.v.compare_value, format: (v, r) => (r.v.metric ? f(r.v.metric)(v) : '') },
@@ -166,7 +167,7 @@ export function TrendVisual({ id: idProp, alt, months = 18, title, pid, height =
   const noData = t.every((x) => x.value === null) ? 'No data for the current filters.' : null;
   return (
     <Visual title={title ?? `${m.name} trend`} pid={pid ?? title ?? `${METRIC_BY_ID[idProp].name} trend`} metricId={id} noData={noData}
-      subtitle={`Monthly, ${t.length} months to ${period.short} · click a month to set the period`}
+      subtitle={`Monthly, ${t.length} months to ${monthPeriod(period.endMi).short} · click a month to set the period`}
       table={{ columns: ['Month', m.name, 'Target', 'Prior year', 'Rolling 3-month'], rows: t.map((x) => [x.label, fm(x.value), fm(x.target), fm(x.prior_year), fm(x.rolling_3)]) }}
       actions={(
         <span className="toggles">

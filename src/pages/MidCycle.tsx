@@ -5,6 +5,7 @@ import { useApp } from '../state/AppState';
 import { usd } from '../format';
 import { Chart } from '../ui/Chart';
 import { barOption, SERIES } from '../ui/charts';
+import { snapshotLabel } from '../ui/common';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, KpiStrip, Scorecard, TrendVisual } from '../ui/widgets';
@@ -36,7 +37,7 @@ export function MidCycle() {
       <div className="row cols-3">
         <BreakdownVisual id="final_coded_volume" dim="patientType" dims={['patientType', 'facility', 'serviceLine']} title="Final coded accounts" />
         <BreakdownVisual id="coding_tat" dim="patientType" dims={['patientType', 'serviceLine', 'payer']} title="Coding turnaround by type" />
-        <BreakdownVisual id="missed_charge_rate" alt={['missing_charges']} dim="facility" title="Missed charges by hospital" onDrill={drill} />
+        <BreakdownVisual id="missed_charge_rate" alt={['missing_charges']} dim="facility" onDrill={drill} />
       </div>
       <div className="row cols-2">
         <MidCycleHolds />
@@ -56,7 +57,7 @@ function MidCycleHolds() {
     f, vals: holds.map((h) => (day === null ? 0 : engine.snapshot('dnfb', 'amount', day, { ...sel, facility: [f.key], dnfbHold: [h] }, { stage: 0 }))),
   })).sort((a, b) => b.vals.reduce((x, y) => x + y, 0) - a.vals.reduce((x, y) => x + y, 0)), [engine, day, sel, ds, facs]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <Visual title="DNFB held by mid-cycle reasons" subtitle={`By hospital at ${period.short} month end · click a hospital to filter`}
+    <Visual title="DNFB held by mid-cycle reasons" subtitle={`By hospital at ${snapshotLabel(day)} · click a hospital to filter`}
       table={{ columns: ['Hospital', ...holds.map((h) => ds.dims.dnfbHolds[h].name)], rows: data.map((d) => [d.f.short, ...d.vals.map((v) => usd(v))]) }}
       spec={{ type: 'Stacked bar chart (horizontal)', metrics: ['dnfb_coding', 'dnfb_query'], dimensions: ['Hospital', 'DNFB hold reason'], interactions: 'Click filters the hospital' }}>
       <Chart height={Math.max(200, data.length * 24 + 40)} ariaLabel="DNFB held by mid-cycle reasons by hospital"

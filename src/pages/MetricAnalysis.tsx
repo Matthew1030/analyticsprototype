@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import type { FactName, SelField } from '../engine/engine';
 import { FACILITY_TYPES } from '../engine/engine';
 import { evaluate, METRIC_BY_ID, METRICS, RCM_AREAS } from '../engine/metrics';
-import { comparePeriod, makePeriod, priorYearPeriod, ytdPeriod } from '../engine/periods';
+import { comparePeriod, monthPeriod, monthsEarlier, priorYearPeriod, ytdPeriod } from '../engine/periods';
 import { changeOf, statusOf } from '../engine/status';
 import { fmt, fmtDelta } from '../format';
 import { breakdown, DIMENSION_LABEL, trend } from '../services/analytics';
@@ -136,8 +136,8 @@ function ChangeByHospital({ id }: { id: string }) {
   const { engine, period, compare, sel, selectOnly, ds } = useApp();
   const m = METRIC_BY_ID[id];
   const [horizon, setHorizon] = useState<'cmp' | '3' | '6' | '12'>('cmp');
-  const cp = horizon === 'cmp' ? comparePeriod(period, compare) : makePeriod(period.kind === 'quarter' ? 'month' : period.kind, period.endMi - Number(horizon));
-  const cur = horizon === 'cmp' || period.kind !== 'quarter' ? period : makePeriod('month', period.endMi);
+  const cp = horizon === 'cmp' ? comparePeriod(period, compare) : monthsEarlier(period, Number(horizon));
+  const cur = horizon === 'cmp' || period.kind !== 'quarter' ? period : monthPeriod(period.endMi);
   const rows = useMemo(() => {
     const facs = engine.facilitySet(sel);
     return ds.dims.facilities.filter((f) => !facs || facs.has(f.key)).map((f) => {

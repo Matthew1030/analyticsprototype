@@ -11,7 +11,7 @@ const relPct = (v: number | null) => (v === null ? '–' : `${v > 0 ? '+' : v < 
 import { useApp } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { barOption, COMPARE, lineOption, SERIES } from '../ui/charts';
-import { StatusMark } from '../ui/common';
+import { metricLabel, StatusMark } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
@@ -30,19 +30,19 @@ export function Cash() {
       </div>
       <YtdByHospital />
       <div className="row cols-3">
-        <BreakdownVisual id="cash" dim="payer" title="Collections by payer" top={12} />
-        <BreakdownVisual id="cash_pct_npsr" dim="facility" title="Cash % NPSR by hospital" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
+        <BreakdownVisual id="cash" dim="payer" top={12} />
+        <BreakdownVisual id="cash_pct_npsr" dim="facility" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
         <BreakdownVisual id="net_collection_rate" dim="financialClass" title="Net collection rate by financial class" />
       </div>
       <KpiStrip ids={['patient_cash', 'refunds', 'retractions', 'retraction_pct_cash', 'contractual_adj_dollars', 'service_month_yield']} />
       <div className="row cols-3">
         <NonChargeTransactions />
         <BreakdownVisual id="retractions" alt={['retraction_pct_cash']} dim="payer" title="Insurance retractions by payer" top={11} />
-        <BreakdownVisual id="contractual_adj_dollars" alt={['contractual_adj_pct']} dim="financialClass" title="Contractual adjustments by financial class" />
+        <BreakdownVisual id="contractual_adj_dollars" alt={['contractual_adj_pct']} dim="financialClass" />
       </div>
       <div className="row cols-2">
         <TrendVisual id="service_month_yield" months={18} title="Life-to-date yield by service month (recent months still maturing)" />
-        <BreakdownVisual id="cash" dim="financialClass" title="Cash by financial class" subtitle="Click Self Pay for patient cash" />
+        <BreakdownVisual id="cash" dim="financialClass" subtitle="Click Self Pay for patient cash" />
       </div>
       <div className="row cols-2">
         <TrendVisual id="cash_pct_npsr" months={18} />
@@ -76,10 +76,10 @@ function MonthPace() {
   const st = statusOf(end, goal, 'up', goal * 0.97);
   return (
     <Visual title={`Month-to-date pace, ${cur.label}`} pid="Month-to-date pace" metricId="cash"
-      subtitle={<>Cumulative cash by day of month · {usd(end)} of {usd(goal)} goal ({fmt(pct, 'pct', 1)}) <StatusMark status={st} /></>}
+      subtitle={<>Cumulative cash collections by day of month · {usd(end)} of {usd(goal)} goal ({fmt(pct, 'pct', 1)}) <StatusMark status={st} /></>}
       table={{ columns: ['Day', cur.short, prev.short, 'Goal pace'], rows: labels.map((l, i) => [l, usd(series.cur[i] ?? 0), usd(series.prev[i] ?? 0), usd(pace[i])]) }}
       spec={{ type: 'Cumulative line chart vs goal pace', metrics: ['cash', 'cash_goal'], dimensions: ['Day of month'], interactions: 'Follows the report month; hover for daily values' }}>
-      <Chart height={250} ariaLabel="Cumulative cash by day of month"
+      <Chart height={250} ariaLabel="Cumulative cash collections by day of month"
         option={lineOption({ labels, fmt: usd, dashed: ['Goal pace'], series: [
           { name: cur.short, data: series.cur, color: SERIES[0] },
           { name: prev.short, data: series.prev, color: COMPARE },
@@ -119,27 +119,27 @@ function YtdByHospital() {
     { key: 'name', label: 'Region / hospital', value: (r) => r.name, width: 190, render: (r) => (r.isRegion ? <b>{r.name}</b> : r.name) },
     { key: 'm', label: 'Cash', group: cm.label, value: (r) => r.month, format: (v) => usd(v ?? 0) },
     { key: 'mg', label: 'Goal', group: cm.label, value: (r) => r.monthGoal, format: (v) => usd(v ?? 0) },
-    { key: 'mv', label: 'Var %', group: cm.label, value: (r) => varPct(r.month, r.monthGoal), format: relPct, status: (r) => st(r.month, r.monthGoal) },
+    { key: 'mv', label: 'Variance %', group: cm.label, value: (r) => varPct(r.month, r.monthGoal), format: relPct, status: (r) => st(r.month, r.monthGoal) },
     { key: 'y', label: 'Cash', group: `Year to date (${ytd.short.replace('YTD ', 'Jan–')})`, value: (r) => r.ytd, format: (v) => <b>{usd(v ?? 0)}</b>, exportText: (r) => usd(r.ytd ?? 0), bar: true },
     { key: 'yg', label: 'Goal', group: `Year to date (${ytd.short.replace('YTD ', 'Jan–')})`, value: (r) => r.ytdGoal, format: (v) => usd(v ?? 0) },
     { key: 'yv', label: 'Variance', group: `Year to date (${ytd.short.replace('YTD ', 'Jan–')})`, value: (r) => (r.ytd !== null && r.ytdGoal !== null ? r.ytd - r.ytdGoal : null), format: (v) => fmtDelta(v, 'usd'), status: (r) => st(r.ytd, r.ytdGoal) },
-    { key: 'yvp', label: 'Var %', group: `Year to date (${ytd.short.replace('YTD ', 'Jan–')})`, value: (r) => varPct(r.ytd, r.ytdGoal), format: relPct },
+    { key: 'yvp', label: 'Variance %', group: `Year to date (${ytd.short.replace('YTD ', 'Jan–')})`, value: (r) => varPct(r.ytd, r.ytdGoal), format: relPct },
     { key: 'py', label: 'vs PY YTD', value: (r) => varPct(r.ytd, r.pyYtd), format: relPct, info: 'YTD cash vs the same months last year (relative change).' },
-    { key: 'pct', label: 'Cash % NPSR (YTD)', value: (r) => r.pct, format: (v) => fmt(v, 'pct'), metricId: 'cash_pct_npsr' },
+    { key: 'pct', label: 'Cash % net rev (YTD)', value: (r) => r.pct, format: (v) => fmt(v, 'pct'), metricId: 'cash_pct_npsr' },
     { key: 'st', label: 'YTD status', value: (r) => st(r.ytd, r.ytdGoal) ?? '', align: 'left', render: (r) => <StatusMark status={st(r.ytd, r.ytdGoal)} /> },
   ];
   return (
-    <Visual title="Cash vs goal by hospital: month and year to date" subtitle="Grouped by region with subtotals · Watch = within 3% of goal · click a hospital to open its profile"
+    <Visual title="Cash collections vs cash goal by hospital: month and year to date" subtitle="Grouped by region with subtotals · Watch = within 3% of goal · click a hospital to open its profile"
       table={gridExport(cols, rows, total)}
       spec={{ type: 'Matrix table: column groups, region subtotals, data bars, status text', metrics: ['cash', 'cash_goal', 'cash_pct_npsr'], dimensions: ['Region', 'Hospital'], interactions: 'Expand/collapse regions; sort; row click drills to Hospital Profile' }}>
-      <Grid caption="Cash vs goal by hospital" columns={cols} rows={rows} total={total} defaultExpanded
+      <Grid caption="Cash collections vs cash goal by hospital" columns={cols} rows={rows} total={total} defaultExpanded
         onRowClick={(r) => { if (!r.isRegion && r.key >= 0) go('facility', { id: String(r.key) }, { drill: true }); }} />
     </Visual>
   );
 }
 
 const NON_CHARGE = ['bad_debt', 'charity', 'denial_writeoffs', 'refunds', 'retractions'];
-const NON_CHARGE_LABEL = ['Bad debt', 'Charity', 'Denial W/O', 'Refunds', 'Retractions'];
+const NON_CHARGE_LABEL = ['bad_debt', 'charity', 'denial_writeoffs', 'refunds', 'retractions'].map(metricLabel);
 
 /** Non-charge transactions other than contractuals, in the period. Click a bar to analyze it. */
 function NonChargeTransactions() {

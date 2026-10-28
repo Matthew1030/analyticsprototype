@@ -13,7 +13,7 @@ import { trend } from '../services/analytics';
 import { useApp } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { barLineOption, COMPARE, SERIES } from '../ui/charts';
-import { Delta, fmtMetric, StatusMark } from '../ui/common';
+import { Delta, fmtMetric, metricLabel, StatusMark } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { Visual } from '../ui/Visual';
 
@@ -158,12 +158,12 @@ export function CashVsGoal({ months = 13 }: { months?: number }) {
   const pct = useMemo(() => trend(engine, 'cash_pct_npsr', period.endMi, months, sel), [engine, period.endMi, months, sel]);
   const f = (v: number | null) => fmt(v, 'usd');
   return (
-    <Visual title="Cash collected vs cash goal" metricId="cash"
+    <Visual title="Cash collections vs cash goal" metricId="cash"
       subtitle={`Monthly · goal = ${'98%'} of lagged NPSR · click a month to set the period`}
-      table={{ columns: ['Month', 'Cash collected', 'Cash goal', 'Variance', 'Cash % NPSR'], rows: cash.map((c, i) => [c.label, f(c.value), f(c.target), c.value !== null && c.target !== null ? f(c.value - c.target) : '–', fmt(pct[i].value, 'pct')]) }}
+      table={{ columns: ['Month', 'Cash collections', 'Cash goal', 'Variance', metricLabel('cash_pct_npsr')], rows: cash.map((c, i) => [c.label, f(c.value), f(c.target), c.value !== null && c.target !== null ? f(c.value - c.target) : '–', fmt(pct[i].value, 'pct')]) }}
       spec={{ type: 'Column chart with goal line (single $ axis)', metrics: ['cash', 'cash_goal'], dimensions: ['Month'], interactions: 'Click a month to set the period' }}>
-      <Chart height={240} ariaLabel="Cash collected vs cash goal by month"
-        option={barLineOption({ labels: cash.map((c) => c.label), bars: [{ name: 'Cash collected', data: cash.map((c) => c.value), color: SERIES[0] }], lines: [{ name: 'Cash goal', data: cash.map((c) => c.target), color: '#4b5361' }, { name: 'Cash, prior year', data: cash.map((c) => c.prior_year), color: COMPARE }], fmt: f, selectedIndex: cash.length - 1 })}
+      <Chart height={240} ariaLabel="Cash collections vs cash goal by month"
+        option={barLineOption({ labels: cash.map((c) => c.label), bars: [{ name: 'Cash collections', data: cash.map((c) => c.value), color: SERIES[0] }], lines: [{ name: 'Cash goal', data: cash.map((c) => c.target), color: '#4b5361' }, { name: 'Cash collections, prior year', data: cash.map((c) => c.prior_year), color: COMPARE }], fmt: f, selectedIndex: cash.length - 1 })}
         onClick={(i) => setPeriod('month', Number(cash[i].period.slice(0, 4)) * 12 + Number(cash[i].period.slice(5)) - 1)} />
     </Visual>
   );

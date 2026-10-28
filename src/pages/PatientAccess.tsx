@@ -7,7 +7,7 @@ import { fmt } from '../format';
 import { useApp } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { barOption, lineOption, SERIES } from '../ui/charts';
-import { PageSection } from '../ui/common';
+import { metricLabel, PageSection } from '../ui/common';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
 import { weekLabel, weeksEnding } from '../ui/weekly';
@@ -40,7 +40,7 @@ export function PatientAccess() {
       <PageSection title="Contact center" note="Patient access line (front end) and business office customer service line (back end)" />
       <KpiStrip ids={['call_volume_total', 'call_volume', 'calls_outbound', 'call_abandon_rate_all', 'call_abandon_rate', 'cbo_call_abandon_rate', 'asa']} />
       <div className="row cols-2">
-        <BreakdownVisual id="call_abandon_rate_all" alt={['call_abandon_rate', 'cbo_call_abandon_rate']} dim="facility" title="Call abandonment by hospital" onDrill={drill} />
+        <BreakdownVisual id="call_abandon_rate_all" alt={['call_abandon_rate', 'cbo_call_abandon_rate']} dim="facility" onDrill={drill} />
         <TrendVisual id="call_volume_total" alt={['call_abandon_rate_all']} months={18} title="Call volume and abandonment, all lines" />
       </div>
 
@@ -49,15 +49,15 @@ export function PatientAccess() {
       <div className="row cols-3">
         <OrderOutcomes />
         <BreakdownVisual id="open_orders_24h_pct" alt={['open_orders']} dim="facility" title="Open orders in process > 24 hours by hospital" onDrill={drill} />
-        <BreakdownVisual id="lead_time_3plus_pct" alt={['schedule_lead_time']} dim="facility" title="Scheduling lead time by hospital" onDrill={drill} />
+        <BreakdownVisual id="lead_time_3plus_pct" alt={['schedule_lead_time']} dim="facility" onDrill={drill} />
       </div>
 
       <PageSection title="Pre-registration and financial clearance" note="72-hour and before-service windows" />
       <KpiStrip ids={['prereg_rate', 'prereg_rate_72h', 'fin_clearance_rate', 'fin_clearance_rate_72h', 'scheduled_under_72h_pct']} />
       <div className="row cols-3">
-        <BreakdownVisual id="prereg_rate_72h" alt={['prereg_rate']} dim="facility" title="Pre-registration by hospital" onDrill={drill} />
-        <BreakdownVisual id="fin_clearance_rate_72h" alt={['fin_clearance_rate']} dim="facility" title="Financial clearance by hospital" onDrill={drill} />
-        <BreakdownVisual id="scheduled_under_72h_pct" dim="facility" title="Accounts scheduled < 72 hours before service" onDrill={drill} />
+        <BreakdownVisual id="prereg_rate_72h" alt={['prereg_rate']} dim="facility" onDrill={drill} />
+        <BreakdownVisual id="fin_clearance_rate_72h" alt={['fin_clearance_rate']} dim="facility" onDrill={drill} />
+        <BreakdownVisual id="scheduled_under_72h_pct" dim="facility" onDrill={drill} />
       </div>
 
       <PageSection title="Point-of-service collections" note="Collections against the patient liability estimate" />
@@ -72,14 +72,14 @@ export function PatientAccess() {
       <KpiStrip ids={['eligibility_rate', 'medicaid_in_scope', 'medicaid_screening_rate', 'coverage_found_rate', 'medicaid_eligible_completion']} />
       <div className="row cols-3">
         <BreakdownVisual id="eligibility_rate" dim="facility" title="Eligibility rate by hospital" onDrill={drill} />
-        <BreakdownVisual id="medicaid_screening_rate" alt={['medicaid_in_scope']} dim="facility" title="Medicaid screening by hospital" onDrill={drill} />
-        <BreakdownVisual id="medicaid_eligible_completion" alt={['coverage_found_rate']} dim="facility" title="Medicaid application completion by hospital" onDrill={drill} />
+        <BreakdownVisual id="medicaid_screening_rate" alt={['medicaid_in_scope']} dim="facility" onDrill={drill} />
+        <BreakdownVisual id="medicaid_eligible_completion" alt={['coverage_found_rate']} dim="facility" onDrill={drill} />
       </div>
 
       <PageSection title="Registration quality and authorization" />
       <div className="row cols-3">
-        <BreakdownVisual id="registration_accuracy" alt={['registration_edits']} dim="facility" title="Registration quality by hospital" onDrill={drill} />
-        <BreakdownVisual id="preservice_auth_rate" dim="facility" title="Pre-service authorization by hospital" onDrill={drill} />
+        <BreakdownVisual id="registration_accuracy" alt={['registration_edits']} dim="facility" onDrill={drill} />
+        <BreakdownVisual id="preservice_auth_rate" dim="facility" onDrill={drill} />
         <BreakdownVisual id="front_end_denial_rate" dim="payer" title="Front-end denial rate by payer" top={11} />
       </div>
     </div>
@@ -100,7 +100,7 @@ function WeeklyScheduling() {
       table={{ columns: ['Week ending', 'Scheduled rate', 'Scheduled volume'], rows: weeks.map((w, i) => [weekLabel(w), fmt(rate[i], 'pct'), fmt(vol[i], 'count')]) }}
       spec={{ type: 'Two aligned charts (line + columns), shared week axis', metrics: ['scheduled_rate', 'scheduled_volume'], dimensions: ['Week'] }}>
       <Chart height={120} ariaLabel="Weekly scheduled rate" option={lineOption({ labels: weeks.map(weekLabel), series: [{ name: 'Scheduled rate', data: rate }], fmt: (v) => fmt(v, 'pct', 0), target })} />
-      <Chart height={100} ariaLabel="Weekly scheduled volume" option={barOption({ labels: weeks.map(weekLabel), series: [{ name: 'Scheduled', data: vol, color: SERIES[0] }], fmt: (v) => fmt(v, 'count'), labels_on: false })} />
+      <Chart height={100} ariaLabel="Weekly scheduled volume" option={barOption({ labels: weeks.map(weekLabel), series: [{ name: metricLabel('scheduled_volume'), data: vol, color: SERIES[0] }], fmt: (v) => fmt(v, 'count'), labels_on: false })} />
     </Visual>
   );
 }
