@@ -7,6 +7,7 @@ import { fmt, usd } from '../format';
 import { useApp } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { lineOption, ORDINAL, stackedColumnsOption } from '../ui/charts';
+import { snapshotLabel } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
@@ -34,8 +35,8 @@ export function BillingDnfb() {
       </div>
       <KpiStrip ids={['claims_submitted', 'claims_submitted_dollars', 'dnsp_dollars', 'dnsp_accounts', 'first_pass_yield', 'rework_claims']} />
       <div className="row cols-3">
-        <BreakdownVisual id="claims_submitted_dollars" alt={['claims_submitted']} dim="facility" title="Claims exported to payers by hospital" onDrill={drill} />
-        <BreakdownVisual id="dnsp_dollars" alt={['dnsp_accounts', 'dnsp_days']} dim="facility" title="Billed, not exported (open edits) by hospital" onDrill={drill} />
+        <BreakdownVisual id="claims_submitted_dollars" alt={['claims_submitted']} dim="facility" onDrill={drill} />
+        <BreakdownVisual id="dnsp_dollars" alt={['dnsp_accounts', 'dnsp_days']} dim="facility" onDrill={drill} />
         <BreakdownVisual id="first_pass_yield" dim="payer" dims={['payer', 'facility', 'financialClass', 'patientType']} title="First pass yield" top={11} />
       </div>
       <div className="row cols-2">
@@ -96,7 +97,7 @@ function DnfbMatrix() {
     { key: 'days', label: 'DNFB days', value: (r) => r.days, format: (v) => fmt(v, 'days'), metricId: 'dnfb_days' },
   ];
   return (
-    <Visual title="DNFB by hospital and hold reason" subtitle={`${period.short} month-end snapshot · expand a hospital for hold reasons · click to filter`}
+    <Visual title="DNFB by hospital and hold reason" subtitle={`Snapshot at ${snapshotLabel(day)} · expand a hospital for hold reasons · click to filter`}
       table={gridExport(cols, rows, total)} noData={rows.length ? null : 'No DNFB for the current filters.'}
       spec={{ type: 'Matrix (pivot) table with hierarchy and heat', metrics: ['dnfb_dollars', 'dnfb_days'], dimensions: ['Hospital', 'Hold reason', 'DNFB age'], interactions: 'Expand/collapse; row click filters hospital (and hold reason)' }}>
       <Grid caption="DNFB by hospital and hold reason" columns={cols} rows={rows} total={total} defaultSort={{ key: 'total', dir: 'desc' }} maxHeight={430}

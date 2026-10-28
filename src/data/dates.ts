@@ -39,7 +39,7 @@ export function monthEndDay(mi: number): number {
   return monthStartDay(mi + 1) - 1;
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function monthLabel(mi: number): string {
   return `${MONTHS[mi % 12]} ${Math.floor(mi / 12)}`;

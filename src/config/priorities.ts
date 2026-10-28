@@ -5,6 +5,7 @@
 
 import { KPI_COVERAGE } from './kpiCoverage';
 import { FRAMEWORK, LEGACY_FRAMEWORK_CODE } from '../engine/framework';
+import { METRIC_BY_ID } from '../engine/metrics';
 
 export type Tier = 'v1' | 'v2' | 'v3' | 'wont';
 
@@ -41,10 +42,42 @@ export const visualItemId = (page: string, key: string) => `visual:${page}:${key
 /** ELT framework metric, by catalog metric id. */
 export const eltItemId = (metricId: string) => `kpi:elt:${metricId}`;
 
-/** Item id from before the metric recode: ELT framework KPIs were keyed by their P code. */
+/**
+ * Visuals renamed to the Metric Dictionary names (page, former title, current title). Visual
+ * items are keyed by title, so ratings saved under a former title move to the current one.
+ */
+export const LEGACY_VISUAL_TITLE: [string, string, string][] = [
+  ['ar', 'Credit balances by payer', 'Credit balances $ by payer'],
+  ['ar', 'Credit balances trend', 'Credit balances ($) trend'],
+  ['billing', 'Claims exported to payers by hospital', 'Submitted $ by hospital'],
+  ['billing', 'Billed, not exported (open edits) by hospital', 'DNSP $ by hospital'],
+  ['cash', 'Collections by payer', 'Cash collections by payer'],
+  ['cash', 'Cash % NPSR by hospital', 'Cash % net rev by hospital'],
+  ['cash', 'Cash by financial class', 'Cash collections by financial class'],
+  ['cash', 'Contractual adjustments by financial class', 'Contractual adj. $ by financial class'],
+  ['cash', 'Cash vs goal by hospital: month and year to date', 'Cash collections vs cash goal by hospital: month and year to date'],
+  ['cycle', 'Cash collected vs cash goal', 'Cash collections vs cash goal'],
+  ['midcycle', 'Missed charges by hospital', 'Missed charge rate by hospital'],
+  ['access', 'Scheduling lead time by hospital', 'Lead time 3+ days by hospital'],
+  ['access', 'Accounts scheduled < 72 hours before service', 'Scheduled < 72h by hospital'],
+  ['access', 'Pre-service authorization by hospital', 'Pre-service auth by hospital'],
+  ['access', 'Call abandonment by hospital', 'Call abandonment (all lines) by hospital'],
+  ['access', 'Pre-registration by hospital', 'Pre-registration 72h by hospital'],
+  ['access', 'Financial clearance by hospital', 'Financial clearance 72h by hospital'],
+  ['access', 'Medicaid application completion by hospital', 'Medicaid eligible completion by hospital'],
+  ['access', 'Registration quality by hospital', 'Registration accuracy by hospital'],
+  ['payers', 'Denials vs days in A/R', 'Denial rate vs Gross A/R days'],
+];
+const LEGACY_VISUAL_ID: Record<string, string> = Object.fromEntries(LEGACY_VISUAL_TITLE.map(([p, a, b]) => [visualItemId(p, a), visualItemId(p, b)]));
+
+/**
+ * Item id from before a rename: ELT framework KPIs were keyed by their P code, and some visuals
+ * had other titles before the Metric Dictionary names.
+ */
 export function currentItemId(id: string): string {
   const m = /^kpi:elt:(P\d+)$/.exec(id);
-  return m && LEGACY_FRAMEWORK_CODE[m[1]] ? eltItemId(LEGACY_FRAMEWORK_CODE[m[1]]) : id;
+  if (m && LEGACY_FRAMEWORK_CODE[m[1]]) return eltItemId(LEGACY_FRAMEWORK_CODE[m[1]]);
+  return LEGACY_VISUAL_ID[id] ?? id;
 }
 
 /** Decisions with legacy item ids moved to the current ids. */
@@ -64,7 +97,7 @@ export const CAPABILITIES: PriorityItem[] = [
   cap('filter-pane', 'Filtering', 'Global filter pane (organization, payer, service, RCM area)'),
   cap('page-filters', 'Filtering', 'Page-specific filters (denial category, A/R age, DNFB hold, edit category)'),
   cap('click-filter', 'Filtering', 'Click a bar, row or point to filter'),
-  cap('period', 'Filtering', 'Period type (month, quarter, YTD) and compare to prior period or prior year'),
+  cap('period', 'Filtering', 'Period type (day, week, month, quarter, YTD, rolling 12 months) and compare to prior period or prior year'),
   cap('filters-persist', 'Filtering', 'Filters kept between pages and visits'),
   cap('measure-switch', 'Analysis', 'Measure switch on visuals ($ / % / #)'),
   cap('decomposition', 'Analysis', 'Decomposition tree'),
@@ -88,7 +121,7 @@ export const CAPABILITIES: PriorityItem[] = [
 
 /** Client KPI inventory rows (Definitions) and the ELT framework metrics. */
 export const KPI_ITEMS: PriorityItem[] = [
-  ...FRAMEWORK.flatMap((g) => g.metrics.map((m) => ({ id: eltItemId(m.id), kind: 'kpi' as const, group: 'ELT framework', label: `${m.code} ${m.label}` }))),
+  ...FRAMEWORK.flatMap((g) => g.metrics.map((m) => ({ id: eltItemId(m.id), kind: 'kpi' as const, group: 'ELT framework', label: `${m.code} ${METRIC_BY_ID[m.id].name}` }))),
   ...KPI_COVERAGE.map((k) => ({ id: kpiItemId(k.dashboard, k.kpi), kind: 'kpi' as const, group: `Client KPI inventory · ${k.stage}`, label: `${k.kpi} (${k.dashboard})` })),
 ];
 

@@ -9,6 +9,7 @@ import { useApp } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { barOption, scatterOption } from '../ui/charts';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
+import { metricLabel } from '../ui/common';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, KpiStrip } from '../ui/widgets';
@@ -67,19 +68,19 @@ function PayerTable() {
   const { tree, total } = usePayerRows();
   const cols: GridColumn<PRow>[] = [
     { key: 'name', label: 'Financial class / payer', value: (r) => r.name, width: 240, render: (r) => (r.isClass ? <b>{r.name}</b> : r.name) },
-    { key: 'gross', label: 'Gross chg.', value: (r) => r.gross, format: (v) => usd(v ?? 0) },
+    { key: 'gross', label: metricLabel('gross_charges'), value: (r) => r.gross, format: (v) => usd(v ?? 0) },
     { key: 'mix', label: 'Mix', value: (r) => r.mix, format: (v) => fmt(v, 'pct'), bar: true, info: 'Share of gross charges across all payers (ignores the payer filter).' },
-    { key: 'ar', label: 'Net A/R', value: (r) => r.ar, format: (v) => usd(v ?? 0), group: 'A/R' },
-    { key: 'arDays', label: 'Days in A/R', value: (r) => r.arDays, format: (v) => fmt(v, 'days'), heat: 'high', group: 'A/R', metricId: 'gross_ar_days' },
-    { key: 'gt90', label: '% > 90', value: (r) => r.gt90, format: (v) => fmt(v, 'pct'), heat: 'high', group: 'A/R', metricId: 'ar_gt90_pct' },
-    { key: 'denial', label: 'Denial rate', value: (r) => r.denial, format: (v) => fmt(v, 'pct'), heat: 'high', metricId: 'denial_rate' },
-    { key: 'ncr', label: 'Net collection', value: (r) => r.ncr, format: (v) => fmt(v, 'pct'), heat: 'low', metricId: 'net_collection_rate' },
-    { key: 'pv', label: 'Pmt variance', value: (r) => r.pv, format: (v) => <span className={(v ?? 0) < 0 ? 'txt-off' : ''}>{fmtDelta(v, 'usd')}</span>, exportText: (r) => Math.round(r.pv ?? 0), group: 'Reimbursement', metricId: 'payment_variance' },
-    { key: 'pvPct', label: 'Var %', value: (r) => r.pvPct, format: (v) => fmtDelta(v, 'pct'), heat: 'low', group: 'Reimbursement', metricId: 'payment_variance_pct' },
+    { key: 'ar', label: metricLabel('net_ar'), value: (r) => r.ar, format: (v) => usd(v ?? 0), group: 'A/R' },
+    { key: 'arDays', label: metricLabel('gross_ar_days'), value: (r) => r.arDays, format: (v) => fmt(v, 'days'), heat: 'high', group: 'A/R', metricId: 'gross_ar_days' },
+    { key: 'gt90', label: metricLabel('ar_gt90_pct'), value: (r) => r.gt90, format: (v) => fmt(v, 'pct'), heat: 'high', group: 'A/R', metricId: 'ar_gt90_pct' },
+    { key: 'denial', label: metricLabel('denial_rate'), value: (r) => r.denial, format: (v) => fmt(v, 'pct'), heat: 'high', metricId: 'denial_rate' },
+    { key: 'ncr', label: metricLabel('net_collection_rate'), value: (r) => r.ncr, format: (v) => fmt(v, 'pct'), heat: 'low', metricId: 'net_collection_rate' },
+    { key: 'pv', label: metricLabel('payment_variance'), value: (r) => r.pv, format: (v) => <span className={(v ?? 0) < 0 ? 'txt-off' : ''}>{fmtDelta(v, 'usd')}</span>, exportText: (r) => Math.round(r.pv ?? 0), group: 'Reimbursement', metricId: 'payment_variance' },
+    { key: 'pvPct', label: metricLabel('payment_variance_pct'), value: (r) => r.pvPct, format: (v) => fmtDelta(v, 'pct'), heat: 'low', group: 'Reimbursement', metricId: 'payment_variance_pct' },
     { key: 'flag', label: 'Underpayment', value: (r) => (r.pvPct !== null && r.pvPct < UNDERPAY ? 1 : 0), align: 'left', group: 'Reimbursement',
       render: (r) => (r.pvPct !== null && r.pvPct < UNDERPAY ? <span className="flag-off" title="Review contract terms and payment posting">▲ Review</span> : <span className="muted">–</span>),
       exportText: (r) => (r.pvPct !== null && r.pvPct < UNDERPAY ? 'Yes' : 'No'), info: 'Flagged when payments run more than 2% below expected reimbursement.' },
-    { key: 'contr', label: 'Contractual adj.', value: (r) => r.contractual, format: (v) => fmt(v, 'pct'), metricId: 'contractual_adj_pct' },
+    { key: 'contr', label: metricLabel('contractual_adj_pct'), value: (r) => r.contractual, format: (v) => fmt(v, 'pct'), metricId: 'contractual_adj_pct' },
   ];
   return (
     <Visual title="Payer performance" subtitle="Grouped by financial class with subtotals · shading = worse relative to other payers · click a payer to filter"
@@ -103,11 +104,11 @@ function PayerScatter() {
   const med = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : undefined; };
   const shown = leaves.filter((r) => r.arDays !== null && r.denial !== null);
   return (
-    <Visual title="Denials vs days in A/R" subtitle="Each bubble is a payer (size = net A/R) · dashed lines = medians · top right = slow and denying"
-      table={{ columns: ['Payer', 'Days in A/R', 'Denial rate', 'Net A/R'], rows: leaves.map((r) => [r.name, fmt(r.arDays, 'days'), fmt(r.denial, 'pct'), usd(r.ar ?? 0)]) }}
+    <Visual title={`${metricLabel('denial_rate')} vs ${metricLabel('gross_ar_days')}`} subtitle="Each bubble is a payer (size = net A/R) · dashed lines = medians · top right = slow and denying"
+      table={{ columns: ['Payer', metricLabel('gross_ar_days'), metricLabel('denial_rate'), metricLabel('net_ar')], rows: leaves.map((r) => [r.name, fmt(r.arDays, 'days'), fmt(r.denial, 'pct'), usd(r.ar ?? 0)]) }}
       spec={{ type: 'Scatter / bubble chart with median reference lines', metrics: ['gross_ar_days', 'denial_rate', 'net_ar'], dimensions: ['Payer'], interactions: 'Click toggles the payer filter' }}>
-      <Chart height={300} ariaLabel="Payer denial rate vs days in A/R"
-        option={scatterOption({ points: pts, xName: 'Days in A/R', yName: 'Denial rate', xFmt: (v) => fmt(v, 'days', 0), yFmt: (v) => fmt(v, 'pct', 0), xRef: med(xs), yRef: med(ys),
+      <Chart height={300} ariaLabel="Payer denial rate vs gross A/R days"
+        option={scatterOption({ points: pts, xName: metricLabel('gross_ar_days'), yName: metricLabel('denial_rate'), xFmt: (v) => fmt(v, 'days', 0), yFmt: (v) => fmt(v, 'pct', 0), xRef: med(xs), yRef: med(ys),
           selected: shown.map((r, i) => (sel.payer?.includes(r.key) ? i : -1)).filter((i) => i >= 0) })}
         onClick={(i) => toggle('payer', shown[i].key)} />
     </Visual>

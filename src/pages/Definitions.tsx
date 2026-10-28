@@ -194,8 +194,8 @@ const SCENARIOS: Scenario[] = [
     steps: ['DNFB $ by hospital: Riverbend and Lakeside General lead relative to size.', 'Expand them in “DNFB by hospital and hold reason”: Riverbend = awaiting coding; Lakeside = unassigned and charge reconciliation.', 'Mid-Cycle page: coding turnaround at Riverbend; late charges at Lakeside.'],
   },
   {
-    title: 'Are we on track for cash?', question: 'Cash collected vs goal for the month and year to date.', page: 'cash', filters: {},
-    steps: ['Month-to-date pace vs goal pace.', 'YTD by hospital: which hospitals are behind goal.', 'Cash % NPSR by hospital: drill into the weakest.'],
+    title: 'Are we on track for cash?', question: 'Cash collections vs cash goal for the month and year to date.', page: 'cash', filters: {},
+    steps: ['Month-to-date pace vs goal pace.', 'YTD by hospital: which hospitals are behind goal.', 'Cash % net rev by hospital: drill into the weakest.'],
   },
 ];
 
@@ -282,7 +282,7 @@ function Contract() {
         <ul className="notes">
           <li><b>Filter context</b> is global (left pane + click-to-filter) and sent with every request. Detail fields (aging bucket, denial category, hold reason) apply only to the measures that carry them.</li>
           <li><b>Ratios</b> are always sum(numerator) / sum(denominator) for the filter context, never an average of ratios.</li>
-          <li><b>Balance</b> metrics use the period-end snapshot; <b>flow</b> metrics sum the period. Quarter, YTD and rolling-12 work the same way.</li>
+          <li><b>Balance</b> metrics use the period-end snapshot; <b>flow</b> metrics sum the period. Day, week, quarter, YTD and rolling-12 work the same way. Metrics that need a month-end snapshot, monthly costs or monthly revenue averages show no value for a day or a week (see Shortest period in the Metric Dictionary); DNFB metrics use the weekly Saturday snapshots.</li>
           <li><b>Targets</b> and Watch thresholds are configuration (config/targets.config.json). Status = On target / Watch / Off target, always with a shape and label, never color alone.</li>
           <li><b>Drill-through</b>: KPI → Metric Analysis; hospital → Hospital Profile; aggregate → Account Detail. Breadcrumbs and Back keep the path.</li>
           <li><b>Every visual</b> supports definition, show as table, focus mode and CSV export, and handles loading, empty, unavailable and error states.</li>

@@ -9,11 +9,12 @@ import { monthEndDay } from '../data/dates';
 import { hash01 } from '../data/hash';
 import type { Engine, FactName, Selections } from './engine';
 import { FIELD_LABEL, missingFields } from './engine';
-import { shiftMonths } from './periods';
+import { shiftMonths, type SubMonthGrain } from './periods';
 import { CONFIG, staticTarget, watchFor } from './status';
 
 export type Unit = 'pct' | 'days' | 'usd' | 'count' | 'sec' | 'ratio';
 export type Direction = 'up' | 'down' | 'none';
+export const UNIT_LABEL: Record<Unit, string> = { pct: '%', days: 'Days', usd: '$', count: 'Count', sec: 'Seconds', ratio: 'Ratio' };
 /** Revenue cycle area, in lifecycle order (plus enterprise financials). */
 export type RcmArea =
   | 'Patient Access' | 'Charge Capture' | 'Coding' | 'Clinical Documentation'
@@ -35,6 +36,8 @@ export interface Range {
   endDay: number;
   startMi: number;
   endMi: number;
+  /** Set when the range is a day or a week (a period shorter than a month). */
+  grain?: SubMonthGrain;
 }
 
 export interface Ctx {
@@ -55,6 +58,12 @@ export interface MetricDef {
   direction: Direction;
   /** flow = sum over the period; balance = point in time at period end. */
   type: 'flow' | 'balance';
+  /**
+   * Shortest period the metric is calculated for (default: day). 'week': it reads the weekly
+   * DNFB snapshots. 'month': it reads month-end A/R snapshots, monthly cost data, monthly
+   * revenue averages or monthly cohorts. Shorter periods show no value.
+   */
+  finest?: 'week' | 'month';
   /** Time recency: how often the value refreshes (Hourly, Daily, Weekly, Monthly, Yearly). Not set yet. */
   recency?: 'H' | 'D' | 'W' | 'M' | 'Y';
   definition: string;
@@ -279,7 +288,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => s(c, 'chAmt', 'chD'),
   },
   {
-    id: 'charity_pct', code: 'FN-08', name: 'Charity care % of NPSR', short: 'Charity % NPSR', area: 'Financial', unit: 'pct', direction: 'none', type: 'flow', page: 'executive', digits: 2,
+    id: 'charity_pct', code: 'FN-08', name: 'Charity care % of NPSR', short: 'Charity care % NPSR', area: 'Financial', unit: 'pct', direction: 'none', type: 'flow', page: 'executive', digits: 2,
     definition: 'Charity care adjustments as a share of NPSR. No target: the level follows community need and policy.',
     calculation: 'Charity adjustments (post date) / NPSR (discharge date)',
     formula: 'Charity care adjustments / NPSR',
@@ -287,7 +296,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => div(s(c, 'chAmt', 'chD'), net(c)),
   },
   {
-    id: 'cost_to_collect', code: 'FN-09', name: 'Cost to collect', area: 'Financial', unit: 'pct', direction: 'down', type: 'flow', page: 'executive', digits: 2,
+    id: 'cost_to_collect', code: 'FN-09', name: 'Cost to collect', area: 'Financial', unit: 'pct', direction: 'down', type: 'flow', page: 'executive', finest: 'month', digits: 2,
     definition: 'Revenue cycle operating cost as a share of cash collected.',
     calculation: 'SUM(gl.rcm_operating_cost) / Cash collections, same period',
     formula: 'Revenue cycle operating cost / cash collected',
@@ -312,7 +321,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => { const d = endOf(c); return div(Math.abs(creditAt(c, d)), adnr(c, d)); },
   },
   {
-    id: 'pos_pct_net', code: 'PA-01', name: 'Point-of-service cash % of net revenue', short: 'POS % net rev', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access', digits: 2,
+    id: 'pos_pct_net', code: 'PA-01', name: 'Point-of-service cash % of net revenue', short: 'POS cash % net rev', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access', digits: 2,
     definition: 'Patient cash collected before service, at service, or within the defined POS window as a percentage of net revenue.',
     calculation: '(Patient POS Payments ÷ Net Patient Service Revenue) × 100, by service date',
     formula: 'Point-of-service patient payments / NPSR',
@@ -320,7 +329,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => div(s(c, 'pos', 'dd'), net(c)),
   },
   {
-    id: 'bad_debt_pct_gross', code: 'FN-11', name: 'Bad debt as % of gross revenue', short: 'Bad debt % gross', area: 'Financial', unit: 'pct', direction: 'down', type: 'flow', page: 'cash', digits: 2,
+    id: 'bad_debt_pct_gross', code: 'FN-11', name: 'Bad debt as % of gross revenue', short: 'Bad debt % gross rev', area: 'Financial', unit: 'pct', direction: 'down', type: 'flow', page: 'cash', digits: 2,
     definition: 'Bad debt provision recorded on the income statement as a percentage of gross patient service revenue. Prototype: the provision is the bad debt transfers posted in the period.',
     calculation: '(Bad Debt Provision ÷ Gross Patient Service Revenue) × 100',
     formula: 'Bad debt provision / gross patient service revenue',
@@ -336,7 +345,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => div(s(c, 'bdAmt', 'bdD') + unrealizedBadDebtAt(c, endOf(c)), gross(c)),
   },
   {
-    id: 'avoidable_wo_pct_net', code: 'DN-01', name: 'Avoidable write-offs as % of net revenue', short: 'Avoidable W/O % net', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials', digits: 2,
+    id: 'avoidable_wo_pct_net', code: 'DN-01', name: 'Avoidable write-offs as % of net revenue', short: 'Avoidable W/O % net', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials', finest: 'month', digits: 2,
     definition: 'Realized avoidable write-offs as a percentage of average monthly net patient service revenue. Prototype: avoidable write-offs are write-offs after a final denial, net of recoveries.',
     calculation: '(Net Avoidable Write-Offs ÷ Average Monthly Net Patient Service Revenue) × 100',
     formula: 'Net avoidable write-offs / average monthly NPSR',
@@ -344,7 +353,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => div(avoidableWo(c), avgMonthlyNet(c)),
   },
   {
-    id: 'avoidable_wo_unrealized_pct', code: 'DN-02', name: 'Avoidable write-offs incl. unrealized as % of net revenue', short: 'Avoidable W/O incl. unrealized', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials', digits: 2,
+    id: 'avoidable_wo_unrealized_pct', code: 'DN-02', name: 'Avoidable write-offs incl. unrealized as % of net revenue', short: 'Avoidable W/O incl. unrealized', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials', finest: 'month', digits: 2,
     definition: 'Realized avoidable write-offs plus unrealized avoidable write-offs, as a percentage of net patient service revenue. Prototype definition of unrealized: expected net on open, unresolved denials older than the configured days.',
     calculation: '((Net Avoidable Write-Offs + Defined Unrealized Avoidable Write-Offs at period end) ÷ Average Monthly Net Patient Service Revenue) × 100',
     formula: '(Net avoidable write-offs + unrealized avoidable write-offs at period end) / average monthly NPSR',
@@ -353,16 +362,17 @@ export const METRICS: MetricDef[] = [
   },
   // ================= Cash =================
   {
-    id: 'cash', code: 'CA-01', name: 'Cash collections', short: 'Cash collected', area: 'Cash', unit: 'usd', direction: 'up', type: 'flow', page: 'cash',
+    id: 'cash', code: 'CA-01', name: 'Cash collections', area: 'Cash', unit: 'usd', direction: 'up', type: 'flow', page: 'cash',
     definition: 'Payer and patient payments posted in the period, including point-of-service cash. Target = cash goal (goal % × lagged NPSR).',
     calculation: 'SUM(transaction.amount) WHERE type = PAYMENT AND post_date IN period',
     formula: 'Payer payments + patient payments (including point-of-service cash)',
     sourceFields: ['transaction.amount', 'transaction.type', 'transaction.post_date'], fact: 'acc',
     compute: (c) => cash(c),
-    target: (c) => cashGoal(c),
+    // The cash goal is a monthly goal (CA-02): no target for days and weeks.
+    target: (c) => (c.r.grain ? null : cashGoal(c)),
   },
   {
-    id: 'cash_goal', code: 'CA-02', name: 'Cash goal', area: 'Cash', unit: 'usd', direction: 'none', type: 'flow', page: 'cash',
+    id: 'cash_goal', code: 'CA-02', name: 'Cash goal', area: 'Cash', unit: 'usd', direction: 'none', type: 'flow', page: 'cash', finest: 'month',
     definition: 'Expected cash for the period: the cash-to-NPSR goal × lagged average daily NPSR (period shifted back 1, 2 and 3 months) × days in the period.',
     calculation: 'cash_goal_pct × lagged average daily NPSR × days in period',
     formula: 'Cash goal % × average daily NPSR of the 3 prior months × days in the period',
@@ -370,15 +380,15 @@ export const METRICS: MetricDef[] = [
     compute: (c) => cashGoal(c),
   },
   {
-    id: 'cash_pct_npsr', code: 'CA-03', name: 'Cash as % of net revenue', short: 'Cash % net rev', area: 'Cash', unit: 'pct', direction: 'up', type: 'flow', page: 'cash',
+    id: 'cash_pct_npsr', code: 'CA-03', name: 'Cash as % of net revenue', short: 'Cash % net rev', area: 'Cash', unit: 'pct', direction: 'up', type: 'flow', page: 'cash', finest: 'month',
     definition: 'Total patient service cash collected in the reporting period as a percentage of average monthly net patient service revenue for the most recent 3 months (including the reporting month). Multi-month periods compare against the monthly average times the months in the period.',
     calculation: '(Total Patient Service Cash Collected ÷ Average Monthly Net Patient Service Revenue for the Most Recent 3 Months) × 100',
-    formula: 'Cash collected / average monthly NPSR of the most recent 3 months',
+    formula: 'Cash collections / average monthly NPSR of the most recent 3 months',
     sourceFields: ['transaction.amount', 'account.expected_net'], fact: 'acc',
     compute: (c) => div(cash(c), avgMonthlyNet(c)),
   },
   {
-    id: 'net_collection_rate', code: 'CA-04', name: 'Net collection rate', short: 'Net collection rate', area: 'Cash', unit: 'pct', direction: 'up', type: 'flow', page: 'cash',
+    id: 'net_collection_rate', code: 'CA-04', name: 'Net collection rate', area: 'Cash', unit: 'pct', direction: 'up', type: 'flow', page: 'cash', finest: 'month',
     definition: 'Payments received to date on accounts discharged 7–9 months before period end, as a share of their expected net revenue (mature cohort).',
     calculation: 'SUM(payments to date) / SUM(expected_net) WHERE discharge_date IN (period end −9 to −7 months)',
     formula: 'Payments to date / expected net revenue, for accounts discharged 7–9 months before period end',
@@ -440,7 +450,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => div(s(c, 'retAmt', 'retD', { pred: 'insured' }), cash(c)),
   },
   {
-    id: 'service_month_yield', code: 'CA-11', name: 'Life-to-date yield by service month', short: 'LTD yield', area: 'Cash', unit: 'pct', direction: 'none', type: 'flow', page: 'cash',
+    id: 'service_month_yield', code: 'CA-11', name: 'Life-to-date yield by service month', short: 'LTD yield', area: 'Cash', unit: 'pct', direction: 'none', type: 'flow', page: 'cash', finest: 'month',
     definition: 'Payments to date on accounts discharged in the period, as a share of charges less contractual adjustments (expected net). Recent service months are still being paid, so their yield is low until they mature.',
     calculation: 'SUM(payments to data date) / (SUM(gross_charges) − SUM(contractual adjustments)) WHERE discharge_date IN period',
     formula: 'Payments to date / (gross charges − contractual adjustments), for accounts discharged in the period',
@@ -449,7 +459,7 @@ export const METRICS: MetricDef[] = [
   },
   // ================= A/R =================
   {
-    id: 'credit_balance_dollars', code: 'AR-02', name: 'Credit balances ($)', short: 'Credit balance $', area: 'A/R', unit: 'usd', direction: 'down', type: 'balance', page: 'ar',
+    id: 'credit_balance_dollars', code: 'AR-02', name: 'Credit balances ($)', short: 'Credit balances $', area: 'A/R', unit: 'usd', direction: 'down', type: 'balance', page: 'ar',
     definition: 'Absolute value of accounts with a credit balance (overpayments awaiting refund) at period end. Prototype: modeled credits (see AR-01).',
     calculation: 'ABS(SUM(account.balance WHERE balance < 0)) at period end',
     formula: 'Total credit balances at period end (absolute value)',
@@ -457,7 +467,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => Math.abs(creditAt(c, endOf(c))),
   },
   {
-    id: 'gross_ar', code: 'AR-03', name: 'Gross A/R', area: 'A/R', unit: 'usd', direction: 'none', type: 'balance', page: 'ar',
+    id: 'gross_ar', code: 'AR-03', name: 'Gross A/R', area: 'A/R', unit: 'usd', direction: 'none', type: 'balance', page: 'ar', finest: 'month',
     definition: 'Open debit balances (gross charges less payments) at the period-end snapshot.',
     calculation: 'SUM(ar_snapshot.gross_balance) WHERE snapshot_date = period end',
     formula: 'Total open debit balances at period end (gross charges − payments)',
@@ -465,7 +475,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => ar(c, 'gross'),
   },
   {
-    id: 'net_ar', code: 'AR-04', name: 'Net A/R', area: 'A/R', unit: 'usd', direction: 'none', type: 'balance', page: 'ar',
+    id: 'net_ar', code: 'AR-04', name: 'Net A/R', area: 'A/R', unit: 'usd', direction: 'none', type: 'balance', page: 'ar', finest: 'month',
     definition: 'Open debit balances net of expected contractual allowances at the period-end snapshot.',
     calculation: 'SUM(ar_snapshot.net_balance) WHERE snapshot_date = period end',
     formula: 'Total open debit balances at period end, net of expected contractual allowances',
@@ -473,7 +483,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => ar(c, 'net'),
   },
   {
-    id: 'net_ar_days', code: 'AR-05', name: 'Net A/R days', short: 'Net A/R days', area: 'A/R', unit: 'days', direction: 'down', type: 'balance', page: 'ar',
+    id: 'net_ar_days', code: 'AR-05', name: 'Net A/R days', area: 'A/R', unit: 'days', direction: 'down', type: 'balance', page: 'ar', finest: 'month',
     definition: 'Net A/R at period end divided by average daily net revenue over the last 90 days. Ignores aging-bucket and account-status filters.',
     calculation: 'Net A/R (period end) / (SUM(expected_net, last 90 days) / 90)',
     formula: 'Net A/R at period end / average daily net revenue (last 90 days)',
@@ -481,7 +491,7 @@ export const METRICS: MetricDef[] = [
     compute: (c0) => { const c = whole(c0); const v = ar(c, 'net'); return v === null ? null : div(v, adnr(c, arDay(c)!)); },
   },
   {
-    id: 'gross_ar_days', code: 'AR-06', name: 'Gross A/R days', area: 'A/R', unit: 'days', direction: 'down', type: 'balance', page: 'ar',
+    id: 'gross_ar_days', code: 'AR-06', name: 'Gross A/R days', area: 'A/R', unit: 'days', direction: 'down', type: 'balance', page: 'ar', finest: 'month',
     definition: 'Month-end gross accounts receivable divided by trailing average daily gross patient service revenue.',
     calculation: 'Ending Gross AR ÷ (Trailing 90-Day Gross Patient Service Revenue ÷ 90)',
     formula: 'Gross A/R at period end / average daily gross revenue (last 90 days)',
@@ -489,7 +499,7 @@ export const METRICS: MetricDef[] = [
     compute: (c0) => { const c = whole(c0); const v = ar(c, 'gross'); return v === null ? null : div(v, adgr(c, arDay(c)!)); },
   },
   {
-    id: 'ar_gt90_pct', code: 'AR-07', name: 'A/R > 90 days', short: 'A/R > 90 days', area: 'A/R', unit: 'pct', direction: 'down', type: 'balance', page: 'ar',
+    id: 'ar_gt90_pct', code: 'AR-07', name: 'A/R > 90 days', area: 'A/R', unit: 'pct', direction: 'down', type: 'balance', page: 'ar', finest: 'month',
     definition: 'Percentage of billed gross AR in the aged trial balance 91+ day aging buckets.',
     calculation: '(Billed Gross AR in 91+ Buckets ÷ Total Billed Gross AR) × 100, period-end snapshot',
     formula: 'Billed gross A/R aged 91+ days / total billed gross A/R',
@@ -497,7 +507,7 @@ export const METRICS: MetricDef[] = [
     compute: (c0) => { const c = whole(c0); const a = ar(c, 'gross', { ageMin: 3, billed: [1, 2] }); const b = ar(c, 'gross', { billed: [1, 2] }); return a === null || b === null ? null : div(a, b); },
   },
   {
-    id: 'ar_gt180_pct', code: 'AR-08', name: 'A/R > 180 days', short: 'A/R > 180 days', area: 'A/R', unit: 'pct', direction: 'down', type: 'balance', page: 'ar',
+    id: 'ar_gt180_pct', code: 'AR-08', name: 'A/R > 180 days', area: 'A/R', unit: 'pct', direction: 'down', type: 'balance', page: 'ar', finest: 'month',
     definition: 'Share of gross A/R more than 180 days from discharge.',
     calculation: 'Gross A/R aged 181+ days / gross A/R, period-end snapshot',
     formula: 'Gross A/R aged 181+ days / total gross A/R',
@@ -662,7 +672,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => submittedGross(c),
   },
   {
-    id: 'first_pass_yield', code: 'BL-05', name: 'First pass yield', short: 'First pass yield', area: 'Billing', unit: 'pct', direction: 'up', type: 'flow', page: 'billing',
+    id: 'first_pass_yield', code: 'BL-05', name: 'First pass yield', area: 'Billing', unit: 'pct', direction: 'up', type: 'flow', page: 'billing',
     definition: 'Share of adjudicated insurance claims that passed edits on the first submission, were not denied, and were paid. Prototype: a claim with no scrubber edit stands in for "no 277 rejection".',
     calculation: 'COUNT(claim WHERE no edit AND no 277 rejection AND no denial AND paid) / COUNT(claim adjudicated), by submit date',
     formula: 'Claims with no edit, no rejection, no denial and paid / claims adjudicated',
@@ -678,7 +688,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => div(s(c, 'sbL', 'sbd'), s(c, '__one', 'sbd')),
   },
   {
-    id: 'dnfb_dollars', code: 'BL-07', name: 'DNFB', short: 'DNFB $', area: 'Billing', unit: 'usd', direction: 'down', type: 'balance', page: 'billing',
+    id: 'dnfb_dollars', code: 'BL-07', name: 'DNFB', short: 'DNFB $', area: 'Billing', unit: 'usd', direction: 'down', type: 'balance', page: 'billing', finest: 'week',
     definition: 'Gross charges of discharged accounts not yet final billed, at the period-end snapshot.',
     calculation: 'SUM(dnfb_snapshot.gross_amount) WHERE stage = DNFB AND snapshot_date = period end',
     formula: 'Total gross charges on discharged accounts not final billed at period end',
@@ -686,7 +696,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => dnfb(c, 0),
   },
   {
-    id: 'dnfb_days', code: 'BL-08', name: 'Days in DNFB', short: 'DNFB days', area: 'Billing', unit: 'days', direction: 'down', type: 'balance', page: 'billing',
+    id: 'dnfb_days', code: 'BL-08', name: 'Days in DNFB', short: 'DNFB days', area: 'Billing', unit: 'days', direction: 'down', type: 'balance', page: 'billing', finest: 'week',
     definition: 'Month-end gross charges for discharged accounts not yet final billed, expressed as days of average daily gross patient service revenue. Target: bill hold + 1.5 days.',
     calculation: 'Month-End Gross Dollars in DNFB ÷ (Trailing 90-Day Gross Patient Service Revenue ÷ 90)',
     formula: 'DNFB $ at period end / average daily gross revenue (last 90 days)',
@@ -695,7 +705,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => { const v = dnfb(c, 0); return v === null ? null : div(v, adgr(c, dnfbDay(c)!)); },
   },
   {
-    id: 'dnsp_days', code: 'BL-09', name: 'Billed not submitted days', short: 'DNSP days', area: 'Billing', unit: 'days', direction: 'down', type: 'balance', page: 'billing',
+    id: 'dnsp_days', code: 'BL-09', name: 'Billed not submitted days', short: 'DNSP days', area: 'Billing', unit: 'days', direction: 'down', type: 'balance', page: 'billing', finest: 'week',
     definition: 'Final-billed charges held by claim edits (not yet sent to the payer) at period end, as days of average daily gross charges.',
     calculation: 'DNSP $ (period end) / (SUM(gross_charges, last 90 days) / 90)',
     formula: 'Billed not submitted $ at period end / average daily gross charges (last 90 days)',
@@ -703,7 +713,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => { const v = dnfb(c, 1); return v === null ? null : div(v, adgr(c, dnfbDay(c)!)); },
   },
   {
-    id: 'dnsp_dollars', code: 'BL-10', name: 'Billed not submitted ($)', short: 'DNSP $', area: 'Billing', unit: 'usd', direction: 'down', type: 'balance', page: 'billing',
+    id: 'dnsp_dollars', code: 'BL-10', name: 'Billed not submitted ($)', short: 'DNSP $', area: 'Billing', unit: 'usd', direction: 'down', type: 'balance', page: 'billing', finest: 'week',
     definition: 'Gross charges on final-billed claims not yet exported to the payer (open scrubber edits) at period end.',
     calculation: 'SUM(dnfb_snapshot.gross_amount) WHERE stage = DNSP AND snapshot_date = period end',
     formula: 'Total gross charges on final-billed claims not yet sent to the payer at period end',
@@ -711,7 +721,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => dnfb(c, 1),
   },
   {
-    id: 'dnsp_accounts', code: 'BL-11', name: 'Billed claims not submitted', short: 'DNSP claims', area: 'Billing', unit: 'count', direction: 'down', type: 'balance', page: 'billing',
+    id: 'dnsp_accounts', code: 'BL-11', name: 'Billed claims not submitted', short: 'DNSP claims', area: 'Billing', unit: 'count', direction: 'down', type: 'balance', page: 'billing', finest: 'week',
     definition: 'Final-billed claims with no export to the payer (open scrubber edits) at period end.',
     calculation: 'COUNT(dnfb_snapshot.account) WHERE stage = DNSP AND snapshot_date = period end',
     formula: 'Count of final-billed claims not yet sent to the payer at period end',
@@ -719,7 +729,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => dnfb(c, 1, { col: 'count' }),
   },
   {
-    id: 'unbilled_accounts', code: 'BL-12', name: 'Unbilled accounts (DNFB)', short: 'Unbilled accounts', area: 'Billing', unit: 'count', direction: 'down', type: 'balance', page: 'billing',
+    id: 'unbilled_accounts', code: 'BL-12', name: 'Unbilled accounts (DNFB)', short: 'Unbilled accounts', area: 'Billing', unit: 'count', direction: 'down', type: 'balance', page: 'billing', finest: 'week',
     definition: 'Number of discharged accounts not final billed at the period-end snapshot.',
     calculation: 'COUNT(dnfb_snapshot.account) WHERE stage = DNFB AND snapshot_date = period end',
     formula: 'Count of discharged accounts not final billed at period end',
@@ -727,7 +737,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => dnfb(c, 0, { col: 'count' }),
   },
   {
-    id: 'dnfb_15plus_pct', code: 'BL-13', name: 'DNFB aged 15+ days', short: 'DNFB 15+ days %', area: 'Billing', unit: 'pct', direction: 'down', type: 'balance', page: 'billing',
+    id: 'dnfb_15plus_pct', code: 'BL-13', name: 'DNFB aged 15+ days', short: 'DNFB 15+ days %', area: 'Billing', unit: 'pct', direction: 'down', type: 'balance', page: 'billing', finest: 'week',
     definition: 'Share of DNFB dollars 15 or more days past discharge.',
     calculation: 'DNFB $ aged 15+ days / DNFB $, period-end snapshot',
     formula: 'DNFB $ aged 15+ days / total DNFB $',
@@ -817,7 +827,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => div(deniedIn(c, [3]), submittedGross(c)),
   },
   {
-    id: 'dnfb_coding', code: 'CO-05', name: 'DNFB awaiting coding', area: 'Coding', unit: 'usd', direction: 'down', type: 'balance', page: 'midcycle',
+    id: 'dnfb_coding', code: 'CO-05', name: 'DNFB awaiting coding', area: 'Coding', unit: 'usd', direction: 'down', type: 'balance', page: 'midcycle', finest: 'week',
     definition: 'DNFB dollars on hold for coding at the period-end snapshot.',
     calculation: 'SUM(dnfb_snapshot.gross_amount) WHERE hold_reason = Awaiting coding',
     formula: 'Total DNFB $ on hold for coding at period end',
@@ -842,7 +852,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => div(deniedIn(c, [2, 4]), submittedGross(c)),
   },
   {
-    id: 'dnfb_query', code: 'CD-03', name: 'DNFB on physician query', area: 'Clinical Documentation', unit: 'usd', direction: 'down', type: 'balance', page: 'midcycle',
+    id: 'dnfb_query', code: 'CD-03', name: 'DNFB on physician query', area: 'Clinical Documentation', unit: 'usd', direction: 'down', type: 'balance', page: 'midcycle', finest: 'week',
     definition: 'DNFB dollars on hold for a physician documentation query at the period-end snapshot.',
     calculation: 'SUM(dnfb_snapshot.gross_amount) WHERE hold_reason = Physician query',
     formula: 'Total DNFB $ on hold for a physician query at period end',
@@ -911,9 +921,9 @@ export const METRICS: MetricDef[] = [
     compute: (c) => feRatio(c, 'scheduleDaysSum', 'ordersScheduled'),
   },
   feMetric('lead_time_3plus_pct', '% scheduled with lead time 3+ days', 'Lead time 3+ days', 'pct', 'up', 'Share of appointments scheduled 3 or more days before the date of service.', 'ordersScheduled3Plus', 'ordersScheduled', { code: 'PA-17', formula: 'Appointments scheduled 3+ days before service / appointments scheduled' }),
-  feMetric('prereg_rate_72h', 'Pre-registration finalization rate (72 hours)', 'Pre-reg 72h', 'pct', 'up', 'Share of scheduled encounters with pre-registration finalized at least 72 hours before service.', 'preRegDone72', 'preRegDue', { code: 'PA-18', formula: 'Encounters pre-registered 72+ hours before service / scheduled encounters due' }),
+  feMetric('prereg_rate_72h', 'Pre-registration finalization rate (72 hours)', 'Pre-registration 72h', 'pct', 'up', 'Share of scheduled encounters with pre-registration finalized at least 72 hours before service.', 'preRegDone72', 'preRegDue', { code: 'PA-18', formula: 'Encounters pre-registered 72+ hours before service / scheduled encounters due' }),
   feMetric('scheduled_under_72h_pct', '% of accounts scheduled < 72 hours before service', 'Scheduled < 72h', 'pct', 'down', 'Share of scheduled encounters booked less than 72 hours before the date of service (too late for the 72-hour pre-registration and financial clearance windows).', 'scheduledUnder72h', 'preRegDue', { code: 'PA-19', formula: 'Encounters scheduled < 72 hours before service / scheduled encounters due' }),
-  feMetric('fin_clearance_rate_72h', 'Financial clearance rate (72 hours)', 'Fin. clearance 72h', 'pct', 'up', 'Share of scheduled patients financially cleared at least 72 hours before service.', 'finCleared72', 'finClearDue', { code: 'PA-20', formula: 'Patients financially cleared 72+ hours before service / scheduled patients due for clearance' }),
+  feMetric('fin_clearance_rate_72h', 'Financial clearance rate (72 hours)', 'Financial clearance 72h', 'pct', 'up', 'Share of scheduled patients financially cleared at least 72 hours before service.', 'finCleared72', 'finClearDue', { code: 'PA-20', formula: 'Patients financially cleared 72+ hours before service / scheduled patients due for clearance' }),
   {
     id: 'open_orders', code: 'PA-21', name: 'Open orders', area: 'Patient Access', unit: 'count', direction: 'down', type: 'balance', page: 'access',
     definition: 'Orders not yet scheduled at the end of the last day of the period.',
@@ -973,7 +983,7 @@ export const METRICS: MetricDef[] = [
     compute: (c) => fe(c, 'callsOffered') + fe(c, 'callsOutbound') + fe(c, 'cboCallsOffered'),
   },
   {
-    id: 'call_abandon_rate_all', code: 'PA-30', name: 'Call abandonment rate (all lines)', short: 'Abandonment (all)', area: 'Patient Access', unit: 'pct', direction: 'down', type: 'flow', page: 'access',
+    id: 'call_abandon_rate_all', code: 'PA-30', name: 'Call abandonment rate (all lines)', short: 'Call abandonment (all lines)', area: 'Patient Access', unit: 'pct', direction: 'down', type: 'flow', page: 'access',
     definition: 'Share of inbound calls on all in-scope lines (front end and back end) that end before an answer.',
     calculation: 'SUM(calls_abandoned) / SUM(calls_offered), all lines, by date',
     formula: 'Calls abandoned / inbound calls offered (all lines)',
@@ -992,14 +1002,14 @@ export const METRICS: MetricDef[] = [
   },
   { ...feCountMetric('medicaid_in_scope', 'Uninsured accounts in scope (Medicaid E&E)', 'Self-pay (uninsured) accounts in scope for Medicaid eligibility screening.', 'selfPayAccounts', { code: 'PA-34', formula: 'Count of self-pay (uninsured) accounts in scope' }), short: 'Uninsured in scope' },
   {
-    id: 'medicaid_screening_rate', code: 'PA-35', name: 'Medicaid screening rate', short: 'Screening rate', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access',
+    id: 'medicaid_screening_rate', code: 'PA-35', name: 'Medicaid screening rate', short: 'Medicaid screening', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access',
     definition: 'Share of in-scope uninsured accounts screened for Medicaid eligibility, excluding accounts where all contact efforts are exhausted.',
     calculation: 'SUM(screened) / (SUM(self_pay_accounts) − SUM(efforts_exhausted)), by date',
     formula: 'Accounts screened / (in-scope accounts − accounts with all efforts exhausted)',
     sourceFields: ['eligibility_screening.screened', 'eligibility_screening.self_pay_accounts', 'eligibility_screening.efforts_exhausted'], fact: 'fe',
     compute: (c) => div(fe(c, 'screened'), fe(c, 'selfPayAccounts') - fe(c, 'effortsExhausted')),
   },
-  feMetric('medicaid_eligible_completion', 'Medicaid eligible completion rate', 'Eligible completion', 'pct', 'up', 'Share of patients likely eligible for Medicaid whose application was completed.', 'applicationsCompleted', 'medicaidEligible', { code: 'PA-36', formula: 'Applications completed / patients likely eligible' }),
+  feMetric('medicaid_eligible_completion', 'Medicaid eligible completion rate', 'Medicaid eligible completion', 'pct', 'up', 'Share of patients likely eligible for Medicaid whose application was completed.', 'applicationsCompleted', 'medicaidEligible', { code: 'PA-36', formula: 'Applications completed / patients likely eligible' }),
   feMetric('coverage_found_rate', 'Coverage discovery rate', 'Coverage found', 'pct', 'none', 'Share of screened self-pay accounts where insurance or program coverage was found.', 'coverageFound', 'screened', { code: 'PA-37', formula: 'Accounts with coverage found / accounts screened' }),
 ];
 
@@ -1051,6 +1061,18 @@ export interface MetricResult {
   noData?: string;
 }
 
+export const GRAIN_LABEL: Record<'day' | 'week' | 'month', string> = { day: 'Day', week: 'Week', month: 'Month' };
+
+/** True when the metric is calculated for periods of this length. */
+export function validFor(m: MetricDef, grain: SubMonthGrain): boolean {
+  return !m.finest || (m.finest === 'week' && grain === 'week');
+}
+
+const FINEST_REASON: Record<'week' | 'month', string> = {
+  week: 'Calculated by week or longer (weekly DNFB snapshots). Select a week or a longer period.',
+  month: 'Calculated by month or longer. Select a month or a longer period.',
+};
+
 /** Evaluate a metric, with a plain reason when the filter context gives no data. */
 export function evaluate(m: MetricDef, e: Engine, r: Range, sel: Selections): MetricResult {
   const missing = missingFields(m.fact, sel);
@@ -1060,6 +1082,7 @@ export function evaluate(m: MetricDef, e: Engine, r: Range, sel: Selections): Me
     return { value: null, target: staticT, watch: watchFor(m.id, staticT), noData: `Not available by ${names}. Clear the ${names} filter to see this measure.` };
   }
   if (r.startDay > e.lastDay) return { value: null, target: staticT, watch: watchFor(m.id, staticT), noData: 'No data has been loaded for this period yet.' };
+  if (r.grain && !validFor(m, r.grain)) return { value: null, target: staticT, watch: watchFor(m.id, staticT), noData: FINEST_REASON[m.finest!] };
   const ctx = { e, r, sel };
   const v = m.compute(ctx);
   const t = m.target ? m.target(ctx) : staticT;

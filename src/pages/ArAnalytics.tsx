@@ -11,7 +11,7 @@ import { accounts, members } from '../services/analytics';
 import { useApp } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { ORDINAL, paretoOption, stackedColumnsOption } from '../ui/charts';
-import { fmtMetric } from '../ui/common';
+import { fmtMetric, snapshotLabel } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { InvestigationPath } from '../ui/InvestigationPath';
 import { CanvasHeader } from '../ui/Shell';
@@ -61,8 +61,8 @@ export function ArAnalytics() {
         <Concentration basis={basis} />
       </div>
       <div className="row cols-2">
-        <BreakdownVisual id="credit_balance_dollars" alt={['credit_balance_days']} dim="payer" title="Credit balances by payer" top={11} />
-        <TrendVisual id="credit_balance_dollars" months={18} title="Credit balances trend" />
+        <BreakdownVisual id="credit_balance_dollars" alt={['credit_balance_days']} dim="payer" top={11} />
+        <TrendVisual id="credit_balance_dollars" months={18} />
       </div>
       <AgingMatrix basis={basis} />
       <TopAccounts sel={sel} />
@@ -148,10 +148,10 @@ function AgingMatrix({ basis }: { basis: Basis }) {
     ...ds.dims.arAge.map((a, i) => ({ key: `b${i}`, label: a.name, group: 'Days from discharge', value: (r: AgRow) => r.buckets[i], format: (v: number | null) => usd(v ?? 0), heat: 'magnitude' as const })),
     { key: 'total', label: 'Total', value: (r) => r.total, format: (v) => <b>{usd(v ?? 0)}</b>, exportText: (r) => usd(r.total) },
     { key: 'chg', label: `vs ${cp.short}`, value: (r) => r.total - r.prior, format: (v) => <span className={(v ?? 0) > 0 ? 'txt-off' : 'txt-ok'}>{fmtDelta(v, 'usd')}</span>, exportText: (r) => fmtDelta(r.total - r.prior, 'usd'), info: 'Change in the A/R balance vs the comparison period. An increase is shown as unfavorable.' },
-    { key: 'gt90', label: '% > 90 days', value: (r) => r.gt90, format: (v) => fmt(v, 'pct'), heat: 'high', info: 'Share of the balance older than 90 days. Shaded when high relative to the other rows.' },
+    { key: 'gt90', label: 'A/R > 90 days', value: (r) => r.gt90, format: (v) => fmt(v, 'pct'), heat: 'high', info: 'Share of the balance older than 90 days. Shaded when high relative to the other rows.' },
   ];
   return (
-    <Visual title="A/R aging matrix" subtitle={`${basis === 'net' ? 'Net' : 'Gross'} A/R at ${period.short} month end · expand a hospital to see payers · click a row to filter`}
+    <Visual title="A/R aging matrix" subtitle={`${basis === 'net' ? 'Net' : 'Gross'} A/R at ${snapshotLabel(day)} · expand a hospital to see payers · click a row to filter`}
       table={gridExport(cols, rows, total)} noData={rows.length ? null : 'No A/R for the current filters.'}
       spec={{ type: 'Matrix (pivot) table: hierarchical rows, column group, subtotals, heat formatting', metrics: [basis === 'net' ? 'net_ar' : 'gross_ar', 'ar_gt90_pct'], dimensions: ['Hospital', 'Payer', 'Aging bucket'], interactions: 'Expand/collapse; sort within level; row click filters hospital (and payer)' }}>
       <Grid caption="A/R aging matrix" columns={cols} rows={rows} total={total} maxHeight={420} defaultSort={{ key: 'total', dir: 'desc' }}
