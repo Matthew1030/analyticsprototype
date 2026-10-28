@@ -461,7 +461,7 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
 .tabs-worklists .tabs-lead b { color: #9a5200; }
 
 /* ---------- ELT Summary: executive view, low density, high signal ---------- */
-.app-elt { grid-template-rows: 34px 44px 1fr 24px; }
+.app-elt, .app-dictionary { grid-template-rows: 34px 44px 1fr 24px; }
 .app-elt .canvas { background: #f3f5f7; padding: 18px 24px 24px; }
 .elt { max-width: 1360px; margin: 0 auto; display: grid; gap: 20px; }
 .elt-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--line-2); }
@@ -643,7 +643,7 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
   .multiples { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .acct-split { grid-template-columns: minmax(0, 1fr); }
   .elt-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .app-elt { grid-template-rows: 34px 44px 1fr 0; }
+  .app-elt, .app-dictionary { grid-template-rows: 34px 44px 1fr 0; }
   .app-elt .canvas { padding: 14px 12px; }
   .section-btn { padding: 0 8px; }
   .section-step { display: none; }
@@ -749,3 +749,9 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
 .prio-select.prio-opt-v3 { background: var(--p-v3); } .prio-select.prio-opt-wont { background: var(--p-wont); }
 .prio-select option { background: var(--surface); color: var(--ink); font-weight: 400; }
 .prio-table th:first-child, .prio-table td:first-child, .prio-table th:nth-child(2), .prio-table td:nth-child(2) { text-align: left; }
+
+/* Prototype-only tools (Metric Dictionary): not part of the design */
+.section-btn.proto-section { border-style: dashed; margin-left: 6px; }
+.proto-tag { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 1px 6px; border: 1px dashed #c79a2b; background: #fff8e2; color: #4a3b12; border-radius: var(--r); font-size: 10.5px; font-weight: 600; }
+.app-dictionary .canvas { background: var(--surface-2); padding: 10px 12px 14px; }
+.dict-tools { opacity: 1; gap: 8px; }

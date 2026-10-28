@@ -48,7 +48,8 @@ prototype controls bar at the top of the screen. This bar (striped, amber) is fo
 and is not part of the design. It also has a **User type** switch (Internal / External; both show the
 same view for now) and the **Prototype** state menu. The design starts below it, with a header that
 shows the title, scope, reporting period, data through date, last refresh and the user badge.
-Worklists are greyed out in the selector and marked **(v2)**. The full filter pane appears only in
+Worklists are greyed out in the selector and marked **(v2)**. **Metric Dictionary** (prototype only,
+after Worklists) is a reference tool for the team, not a dashboard of the product. The full filter pane appears only in
 Analytics; the ELT Summary has a compact period and scope bar, and worklists have operational filters.
 
 ### 1. ELT Summary
@@ -59,41 +60,41 @@ explanatory prose. Slicers: period type, period and hospital (or region).
 
 | Section | Content |
 |---|---|
-| Key Performance Indicators | P1, P8, P10, P5, P4: actual, target, variance, 3-month change, 12-month sparkline |
-| Performance Trends | P1, P8, P10 monthly for 12 months, with target line and off-target range |
+| Key Performance Indicators | AR-06, CA-03, DN-04, BL-08, AR-07: actual, target, variance, 3-month change, 12-month sparkline |
+| Performance Trends | AR-06, CA-03, DN-04 monthly for 12 months, with target line and off-target range |
 | Performance vs. Target | All 12 framework metrics, grouped as Balance Sheet and Income Statement: actual, target, variance, status, 3-month change, 12-month trend, benchmark |
 | Areas of Focus | Up to 5 off-target metrics with the largest unfavorable variance (relative to target), with the key driver hospital |
 | Performance Highlights | Up to 3 on-target metrics with the largest favorable variance, with the leading hospital |
 
 Variance and change colors follow each metric's direction (higher Gross AR Days is unfavorable;
 higher Cash as % of Net Revenue is favorable). Every metric row and card drills into its analytical
-page (P1, P4, P6 → A/R; P5 → Billing / DNFB; P8 → Cash; P10, P12, P13 → Denials; others → Metric
+page (AR-06, AR-07, AR-01 → A/R; BL-08 → Billing / DNFB; CA-03 → Cash; DN-04, DN-01, DN-02 → Denials; others → Metric
 Analysis). A hospital link applies that hospital as a filter first.
 
 #### ELT metric framework
 
-Client definitions, codes (no P3), benchmarks and targets. `src/engine/framework.ts` maps each code to
-the catalog metric; targets are in `config/targets.config.json`. Watch thresholds (the line between
+Client definitions, benchmarks and targets. `src/engine/framework.ts` maps each framework metric to
+the catalog metric; the code is the catalog code (see Metric codes below); targets are in `config/targets.config.json`. Watch thresholds (the line between
 Watch and Off target) are prototype choices, not client values.
 
 | Group | Code | Metric | Calculation | Target | Watch |
 |---|---|---|---|---|---|
-| Balance Sheet | P1 | Gross AR Days | Ending gross AR ÷ (trailing 90-day gross revenue ÷ 90) | 45 | 50 |
-| Balance Sheet | P4 | % of AR Over 90 Days | Billed gross AR in 91+ buckets ÷ total billed gross AR | 20% | 25% |
-| Balance Sheet | P6 | Credit Balance Days | \|Month-end credit balance AR\| ÷ (trailing 90-day net revenue ÷ 90) ¹ | 1.0 | 1.5 |
-| Balance Sheet | P7 | POS Collections % Net Rev | Patient POS payments ÷ net revenue | 2% | 1% |
-| Income Statement | P2 | Net to Gross Ratio | Net revenue ÷ gross revenue | none (mix dependent) | – |
-| Income Statement | P5 | DNFB / Unbilled Days | Month-end DNFB gross $ ÷ (trailing 90-day gross revenue ÷ 90) | bill hold + 1.5 ² | 5.5 |
-| Income Statement | P8 | Cash as % of Net Revenue | Cash ÷ average monthly net revenue, most recent 3 months ³ | 100% | 95% |
-| Income Statement | P9 | Bad Debt % Gross Rev | Bad debt provision ÷ gross revenue ⁴ | 2% | 5% |
-| Income Statement | P10 | Initial Denial Rate (claim $) | Gross charges denied ÷ gross charges submitted ⁵ | 5% | 6% |
-| Income Statement | P11 | Bad Debt incl. Unrealized | (Provision + unrealized bad debt) ÷ gross revenue ⁶ | 3% | 3.5% |
-| Income Statement | P12 | Avoidable Write-Offs % Net | Net avoidable write-offs ÷ average monthly net revenue ⁷ | 0.5% | 0.75% |
-| Income Statement | P13 | Avoidable W/O incl. Unreal. | (Avoidable write-offs + unrealized) ÷ average monthly net revenue ⁸ | 1% | 1.5% |
+| Balance Sheet | AR-06 | Gross AR Days | Ending gross AR ÷ (trailing 90-day gross revenue ÷ 90) | 45 | 50 |
+| Balance Sheet | AR-07 | % of AR Over 90 Days | Billed gross AR in 91+ buckets ÷ total billed gross AR | 20% | 25% |
+| Balance Sheet | AR-01 | Credit Balance Days | \|Month-end credit balance AR\| ÷ (trailing 90-day net revenue ÷ 90) ¹ | 1.0 | 1.5 |
+| Balance Sheet | PA-01 | POS Collections % Net Rev | Patient POS payments ÷ net revenue | 2% | 1% |
+| Income Statement | FN-10 | Net to Gross Ratio | Net revenue ÷ gross revenue | none (mix dependent) | – |
+| Income Statement | BL-08 | DNFB / Unbilled Days | Month-end DNFB gross $ ÷ (trailing 90-day gross revenue ÷ 90) | bill hold + 1.5 ² | 5.5 |
+| Income Statement | CA-03 | Cash as % of Net Revenue | Cash ÷ average monthly net revenue, most recent 3 months ³ | 100% | 95% |
+| Income Statement | FN-11 | Bad Debt % Gross Rev | Bad debt provision ÷ gross revenue ⁴ | 2% | 5% |
+| Income Statement | DN-04 | Initial Denial Rate (claim $) | Gross charges denied ÷ gross charges submitted ⁵ | 5% | 6% |
+| Income Statement | FN-12 | Bad Debt incl. Unrealized | (Provision + unrealized bad debt) ÷ gross revenue ⁶ | 3% | 3.5% |
+| Income Statement | DN-01 | Avoidable Write-Offs % Net | Net avoidable write-offs ÷ average monthly net revenue ⁷ | 0.5% | 0.75% |
+| Income Statement | DN-02 | Avoidable W/O incl. Unreal. | (Avoidable write-offs + unrealized) ÷ average monthly net revenue ⁸ | 1% | 1.5% |
 
 Prototype assumptions (confirm with the client):
 ¹ Credit balances are modeled; the synthetic data has no overpayments.
-² `framework.billHoldDays` = 3 (illustrative), so the P5 target is 4.5 days.
+² `framework.billHoldDays` = 3 (illustrative), so the BL-08 target is 4.5 days.
 ³ The 3 months include the reporting month; quarters and YTD use the monthly average × months.
 ⁴ The provision is the bad debt transfers posted in the period.
 ⁵ Denials by denial date over claims by submit date in the same period, an approximation of the
@@ -102,14 +103,14 @@ submission cohort (a true cohort is incomplete for recent months).
 ⁷ Avoidable write-offs = write-offs after a final denial.
 ⁸ Unrealized = expected net on open denials older than `framework.unrealizedDenialDays` (90).
 
-The synthetic data was generated before these benchmarks, so several metrics (notably P7, P12, P13)
+The synthetic data was generated before these benchmarks, so several metrics (notably PA-01, DN-01, DN-02)
 sit far from target.
 
 ### 2. Analytics
 
 | Page | Question it answers |
 |---|---|
-| Revenue Cycle Overview | Full enterprise scorecard (P1–P13 first, with codes), ranked hospital exceptions ("where to look first"), lifecycle stages (Patient Access → Charge Capture → Coding → CDI → Billing → Denials → A/R → Cash), hospital performance matrix |
+| Revenue Cycle Overview | Full enterprise scorecard (ELT framework metrics first, with codes), ranked hospital exceptions ("where to look first"), lifecycle stages (Patient Access → Charge Capture → Coding → CDI → Billing → Denials → A/R → Cash), hospital performance matrix |
 | Patient Access | Sections: contact center (all lines), scheduling (order outcomes, open orders > 24 h, lead time), pre-registration and financial clearance (72-hour windows), POS collections (yield and accuracy vs estimate), eligibility and Medicaid enrollment, registration quality |
 | Mid-Cycle | Charge lag, late charges ($ and %), missed charges, final coded volume, coding turnaround by type, CDI, documentation denials |
 | Billing / DNFB | DNFB $ and days, hold reasons, aging, claims exported (# and $), billed not exported, first pass yield, clean claims, edits, billing lag |
@@ -184,6 +185,33 @@ the prototype are kept in the browser only.
 4. **DNFB**: coding backlog at Riverbend; unassigned holds and late charges at Lakeside General.
 5. **Cash**: cash runs below goal as A/R builds; YTD by hospital shows who is behind.
 
+## Metric codes and the Metric Dictionary (prototype only)
+
+Every catalog metric has a unique code: its RCM area prefix and a number in the area, for example
+`AR-06` (Gross A/R days) or `DN-09` (Appeal rate). The code is stored on the metric in
+`src/engine/metrics.ts` (`code`). Codes do not change: a new metric takes the next free number in its
+area, and the code of a removed metric is not used again.
+
+| Prefix | RCM area | Prefix | RCM area |
+|---|---|---|---|
+| PA | Patient Access | DN | Denials |
+| CC | Charge Capture | AR | A/R |
+| CO | Coding | CA | Cash |
+| CD | Clinical Documentation | FN | Financial |
+| BL | Billing | | |
+
+The codes replace the client's former ELT framework codes (P1–P13). Release priority ratings saved or
+exported with the old codes still load (`LEGACY_FRAMEWORK_CODE` in `src/engine/framework.ts`).
+
+**Metric Dictionary** in the prototype controls bar (after Worklists, marked *prototype only*) lists every
+metric: code, name, RCM category, definition, calculation in plain terms (`formula` on the metric, for
+example "Appealed denials / denials"), unit, direction, target, flow or balance, time recency
+(H/D/W/M/Y, `recency` on the metric, not set yet) and the views where the metric appears.
+**Export to Excel (CSV)** downloads all metrics. The views are read from the page source files
+(`src/config/metricDictionary.ts`), so the export follows the prototype as it changes. Every metric is
+also on Metric Analysis (drill-through), which has a selector over the whole catalog. A new page file
+must be added to `FILE_PAGE` (or `FILES_WITHOUT_VIEWS`); a test checks this.
+
 ## Release prioritization (facilitated session)
 
 A prototype-only tool to decide, live with business leaders, what goes into each release. One person
@@ -224,7 +252,7 @@ config/             data.config.json (seed, months, sample weight)
 public/data/        Generated data files (columnar JSON)
 src/data/           Loader: expands compact files into typed in-memory facts
 src/engine/         engine.ts   aggregation for any filter context (sums, snapshots)
-                    metrics.ts  metric catalog: definition, calculation, source fields, compute
+                    metrics.ts  metric catalog: code, definition, calculation, plain formula, source fields, compute
                     periods.ts  month / quarter / YTD / R12 and comparisons
                     status.ts   On target / Watch / Off target
 src/services/       contracts.ts  response shapes the UI expects from a data service
@@ -234,6 +262,7 @@ src/ui/             Shell, Visual container, Grid (analytical table), charts, wi
                     (KPI card, scorecard, trend, breakdown, decomposition tree), investigation path
                     Priority (release prioritization: picker, dock, summary)
 src/config/         priorities.ts  release prioritization model, capability list, export / import formats
+                    metricDictionary.ts  metric dictionary rows, views read from the page sources, CSV export
 src/pages/          One file per screen (EltSummary, analytics pages, Worklist)
 tests/              Data, reconciliation, planted-pattern and contract tests
 ```

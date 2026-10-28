@@ -12,7 +12,8 @@ import type { RcmArea } from '../engine/metrics';
 export type PageId =
   | 'executive' | 'cycle' | 'ar' | 'denials' | 'cash' | 'access' | 'midcycle' | 'billing' | 'payers' | 'facilities'
   | 'definitions' | 'metric' | 'facility' | 'accounts'
-  | 'wl-denials' | 'wl-ar' | 'wl-dnfb';
+  | 'wl-denials' | 'wl-ar' | 'wl-dnfb'
+  | 'dictionary';
 
 /** Changes a user makes to a work item (prototype: kept in this browser only). */
 export interface WorkEdit { assignee?: string | null; status?: string; notes?: { at: string; text: string }[] }

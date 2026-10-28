@@ -4,7 +4,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  CAPABILITIES, effectiveTier, inRelease, KPI_ITEMS, pageItemId, parseFile, SEED, toCsv, toFile,
+  CAPABILITIES, currentItemId, effectiveTier, inRelease, KPI_ITEMS, migrateDecisions, pageItemId, parseFile, SEED, toCsv, toFile,
   type Decisions, type Preview, type PriorityItem, type Tier,
 } from '../config/priorities';
 import { PAGES, SECTIONS } from '../ui/Shell';
@@ -50,12 +50,16 @@ function readStore(): Stored {
   const empty: Stored = { decisions: SEED, seen: {}, on: false, preview: 'all', hide: false, dirty: false };
   try {
     const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Stored | null;
-    return s ? { ...empty, ...s } : empty;
+    if (!s) return empty;
+    // Ratings saved before the metric recode use the old ELT framework ids.
+    const seen = Object.fromEntries(Object.entries(s.seen ?? {}).filter(([id]) => currentItemId(id) === id));
+    return { ...empty, ...s, decisions: migrateDecisions(s.decisions ?? {}), seen };
   } catch { return empty; }
 }
 
 // Built on first use: Shell imports this module, so PAGES is not ready when this module loads.
-const pageItems = (): PriorityItem[] => PAGES.map((p) => ({
+// Prototype-only tools are not part of the product, so they get no rating.
+const pageItems = (): PriorityItem[] => PAGES.filter((p) => !SECTIONS.find((s) => s.id === p.section)!.proto).map((p) => ({
   id: pageItemId(p.id), kind: 'page', page: p.id, label: p.section === 'worklists' ? `${p.label} worklist` : p.label,
   group: SECTIONS.find((s) => s.id === p.section)!.label,
 }));

@@ -4,7 +4,7 @@
 // items that do not depend on what is on screen, the rules, and the export / import file formats.
 
 import { KPI_COVERAGE } from './kpiCoverage';
-import { FRAMEWORK } from '../engine/framework';
+import { FRAMEWORK, LEGACY_FRAMEWORK_CODE } from '../engine/framework';
 
 export type Tier = 'v1' | 'v2' | 'v3' | 'wont';
 
@@ -38,6 +38,19 @@ export type Preview = 'all' | 'v1' | 'v2' | 'v3';
 
 export const pageItemId = (page: string) => `page:${page}`;
 export const visualItemId = (page: string, key: string) => `visual:${page}:${key}`;
+/** ELT framework metric, by catalog metric id. */
+export const eltItemId = (metricId: string) => `kpi:elt:${metricId}`;
+
+/** Item id from before the metric recode: ELT framework KPIs were keyed by their P code. */
+export function currentItemId(id: string): string {
+  const m = /^kpi:elt:(P\d+)$/.exec(id);
+  return m && LEGACY_FRAMEWORK_CODE[m[1]] ? eltItemId(LEGACY_FRAMEWORK_CODE[m[1]]) : id;
+}
+
+/** Decisions with legacy item ids moved to the current ids. */
+export function migrateDecisions(d: Decisions): Decisions {
+  return Object.fromEntries(Object.entries(d).map(([id, v]) => [currentItemId(id), v]));
+}
 
 // ---------------------------------------------------------------- static items
 
@@ -75,7 +88,7 @@ export const CAPABILITIES: PriorityItem[] = [
 
 /** Client KPI inventory rows (Definitions) and the ELT framework metrics. */
 export const KPI_ITEMS: PriorityItem[] = [
-  ...FRAMEWORK.flatMap((g) => g.metrics.map((m) => ({ id: `kpi:elt:${m.code}`, kind: 'kpi' as const, group: 'ELT framework', label: `${m.code} ${m.label}` }))),
+  ...FRAMEWORK.flatMap((g) => g.metrics.map((m) => ({ id: eltItemId(m.id), kind: 'kpi' as const, group: 'ELT framework', label: `${m.code} ${m.label}` }))),
   ...KPI_COVERAGE.map((k) => ({ id: kpiItemId(k.dashboard, k.kpi), kind: 'kpi' as const, group: `Client KPI inventory · ${k.stage}`, label: `${k.kpi} (${k.dashboard})` })),
 ];
 
@@ -151,7 +164,8 @@ export function parseFile(text: string): { decisions: Decisions; items: Priority
   const body = text.replace(/^﻿/, '').trim();
   const decisions: Decisions = {};
   const items: PriorityItem[] = [];
-  const add = (it: PriorityItem, tier: Tier | undefined, inherited: boolean, note: string | undefined, at: string | undefined) => {
+  const add = (raw: PriorityItem, tier: Tier | undefined, inherited: boolean, note: string | undefined, at: string | undefined) => {
+    const it = { ...raw, id: currentItemId(raw.id) };
     items.push({ id: it.id, kind: it.kind, label: it.label, group: it.group, ...(it.page ? { page: it.page } : {}) });
     const own = inherited ? undefined : tier;
     if (own || note) decisions[it.id] = { ...(own ? { tier: own } : {}), ...(note ? { note } : {}), at: at ?? '' };

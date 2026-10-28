@@ -39,7 +39,7 @@ export function MetricInfo({ m }: { m: MetricDef }) {
   const g = CONFIG.governance;
   return (
     <>
-      <strong>{m.code ? `${m.code} · ` : ''}{m.name}</strong>
+      <strong>{m.code} · {m.name}</strong>
       <span className="tagline">{m.area} · {m.type === 'balance' ? 'Point in time (period end)' : 'Flow (sum over period)'} · <code>{m.id}</code></span>
       <span className="info-row">{m.definition}</span>
       <span className="info-label">Calculation</span>
@@ -50,7 +50,7 @@ export function MetricInfo({ m }: { m: MetricDef }) {
         {t !== null && <> · Target {m.direction === 'up' ? '≥' : '≤'} {fmt(t, m.unit, m.digits)} · Watch to {fmt(w, m.unit, m.digits)}</>}
         {m.target && <> · Target is calculated (cash goal)</>}
       </span>
-      {FRAMEWORK_BY_ID[m.id] && <><span className="info-label">ELT framework</span><span className="info-row">{FRAMEWORK_BY_ID[m.id].code} · {FRAMEWORK_BY_ID[m.id].name} · Benchmark {FRAMEWORK_BY_ID[m.id].benchmark}</span></>}
+      {FRAMEWORK_BY_ID[m.id] && <><span className="info-label">ELT framework</span><span className="info-row">{FRAMEWORK_BY_ID[m.id].name} · Benchmark {FRAMEWORK_BY_ID[m.id].benchmark}</span></>}
       {m.multiDef && <span className="info-row note">More than one definition is common in the industry. Confirm this one with Finance.</span>}
       <span className="info-label">Source fields</span>
       <span className="info-row small mono">{m.sourceFields.join(', ')}</span>
