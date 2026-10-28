@@ -17,7 +17,7 @@ import { Delta, fmtMetric, StatusMark } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { Visual } from '../ui/Visual';
 
-/** The ELT framework metrics (P1–P13) first, then the other enterprise measures. */
+/** The ELT framework metrics first, then the other enterprise measures. */
 export const EXEC_KPIS = [
   ...FRAMEWORK_METRICS.map((f) => f.id),
   'net_ar_days', 'gross_ar', 'net_ar', 'npsr', 'cash', 'clean_claim_rate', 'dnfb_dollars', 'bad_debt_pct', 'charity_pct', 'cost_to_collect',

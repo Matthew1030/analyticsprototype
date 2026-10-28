@@ -67,10 +67,12 @@ export function PriorityDock() {
     <>
       <div className="prio-dock no-print" role="region" aria-label="Release prioritization (prototype only)">
         <span className="prio-dock-title">Release priorities</span>
-        <span className="prio-dock-group">
-          <span className="prio-dock-label" title="A visual with no rating of its own takes this rating">This page{page ? ` (${page.label})` : ''}:</span>
-          <PriorityPicker id={pageItemId(route.page)} label={page?.label ?? route.page} tier={p.decisions[pageItemId(route.page)]?.tier} />
-        </span>
+        {page?.section !== 'dictionary' && (
+          <span className="prio-dock-group">
+            <span className="prio-dock-label" title="A visual with no rating of its own takes this rating">This page{page ? ` (${page.label})` : ''}:</span>
+            <PriorityPicker id={pageItemId(route.page)} label={page?.label ?? route.page} tier={p.decisions[pageItemId(route.page)]?.tier} />
+          </span>
+        )}
         <span className="prio-dock-group">
           <span className="prio-dock-label">Preview release:</span>
           <span className="seg prio-seg" role="radiogroup" aria-label="Preview release">
@@ -212,7 +214,7 @@ function Rollup() {
   const { items, decisions } = usePriorities();
   const { go, sel, areas, clearAll, selectOnly, setAreas } = useApp();
   const [walking, setWalking] = useState(false);
-  const pages = PAGES.filter((pg) => pg.nav || pg.id === 'metric' || pg.id === 'facility');
+  const pages = PAGES.filter((pg) => (pg.nav || pg.id === 'metric' || pg.id === 'facility') && pg.section !== 'dictionary');
   const visualsOf = (id: string) => items.filter((i) => i.kind === 'visual' && i.page === id);
   const groupRows = (kind: ItemKind) => {
     const m = new Map<string, PriorityItem[]>();

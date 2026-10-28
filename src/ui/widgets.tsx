@@ -16,8 +16,8 @@ import { Grid, gridExport, type GridColumn, type GridRow } from './Grid';
 import { Icon } from './icons';
 import { Visual, type VisualSpec } from './Visual';
 
-/** Catalog name with the framework code in front (e.g. "P1 · Gross A/R days"). */
-const codeName = (id: string) => `${METRIC_BY_ID[id].code ? `${METRIC_BY_ID[id].code} · ` : ''}${METRIC_BY_ID[id].name}`;
+/** Catalog name with the metric code in front (e.g. "AR-06 · Gross A/R days"). */
+const codeName = (id: string) => `${METRIC_BY_ID[id].code} · ${METRIC_BY_ID[id].name}`;
 
 const f = (id: string) => (v: number | null) => fmt(v, METRIC_BY_ID[id].unit, METRIC_BY_ID[id].digits);
 
@@ -73,7 +73,7 @@ export function KpiCard({ id, onOpen, selOverride }: { id: string; onOpen?: () =
     <div className="kpi" role="button" tabIndex={0} onClick={open} onKeyDown={(e) => { if (e.key === 'Enter') open(); }}
       title={`Analyze ${m.name}`}>
       <div className="kpi-top">
-        <span className="kpi-name">{m.code ? `${m.code} · ` : ''}{m.short ?? m.name}</span>
+        <span className="kpi-name">{m.code} · {m.short ?? m.name}</span>
         <span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={id} /></span>
       </div>
       {v.value === null ? <div className="kpi-nodata">{v.no_data_reason}</div> : (

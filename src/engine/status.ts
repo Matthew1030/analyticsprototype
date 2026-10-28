@@ -12,7 +12,7 @@ export interface TargetsConfig {
   cashGoalPctOfNpsr: number;
   targets: Record<string, TargetEntry>;
   governance: { owner: string; version: string; changeDate: string; changeReason: string };
-  /** ELT framework settings: bill hold days (P5 target = bill hold + 1.5), bad-debt criteria (P11), unrealized denial age (P13). */
+  /** ELT framework settings: bill hold days (BL-08 target = bill hold + 1.5), bad-debt criteria (FN-12), unrealized denial age (DN-02). */
   framework: { billHoldDays: number; badDebtCriteriaDays: number; unrealizedDenialDays: number };
 }
 

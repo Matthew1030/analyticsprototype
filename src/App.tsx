@@ -10,6 +10,7 @@ import { EltSummary } from './pages/EltSummary';
 import { Facilities } from './pages/Facilities';
 import { FacilityProfile } from './pages/FacilityProfile';
 import { MetricAnalysis } from './pages/MetricAnalysis';
+import { MetricDictionary } from './pages/MetricDictionary';
 import { MidCycle } from './pages/MidCycle';
 import { PatientAccess } from './pages/PatientAccess';
 import { Payers } from './pages/Payers';
@@ -109,6 +110,7 @@ function Page() {
     case 'wl-denials': return <Worklist kind="denials" />;
     case 'wl-ar': return <Worklist kind="ar" />;
     case 'wl-dnfb': return <Worklist kind="dnfb" />;
+    case 'dictionary': return <MetricDictionary />;
     default: return <EltSummary />;
   }
 }

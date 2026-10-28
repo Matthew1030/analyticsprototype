@@ -2,8 +2,8 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  CAPABILITIES, countTiers, effectiveTier, inRelease, KPI_ITEMS, pageItemId, parseCsv, parseFile, SEED, toCsv, toFile,
-  visualItemId, type Decisions, type PriorityItem,
+  CAPABILITIES, countTiers, eltItemId, effectiveTier, inRelease, KPI_ITEMS, migrateDecisions, pageItemId, parseCsv, parseFile, SEED,
+  toCsv, toFile, visualItemId, type Decisions, type PriorityItem,
 } from '../src/config/priorities';
 
 const page: PriorityItem = { id: pageItemId('denials'), kind: 'page', label: 'Denials', group: 'Analytics', page: 'denials' };
@@ -68,6 +68,14 @@ describe('release priorities export and import', () => {
     const back = parseFile(csv);
     expect(back.decisions).toEqual(d);
     expect(back.items.find((i) => i.id === vis2.id)).toEqual(vis2);
+  });
+
+  it('reads ELT KPI ratings saved under the former P codes', () => {
+    expect(migrateDecisions({ 'kpi:elt:P1': { tier: 'v1', at: '' }, [page.id]: { tier: 'v2', at: '' } }))
+      .toEqual({ [eltItemId('gross_ar_days')]: { tier: 'v1', at: '' }, [page.id]: { tier: 'v2', at: '' } });
+    const csv = toCsv([{ id: 'kpi:elt:P10', kind: 'kpi', group: 'ELT framework', label: 'P10 Initial Denial Rate' }], { 'kpi:elt:P10': { tier: 'v3', at: '' } });
+    expect(parseFile(csv).decisions).toEqual({ [eltItemId('denial_dollar_rate')]: { tier: 'v3', at: '' } });
+    expect(KPI_ITEMS.some((i) => i.id === eltItemId('denial_dollar_rate'))).toBe(true);
   });
 
   it('rejects files that are not an export', () => {

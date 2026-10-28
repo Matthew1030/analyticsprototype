@@ -13,13 +13,17 @@ import { scopeText, useApp, type Audience, type PageId, type Route, type SimStat
 import { Icon } from './icons';
 import { PriorityToggle } from './Priority';
 
-/** The three product experiences: See (ELT Summary), Understand (Analytics), Act (Worklists). */
-export type Section = 'elt' | 'analytics' | 'worklists';
+/**
+ * The three product experiences: See (ELT Summary), Understand (Analytics), Act (Worklists), and
+ * prototype-only tools (proto), which are not part of the design.
+ */
+export type Section = 'elt' | 'analytics' | 'worklists' | 'dictionary';
 
-export const SECTIONS: { id: Section; label: string; verb: string; question: string; home: PageId }[] = [
+export const SECTIONS: { id: Section; label: string; verb: string; question: string; home: PageId; proto?: boolean }[] = [
   { id: 'elt', label: 'ELT Summary', verb: 'See', question: 'How are we doing?', home: 'executive' },
   { id: 'analytics', label: 'Analytics', verb: 'Understand', question: 'What is happening, where, and why?', home: 'cycle' },
   { id: 'worklists', label: 'Worklists', verb: 'Act', question: 'What specifically needs to be worked?', home: 'wl-denials' },
+  { id: 'dictionary', label: 'Metric Dictionary', verb: 'Prototype only', question: 'Which metrics does the dashboard have, and how is each one calculated?', home: 'dictionary', proto: true },
 ];
 
 export interface PageMeta { id: PageId; label: string; title: string; question: string; section: Section; nav?: boolean; pageFilters?: SelField[] }
@@ -42,6 +46,7 @@ export const PAGES: PageMeta[] = [
   { id: 'wl-denials', section: 'worklists', label: 'Denials', title: 'Denials worklist', question: 'Which denied claims do I appeal, correct or close today?', nav: true },
   { id: 'wl-ar', section: 'worklists', label: 'A/R follow-up', title: 'A/R follow-up worklist', question: 'Which insurance balances do I follow up today?', nav: true },
   { id: 'wl-dnfb', section: 'worklists', label: 'DNFB', title: 'DNFB worklist', question: 'Which unbilled accounts do I release today?', nav: true },
+  { id: 'dictionary', section: 'dictionary', label: 'Metric Dictionary', title: 'Metric Dictionary', question: 'Which metrics does the dashboard have, and how is each one calculated?', nav: true },
 ];
 export const PAGE_BY_ID = Object.fromEntries(PAGES.map((p) => [p.id, p])) as Record<PageId, PageMeta>;
 
@@ -125,17 +130,18 @@ const PLANNED: Partial<Record<Section, string>> = { worklists: 'v2' };
 function SectionNav() {
   const { route, go } = useApp();
   const current = sectionOf(route.page);
-  const last = useRef<Record<Section, PageId>>({ elt: 'executive', analytics: 'cycle', worklists: 'wl-denials' });
+  const last = useRef<Record<Section, PageId>>({ elt: 'executive', analytics: 'cycle', worklists: 'wl-denials', dictionary: 'dictionary' });
   if (PAGE_BY_ID[route.page]?.nav) last.current[current] = route.page;
   return (
     <nav className="sections" aria-labelledby="proto-dash-label">
       {SECTIONS.map((x, i) => {
         const planned = PLANNED[x.id];
         return (
-          <button key={x.id} type="button" className={`section-btn ${current === x.id ? 'on' : ''} ${planned ? 'planned' : ''}`} aria-current={current === x.id ? 'page' : undefined}
+          <button key={x.id} type="button" className={`section-btn ${current === x.id ? 'on' : ''} ${planned ? 'planned' : ''} ${x.proto ? 'proto-section' : ''}`} aria-current={current === x.id ? 'page' : undefined}
             disabled={!!planned} title={planned ? `${x.label}: planned for ${planned}` : `${x.verb}: ${x.question}`}
             onClick={() => go(current === x.id ? x.home : last.current[x.id])}>
-            <span className="section-step" aria-hidden="true">{i + 1}</span>{x.label}{planned && <span className="section-tag"> ({planned})</span>}
+            {!x.proto && <span className="section-step" aria-hidden="true">{i + 1}</span>}{x.label}{planned && <span className="section-tag"> ({planned})</span>}
+            {x.proto && <span className="section-tag"> (prototype only)</span>}
           </button>
         );
       })}
@@ -188,7 +194,8 @@ export function NavTabs() {
   const active = PAGE_BY_ID[route.page]?.nav ? route.page : null;
   const tabs = PAGES.filter((p) => p.nav && p.section === section);
   // The ELT Summary has no sub-pages; its slicers and actions sit in the page header.
-  if (section === 'elt') return null;
+  // Prototype-only tools have one page each.
+  if (section === 'elt' || meta.proto) return null;
   return (
     <nav className={`tabs no-print tabs-${section}`} aria-label={`${meta.label} pages`}>
       <span className="tabs-lead" title={meta.question}><b>{meta.verb}</b><span className="muted">{meta.question}</span></span>

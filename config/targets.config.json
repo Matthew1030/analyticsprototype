@@ -179,7 +179,7 @@
     "changeReason": "Expanded metric catalog for the enterprise prototype"
   },
   "framework": {
-    "_comment": "Settings for the ELT metric framework (P1–P13). Values are illustrative until the client sets them.",
+    "_comment": "Settings for the ELT metric framework. Values are illustrative until the client sets them.",
     "billHoldDays": 3,
     "badDebtCriteriaDays": 120,
     "unrealizedDenialDays": 90

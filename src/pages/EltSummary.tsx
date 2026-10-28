@@ -5,10 +5,10 @@
 // carries no explanatory prose: actual, target, variance and trend carry the message.
 //
 // Sections: Key Performance Indicators · Performance Trends · Performance vs. Target (the full
-// P1–P13 framework) · Areas of Focus · Performance Highlights. Every metric drills into Analytics.
+// ELT framework) · Areas of Focus · Performance Highlights. Every metric drills into Analytics.
 
 import { useMemo, type ReactNode } from 'react';
-import { visualItemId } from '../config/priorities';
+import { eltItemId, visualItemId } from '../config/priorities';
 import { FIELD_LABEL, type SelField } from '../engine/engine';
 import { FRAMEWORK, FRAMEWORK_BY_ID } from '../engine/framework';
 import { evaluate, METRIC_BY_ID } from '../engine/metrics';
@@ -25,7 +25,7 @@ import { fmtMetric, InfoIcon, Sparkline, StatusMark } from '../ui/common';
 import { Icon } from '../ui/icons';
 import { PriorityPicker } from '../ui/Priority';
 
-/** Headline KPIs and trend charts (framework codes P1, P4, P5, P8, P10). */
+/** Headline KPIs and trend charts (AR-06, AR-07, BL-08, CA-03, DN-04). */
 export const ELT_KPIS = ['gross_ar_days', 'cash_pct_npsr', 'denial_dollar_rate', 'dnfb_days', 'ar_gt90_pct'];
 const ELT_TRENDS = ['gross_ar_days', 'cash_pct_npsr', 'denial_dollar_rate'];
 const ALL_IDS = FRAMEWORK.flatMap((g) => g.metrics.map((m) => m.id));
@@ -258,7 +258,7 @@ function TargetTable({ rows, onOpen }: { rows: Record<string, Row>; onOpen: (id:
               return (
                 <tr key={f.id} className="clickable" tabIndex={0} onClick={() => onOpen(f.id)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(f.id); }} title={`Analyze ${METRIC_BY_ID[f.id].name}`}>
                   <td className="al-left elt-mname">{label(f.id)}<span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={f.id} /></span>
-                    {prioOn && <> <PriorityPicker id={`kpi:elt:${f.code}`} label={`${f.code} ${f.label}`} tier={decisions[`kpi:elt:${f.code}`]?.tier} compact /></>}</td>
+                    {prioOn && <> <PriorityPicker id={eltItemId(f.id)} label={`${f.code} ${f.label}`} tier={decisions[eltItemId(f.id)]?.tier} compact /></>}</td>
                   <td><b>{fmtMetric(f.id, r.v.value)}</b></td>
                   <td className="muted">{fmtMetric(f.id, r.v.target)}</td>
                   <td><Variance r={r} /></td>
