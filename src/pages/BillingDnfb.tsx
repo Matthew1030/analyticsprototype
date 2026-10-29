@@ -1,4 +1,5 @@
-// Billing and DNFB: what is holding claims back from going out the door.
+// Billing and DNFB: what is holding claims back from going out the door. Standard stage-page
+// order: Performance, Trend, Where, Why, Act.
 
 import { useMemo } from 'react';
 import type { Selections } from '../engine/engine';
@@ -9,7 +10,9 @@ import { Chart } from '../ui/Chart';
 import { lineOption, ORDINAL, stackedColumnsOption } from '../ui/charts';
 import { snapshotLabel } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
+import { Icon } from '../ui/icons';
 import { CanvasHeader } from '../ui/Shell';
+import { Band, Bands } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { weekLabel, weeksEnding } from '../ui/weekly';
 import { BreakdownVisual, KpiStrip, TrendVisual } from '../ui/widgets';
@@ -17,35 +20,40 @@ import { BreakdownVisual, KpiStrip, TrendVisual } from '../ui/widgets';
 export function BillingDnfb() {
   const { go } = useApp();
   const drill = (k: number) => go('facility', { id: String(k) }, { drill: true });
+  const accounts = () => go('accounts', { mode: 'dnfb' }, { drill: true });
+  const work = () => go('wl-dnfb', {}, { drill: true });
   return (
     <div className="page">
       <CanvasHeader right={<>
-        <button type="button" className="btn btn-sm" onClick={() => go('accounts', { mode: 'dnfb' }, { drill: true })}>View unbilled accounts</button>
-        <button type="button" className="btn btn-sm btn-primary" onClick={() => go('wl-dnfb', {}, { drill: true })}>Work these in the DNFB worklist ›</button>
+        <button type="button" className="btn btn-sm" onClick={accounts}>View unbilled accounts</button>
+        <button type="button" className="btn btn-sm btn-primary" onClick={work}>Work these in the DNFB worklist ›</button>
       </>} />
+      <Band type="kpi" />
       <KpiStrip ids={['dnfb_dollars', 'dnfb_days', 'unbilled_accounts', 'dnfb_15plus_pct', 'dnsp_days', 'clean_claim_rate', 'billing_lag']} />
-      <div className="row cols-2">
-        <WeeklyDnfb />
-        <TrendVisual id="dnfb_days" months={18} />
-      </div>
-      <div className="row cols-3">
-        <BreakdownVisual id="dnfb_dollars" dim="facility" title="DNFB $ by hospital" onDrill={drill} />
-        <BreakdownVisual id="dnfb_dollars" dim="dnfbHold" title="DNFB $ by hold reason" subtitle="Click to filter the hold reason (applies to DNFB measures)" />
-        <BreakdownVisual id="clean_claim_rate" dim="facility" title="Clean claim rate by hospital" onDrill={drill} />
-      </div>
       <KpiStrip ids={['claims_submitted', 'claims_submitted_dollars', 'dnsp_dollars', 'dnsp_accounts', 'first_pass_yield', 'rework_claims']} />
-      <div className="row cols-3">
-        <BreakdownVisual id="claims_submitted_dollars" alt={['claims_submitted']} dim="facility" onDrill={drill} />
-        <BreakdownVisual id="dnsp_dollars" alt={['dnsp_accounts', 'dnsp_days']} dim="facility" onDrill={drill} />
-        <BreakdownVisual id="first_pass_yield" dim="payer" dims={['payer', 'facility', 'financialClass', 'patientType']} title="First pass yield" top={11} />
-      </div>
-      <div className="row cols-2">
-        <DnfbMatrix />
-        <div className="stack">
-          <BreakdownVisual id="rework_claims" dim="editCategory" title="Claims failing edits by edit category" subtitle="Click to filter the edit category (applies to edit measures)" />
-          <BreakdownVisual id="billing_lag" dim="facility" title="Billing lag by hospital" showCompare={false} onDrill={drill} />
-        </div>
-      </div>
+      <Bands
+        trend={[<WeeklyDnfb />, <TrendVisual id="dnfb_days" months={18} />]}
+        where={[
+          [
+            <BreakdownVisual id="dnfb_dollars" dim="facility" title="DNFB $ by hospital" onDrill={drill} />,
+            <BreakdownVisual id="clean_claim_rate" dim="facility" title="Clean claim rate by hospital" onDrill={drill} />,
+            <BreakdownVisual id="billing_lag" dim="facility" title="Billing lag by hospital" showCompare={false} onDrill={drill} />,
+          ],
+          [
+            <BreakdownVisual id="claims_submitted_dollars" alt={['claims_submitted']} dim="facility" onDrill={drill} />,
+            <BreakdownVisual id="dnsp_dollars" alt={['dnsp_accounts', 'dnsp_days']} dim="facility" onDrill={drill} />,
+          ],
+        ]}
+        why={[
+          <BreakdownVisual id="dnfb_dollars" dim="dnfbHold" title="DNFB $ by hold reason" subtitle="Click to filter the hold reason (applies to DNFB measures)" />,
+          <BreakdownVisual id="rework_claims" dim="editCategory" title="Claims failing edits by edit category" subtitle="Click to filter the edit category (applies to edit measures)" />,
+          <BreakdownVisual id="first_pass_yield" dim="payer" dims={['payer', 'facility', 'financialClass', 'patientType']} title="First pass yield" top={11} />,
+        ]}
+        actActions={<>
+          <button type="button" className="btn" onClick={accounts}>View unbilled accounts</button>
+          <button type="button" className="btn btn-primary btn-cta" onClick={work}>Work these in the DNFB worklist <Icon name="chevronRight" size={11} /></button>
+        </>}
+        act={<DnfbMatrix />} />
     </div>
   );
 }

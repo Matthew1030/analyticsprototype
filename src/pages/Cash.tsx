@@ -1,4 +1,5 @@
-// Cash and Collections: are we on track to hit the cash goal?
+// Cash and Collections: are we on track to hit the cash goal? Standard stage-page order:
+// Performance, Trend, Where, Why (no worklist, so no Act band).
 
 import { useMemo } from 'react';
 import type { Selections } from '../engine/engine';
@@ -14,6 +15,7 @@ import { barOption, COMPARE, lineOption, SERIES } from '../ui/charts';
 import { metricLabel, StatusMark } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { CanvasHeader } from '../ui/Shell';
+import { Band, Bands } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, KpiStrip, TrendVisual } from '../ui/widgets';
 import { CashVsGoal } from './EnterpriseOverview';
@@ -23,31 +25,31 @@ export function Cash() {
   return (
     <div className="page">
       <CanvasHeader />
+      <Band type="kpi" />
       <KpiStrip ids={['cash', 'cash_pct_npsr', 'net_collection_rate', 'payment_variance_pct', 'pos_collections', 'cost_to_collect']} />
-      <div className="row cols-2">
-        <CashVsGoal months={18} />
-        <MonthPace />
-      </div>
-      <YtdByHospital />
-      <div className="row cols-3">
-        <BreakdownVisual id="cash" dim="payer" top={12} />
-        <BreakdownVisual id="cash_pct_npsr" dim="facility" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
-        <BreakdownVisual id="net_collection_rate" dim="financialClass" title="Net collection rate by financial class" />
-      </div>
       <KpiStrip ids={['patient_cash', 'refunds', 'retractions', 'retraction_pct_cash', 'contractual_adj_dollars', 'service_month_yield']} />
-      <div className="row cols-3">
-        <NonChargeTransactions />
-        <BreakdownVisual id="retractions" alt={['retraction_pct_cash']} dim="payer" title="Insurance retractions by payer" top={11} />
-        <BreakdownVisual id="contractual_adj_dollars" alt={['contractual_adj_pct']} dim="financialClass" />
-      </div>
-      <div className="row cols-2">
-        <TrendVisual id="service_month_yield" months={18} title="Life-to-date yield by service month (recent months still maturing)" />
-        <BreakdownVisual id="cash" dim="financialClass" subtitle="Click Self Pay for patient cash" />
-      </div>
-      <div className="row cols-2">
-        <TrendVisual id="cash_pct_npsr" months={18} />
-        <TrendVisual id="net_collection_rate" months={18} />
-      </div>
+      <Bands
+        trend={[
+          [<CashVsGoal months={18} />, <MonthPace />],
+          [<TrendVisual id="cash_pct_npsr" months={18} />, <TrendVisual id="net_collection_rate" months={18} />],
+          [<TrendVisual id="service_month_yield" months={18} title="Life-to-date yield by service month (recent months still maturing)" />],
+        ]}
+        where={[
+          [<YtdByHospital />],
+          [
+            <BreakdownVisual id="cash_pct_npsr" dim="facility" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />,
+            <BreakdownVisual id="cash" dim="payer" top={12} />,
+            <BreakdownVisual id="cash" dim="financialClass" subtitle="Click Self Pay for patient cash" />,
+          ],
+        ]}
+        why={[
+          [
+            <BreakdownVisual id="net_collection_rate" dim="financialClass" title="Net collection rate by financial class" />,
+            <BreakdownVisual id="contractual_adj_dollars" alt={['contractual_adj_pct']} dim="financialClass" />,
+            <BreakdownVisual id="retractions" alt={['retraction_pct_cash']} dim="payer" title="Insurance retractions by payer" top={11} />,
+          ],
+          [<NonChargeTransactions />],
+        ]} />
     </div>
   );
 }

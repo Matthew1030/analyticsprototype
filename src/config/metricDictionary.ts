@@ -9,7 +9,7 @@ import { FRAMEWORK_METRICS } from '../engine/framework';
 import { GRAIN_LABEL, METRIC_BY_ID, METRICS, UNIT_LABEL, type Direction, type MetricDef } from '../engine/metrics';
 import { staticTarget } from '../engine/status';
 import { fmt } from '../format';
-import { EXEC_KPIS } from '../pages/EnterpriseOverview';
+import { EXEC_KPIS, MATRIX_KPIS } from '../pages/EnterpriseOverview';
 import { STAGES } from '../pages/RevenueCycle';
 import type { PageId } from '../state/AppState';
 
@@ -71,6 +71,8 @@ export async function loadMetricViews(sources: Record<string, () => Promise<stri
   // Lists defined in another module.
   for (const f of FRAMEWORK_METRICS) add(f.id, 'executive');
   for (const id of [...EXEC_KPIS, ...STAGES.flatMap((s) => s.metrics)]) { add(id, 'cycle'); add(id, 'facility'); }
+  // The hospital performance matrix (EnterpriseOverview) is on Facilities.
+  for (const id of MATRIX_KPIS) add(id, 'facilities');
   // Metric Analysis has a selector over the whole catalog.
   for (const m of METRICS) add(m.id, 'metric');
   return Object.fromEntries(Object.entries(on).map(([id, s]) => [id, VIEW_ORDER.filter((v) => s.has(v.page)).map((v) => v.page)]));

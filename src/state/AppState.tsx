@@ -45,6 +45,8 @@ interface AppState {
   setAreas: (a: RcmArea[]) => void;
   paneOpen: boolean;
   go: (page: PageId, params?: Record<string, string>, opts?: { drill?: boolean }) => void;
+  /** Changes the current page's params (e.g. the open tab) in place: no new history entry, no breadcrumb. */
+  setParams: (params: Record<string, string>) => void;
   back: () => void;
   setPeriod: (kind: PeriodKind, key: number) => void;
   setPeriodKind: (kind: PeriodKind) => void;
@@ -157,6 +159,12 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
     window.scrollTo({ top: 0 });
   }, []);
 
+  const setParams = useCallback((params: Record<string, string>) => {
+    const next = { page: routeRef.current.page, params };
+    setRoute(next);
+    history.replaceState(null, '', toHash(next));
+  }, []);
+
   const back = useCallback(() => {
     const t = trailRef.current;
     const prev = t[t.length - 1];
@@ -202,7 +210,7 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
 
   const value: AppState = {
     ds, engine, sel, period, compare, route, trail, sim, specMode, audience, setAudience, paneOpen, areas, setAreas,
-    go, back, setPeriod, setPeriodKind, setCompare, toggle, selectOnly, clearField, clearAll,
+    go, setParams, back, setPeriod, setPeriodKind, setCompare, toggle, selectOnly, clearField, clearAll,
     setSim, setSpecMode, setPaneOpen, toast, toasts, valueLabel, periodStatus, workEdits, editWork,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

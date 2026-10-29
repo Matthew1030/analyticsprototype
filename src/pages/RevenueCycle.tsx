@@ -1,85 +1,137 @@
-// Revenue Cycle Overview: the analytical entry point. The full enterprise scorecard, the ranked
-// hospital exceptions, then the lifecycle from patient access to cash, stage by stage (select a
-// stage to see its metrics, trend and hospital breakdown), and the hospital matrix.
+// Revenue Cycle Overview: the analytical entry point. One tabbed container is the center of the
+// page: an Overview tab (headline KPIs, the stages at a glance, where to look first, stage status by
+// hospital, then the full scorecard) and one tab per lifecycle stage from patient access to cash
+// (its KPIs, trend and hospital breakdown, and a clear path to the stage's analysis view). Each tab
+// label carries the stage status, so the tab bar itself shows where to look.
 
-import { useMemo, useState } from 'react';
-import type { Selections } from '../engine/engine';
+import { useMemo } from 'react';
 import { evaluate, METRIC_BY_ID } from '../engine/metrics';
 import { statusOf, STATUS_RANK, type Status } from '../engine/status';
 import { useApp, type PageId } from '../state/AppState';
-import { fmtMetric, StatusMark } from '../ui/common';
+import { fmtMetric, PageSection, StatusMark } from '../ui/common';
 import { Grid, gridExport, type GridColumn } from '../ui/Grid';
 import { Icon } from '../ui/icons';
-import { CanvasHeader } from '../ui/Shell';
+import { CanvasHeader, PAGE_BY_ID } from '../ui/Shell';
+import { groupStatus, statusText, TabBox, useGroupStatus, useTab, type GroupStatus, type TabDef } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, KpiStrip, Scorecard, TrendVisual } from '../ui/widgets';
-import { AttentionList, EXEC_KPIS, FacilityMatrix } from './EnterpriseOverview';
+import { AttentionList, EXEC_KPIS } from './EnterpriseOverview';
 
-export interface Stage { id: string; name: string; page: PageId; metrics: string[] }
+export interface Stage {
+  id: string; name: string; page: PageId; metrics: string[];
+  /** Tab of the analysis page that covers the stage (pages that cover more than one stage). */
+  tab?: string;
+}
 
 export const STAGES: Stage[] = [
   { id: 'access', name: 'Patient Access', page: 'access', metrics: ['eligibility_rate', 'auth_rate', 'registration_accuracy', 'front_end_denial_rate'] },
-  { id: 'charge', name: 'Charge Capture', page: 'midcycle', metrics: ['charge_lag', 'late_charge_pct', 'missing_charges'] },
-  { id: 'coding', name: 'Coding', page: 'midcycle', metrics: ['coding_tat', 'coding_denial_rate', 'dnfb_coding'] },
-  { id: 'cdi', name: 'Clinical Documentation', page: 'midcycle', metrics: ['documentation_denial_rate', 'cdi_query_rate', 'dnfb_query'] },
+  { id: 'charge', name: 'Charge Capture', page: 'midcycle', tab: 'charge', metrics: ['charge_lag', 'late_charge_pct', 'missing_charges'] },
+  { id: 'coding', name: 'Coding', page: 'midcycle', tab: 'coding', metrics: ['coding_tat', 'coding_denial_rate', 'dnfb_coding'] },
+  { id: 'cdi', name: 'Clinical Documentation', page: 'midcycle', tab: 'cdi', metrics: ['documentation_denial_rate', 'cdi_query_rate', 'dnfb_query'] },
   { id: 'billing', name: 'Billing', page: 'billing', metrics: ['clean_claim_rate', 'dnfb_days', 'billing_lag'] },
   { id: 'denials', name: 'Denials', page: 'denials', metrics: ['denial_rate', 'denial_dollars', 'appeal_success'] },
   { id: 'ar', name: 'A/R', page: 'ar', metrics: ['net_ar_days', 'ar_gt90_pct', 'net_ar'] },
   { id: 'cash', name: 'Cash', page: 'cash', metrics: ['cash_pct_npsr', 'cash', 'net_collection_rate'] },
 ];
+const STAGE_METRICS = STAGES.map((s) => s.metrics);
 
-/** Worst status among a stage's metrics that have targets. */
-function stageStatus(e: Parameters<typeof evaluate>[1], st: Stage, r: Parameters<typeof evaluate>[2], sel: Selections): { status: Status; off: number; watch: number } {
-  let worst: Status = null;
-  let off = 0, watch = 0;
-  for (const id of st.metrics) {
-    const m = METRIC_BY_ID[id];
-    const v = evaluate(m, e, r, sel);
-    const s = statusOf(v.value, v.target, m.direction, v.watch);
-    if (s === 'Off target') off++;
-    if (s === 'Watch') watch++;
-    if (s && (worst === null || STATUS_RANK[s] < STATUS_RANK[worst])) worst = s;
-  }
-  return { status: worst, off, watch };
-}
+type Summary = GroupStatus & { s: Stage };
 
 export function RevenueCycle() {
-  const { engine, period, sel, go, areas } = useApp();
-  const ids = areas.length ? EXEC_KPIS.filter((id) => areas.includes(METRIC_BY_ID[id].area)) : EXEC_KPIS;
-  const summaries = useMemo(() => STAGES.map((s) => ({ s, ...stageStatus(engine, s, period, sel) })), [engine, period, sel]);
-  const worst = [...summaries].sort((a, b) => b.off * 10 + b.watch - (a.off * 10 + a.watch))[0];
-  const [stageId, setStageId] = useState(worst?.s.id ?? 'billing');
-  const stage = STAGES.find((x) => x.id === stageId)!;
+  const status = useGroupStatus(STAGE_METRICS);
+  const summaries: Summary[] = STAGES.map((s, i) => ({ s, ...status[i] }));
+  const tabs: TabDef[] = [
+    { id: 'overview', label: 'Overview', home: true },
+    ...STAGES.map((s, i) => ({ id: s.id, label: s.name.replace('Clinical Documentation', 'CDI'), num: i + 1, status: status[i] })),
+  ];
+  const [tab, open] = useTab(tabs, 'stage');
+  const current = summaries.find((x) => x.s.id === tab);
   return (
     <div className="page">
       <CanvasHeader />
-      <KpiStrip ids={['npsr', 'cash', 'cash_pct_npsr', 'net_ar_days', 'denial_rate', 'clean_claim_rate', 'dnfb_days']} />
-      <div className="row cols-7-5">
-        <Scorecard ids={ids.length ? ids : EXEC_KPIS} title="Enterprise scorecard" groupByArea={false} showPy={false} />
-        <AttentionList />
-      </div>
-      <div className="flow" role="tablist" aria-label="Revenue cycle stages">
-        {summaries.map(({ s, status, off, watch }, i) => (
-          <button key={s.id} type="button" role="tab" aria-selected={s.id === stageId} className={`flow-stage ${s.id === stageId ? 'on' : ''}`} onClick={() => setStageId(s.id)}>
-            <span className="flow-head"><span className="flow-num">{i + 1}</span><span className="flow-name">{s.name}</span><StatusMark status={status} compact /></span>
-            {s.metrics.slice(0, 3).map((id) => <FlowMetric key={id} id={id} />)}
-            <span className="flow-foot">{off ? `${off} off target` : watch ? `${watch} on watch` : 'On target'}</span>
-          </button>
-        ))}
-      </div>
-      <div className="row cols-7-5">
-        <Scorecard ids={stage.metrics} title={`${stage.name}: metrics`} groupByArea={false} />
-        <TrendVisual key={stage.id} id={stage.metrics[0]} months={18} />
-      </div>
-      <div className="row cols-5-7">
-        <BreakdownVisual key={`b-${stage.id}`} id={stage.metrics[0]} dim="facility" title={`${METRIC_BY_ID[stage.metrics[0]].short ?? METRIC_BY_ID[stage.metrics[0]].name} by hospital`} onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
-        <StageHospitalGrid onPick={setStageId} />
-      </div>
-      <div className="row">
-        <button type="button" className="btn" onClick={() => go(stage.page, {}, { drill: true })}>Open {stage.name} analysis <Icon name="chevronRight" size={10} /></button>
-      </div>
-      <FacilityMatrix />
+      <TabBox id="rc" tabs={tabs} current={tab} onOpen={open} label="Revenue cycle: overview and stages"
+        spec={<><b>Container (tabbed)</b> · 9 tabs: Overview, then one per stage in cycle order · Tab label: stage name with its status
+          (worst status of the stage metrics) · Interaction: stage cards and status-matrix cells switch the tab · The stage action is a navigation button to the analysis sheet (and its tab)</>}>
+        {current ? <StageTab key={current.s.id} sum={current} index={STAGES.indexOf(current.s)} onPick={open} /> : <OverviewTab summaries={summaries} onPick={open} />}
+      </TabBox>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- overview tab
+
+function OverviewTab({ summaries, onPick }: { summaries: Summary[]; onPick: (id: string) => void }) {
+  const { areas, go } = useApp();
+  const ids = areas.length ? EXEC_KPIS.filter((id) => areas.includes(METRIC_BY_ID[id].area)) : EXEC_KPIS;
+  return (
+    <>
+      <KpiStrip ids={['npsr', 'cash', 'cash_pct_npsr', 'net_ar_days', 'denial_rate', 'clean_claim_rate', 'dnfb_days']} />
+      <Visual title="Revenue cycle stages" subtitle="Worst status among each stage's metrics · select a stage to open its tab"
+        table={{ columns: ['Stage', 'Status', 'Metrics off target', 'Metrics on watch'], rows: summaries.map(({ s, status, off, watch }) => [s.name, status ?? 'No target', off, watch]) }}
+        spec={{ type: 'Stage cards (KPI objects in a row, or a button bar)', metrics: STAGES.flatMap((s) => s.metrics.slice(0, 3)), dimensions: ['RCM stage'], interactions: 'Card click opens the stage tab' }}>
+        <div className="flow">
+          {summaries.map(({ s, status, off, watch }, i) => (
+            <button key={s.id} type="button" className="flow-stage" onClick={() => onPick(s.id)} title={`Open the ${s.name} tab`}>
+              <span className="flow-head"><span className="flow-num">{i + 1}</span><span className="flow-name">{s.name}</span><StatusMark status={status} compact /></span>
+              {s.metrics.slice(0, 3).map((id) => <FlowMetric key={id} id={id} />)}
+              <span className="flow-foot"><span>{statusText(off, watch)}</span><span className="flow-go">View <Icon name="chevronRight" size={9} /></span></span>
+            </button>
+          ))}
+        </div>
+      </Visual>
+      <div className="row cols-5-7">
+        <AttentionList />
+        <StageHospitalGrid onPick={onPick} />
+      </div>
+      <PageSection title="Detail" note="The full enterprise scorecard" />
+      <Scorecard ids={ids.length ? ids : EXEC_KPIS} title="Enterprise scorecard" groupByArea={false} showPy={false} />
+      <div className="row">
+        <button type="button" className="btn" onClick={() => go('facilities', {}, { drill: true })}>Compare all hospitals in Facilities <Icon name="chevronRight" size={10} /></button>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------- stage tab
+
+function StageTab({ sum, index, onPick }: { sum: Summary; index: number; onPick: (id: string) => void }) {
+  const { go } = useApp();
+  const { s, status, off, watch } = sum;
+  const page = PAGE_BY_ID[s.page];
+  const first = s.metrics[0];
+  const rest = s.metrics.slice(1);
+  const next = STAGES[index + 1];
+  const prev = STAGES[index - 1];
+  const analyze = () => go(s.page, s.tab ? { tab: s.tab } : {}, { drill: true });
+  const cta = <button type="button" className="btn btn-primary btn-cta" onClick={analyze}>Open {s.name} analysis <Icon name="chevronRight" size={11} /></button>;
+  return (
+    <>
+      <div className="stage-head">
+        <div className="stage-head-text">
+          <span className="stage-kicker">Stage {index + 1} of {STAGES.length}</span>
+          <h2>{s.name} <StatusMark status={status} /></h2>
+          <span className="muted small">{statusText(off, watch)} · {s.metrics.length} metrics</span>
+        </div>
+        <div className="stage-cta">
+          <div className="stage-cta-text">
+            <b>Find the cause in the {s.name} analysis</b>
+            <span>{page.question}{s.tab ? ` (${page.label} page)` : ''}</span>
+          </div>
+          {cta}
+        </div>
+      </div>
+      <KpiStrip ids={s.metrics} />
+      <div className="row cols-7-5">
+        <TrendVisual id={first} alt={rest} months={18} height={330} pid={`${s.name} stage trend`} />
+        <BreakdownVisual id={first} alt={rest} dim="facility" pid={`${s.name} stage by hospital`}
+          onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
+      </div>
+      <div className="stage-foot">
+        <span>{prev && <button type="button" className="btn" onClick={() => onPick(prev.id)}><Icon name="chevronLeft" size={10} /> {prev.name}</button>}</span>
+        {cta}
+        <span>{next && <button type="button" className="btn" onClick={() => onPick(next.id)}>{next.name} <Icon name="chevronRight" size={10} /></button>}</span>
+      </div>
+    </>
   );
 }
 
@@ -103,7 +155,7 @@ function StageHospitalGrid({ onPick }: { onPick: (id: string) => void }) {
   const { engine, period, sel, ds, selectOnly } = useApp();
   const facs = engine.facilitySet(sel);
   const rows = useMemo(() => ds.dims.facilities.filter((f) => !facs || facs.has(f.key)).map((f) => ({
-    key: f.key, name: f.short, st: STAGES.map((s) => stageStatus(engine, s, period, { ...sel, facility: [f.key] })),
+    key: f.key, name: f.short, st: STAGES.map((s) => groupStatus(engine, s.metrics, period, { ...sel, facility: [f.key] })),
   })), [engine, period, sel, ds, facs]);
   const cols: GridColumn<SRow>[] = [
     { key: 'name', label: 'Hospital', value: (r) => r.name, width: 150 },
@@ -122,9 +174,9 @@ function StageHospitalGrid({ onPick }: { onPick: (id: string) => void }) {
   ];
   const g = rows.map((r) => ({ id: String(r.key), data: r }));
   return (
-    <Visual title="Stage status by hospital" subtitle="Worst status among each stage's metrics · click a cell to filter the hospital and open the stage"
+    <Visual title="Stage status by hospital" subtitle="Worst status among each stage's metrics · click a cell to filter to the hospital and open the stage tab"
       table={gridExport(cols, g)}
-      spec={{ type: 'Status matrix (hospital × stage)', dimensions: ['Hospital', 'RCM stage'], interactions: 'Cell click filters hospital and selects stage' }}>
+      spec={{ type: 'Status matrix (hospital × stage)', dimensions: ['Hospital', 'RCM stage'], interactions: 'Cell click filters the hospital and opens the stage tab' }}>
       <Grid caption="Stage status by hospital" columns={cols} rows={g} dense />
       <div className="legend-row"><StatusMark status="On target" /><StatusMark status="Watch" /><StatusMark status="Off target" /></div>
     </Visual>

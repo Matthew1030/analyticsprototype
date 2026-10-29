@@ -384,7 +384,32 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
 .flow-metric { display: flex; justify-content: space-between; gap: 4px; font-size: 11px; }
 .flow-mname { min-width: 0; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .flow-mval { font-weight: 600; white-space: nowrap; }
-.flow-foot { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+.flow-foot { font-size: 10.5px; color: var(--muted); margin-top: 1px; display: flex; justify-content: space-between; gap: 6px; }
+.flow-go { display: inline-flex; align-items: center; gap: 2px; color: var(--accent); font-weight: 600; opacity: 0; transition: opacity .12s; }
+.flow-stage:hover .flow-go, .flow-stage:focus-visible .flow-go { opacity: 1; }
+
+/* Tabbed container: the center of the Revenue Cycle Overview (Overview tab + one tab per stage). */
+.tabbox { display: grid; min-width: 0; }
+.tabbox-bar { display: flex; align-items: flex-end; gap: 2px; overflow-x: auto; scrollbar-width: thin; border-bottom: 2px solid var(--accent); padding: 0 2px; }
+.tabbox-tab { display: inline-flex; align-items: center; gap: 6px; flex: none; border: 1px solid var(--line-2); border-bottom: none; background: var(--surface-2); color: var(--ink-2); padding: 7px 12px 6px; font-size: 12.5px; white-space: nowrap; border-radius: var(--r) var(--r) 0 0; }
+.tabbox-tab:hover:not(.on) { background: var(--surface-3); color: var(--ink); }
+.tabbox-tab.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.tabbox-tab.on .tabbox-num { color: #fff; border-color: rgba(255,255,255,.6); }
+.tabbox-tab.on .status { background: #fff; border-radius: 50%; width: 14px; height: 14px; justify-content: center; }
+.tabbox-tab-home { font-weight: 600; margin-right: 6px; }
+.tabbox-num { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line-2); font-size: 10px; color: var(--muted); }
+.tabbox-panel { display: grid; gap: 10px; align-content: start; min-width: 0; padding: 10px; background: var(--surface-3); border: 1px solid var(--line); border-top: none; }
+.tabbox > .spec-note { border: 1px solid var(--line); border-top: none; }
+
+.stage-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; background: var(--surface); border: 1px solid var(--line); padding: 10px 12px; }
+.stage-head-text { display: grid; gap: 2px; }
+.stage-kicker { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.stage-head h2 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.stage-cta { display: flex; align-items: center; gap: 12px; background: var(--accent-weak); border: 1px solid #bcd2ee; border-left: 4px solid var(--accent); padding: 8px 10px 8px 12px; max-width: 640px; }
+.stage-cta-text { display: grid; gap: 1px; font-size: 11.5px; color: var(--ink-2); }
+.stage-cta-text b { color: var(--accent-ink); font-size: 12.5px; }
+.btn-cta { padding: 7px 14px; font-size: 13px; font-weight: 600; flex: none; }
+.stage-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 
 /* ---------- decomposition tree ---------- */
 .decomp { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 4px; }
@@ -770,3 +795,13 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
 .elt-multi .elt-trend-kv input { vertical-align: middle; margin: 0 3px 0 0; }
 .elt-note { font-size: 11px; color: var(--ink-2); margin-top: 6px; }
 .elt-multi .elt-none { padding: 40px 12px; text-align: center; color: var(--muted); }
+
+/* Standard stage-page bands: 1 Performance, 2 Trend, 3 Where, 4 Why, 5 Act. */
+.band { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--line-2); }
+.band:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.band-num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ink-2); color: #fff; font-size: 11px; font-weight: 600; flex: none; }
+.band h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--ink); }
+.band-q { color: var(--muted); font-size: 11.5px; }
+.band-actions { margin-left: auto; display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.band-act .band-num { background: var(--accent); }
+.tabbox-panel > .band:first-child, .page > .band:first-of-type { margin-top: 0; }

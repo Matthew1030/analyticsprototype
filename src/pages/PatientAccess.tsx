@@ -1,5 +1,7 @@
-// Patient Access (front end): contact center, scheduling, pre-registration and financial clearance,
-// point-of-service collections, eligibility and enrollment, and registration quality.
+// Patient Access (front end). One tab per area, in process order: summary, scheduling,
+// pre-registration and financial clearance, eligibility and enrollment, point-of-service collections,
+// and the contact center. Each tab is in the standard order: Performance, Trend, Where, Why, Act.
+// Most front-end measures exist only by hospital, so "Why" appears only where a finer breakdown exists.
 
 import { useMemo } from 'react';
 import { evaluate, METRIC_BY_ID, ORDER_OUTCOMES } from '../engine/metrics';
@@ -7,8 +9,9 @@ import { fmt } from '../format';
 import { useApp } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { barOption, lineOption, SERIES } from '../ui/charts';
-import { metricLabel, PageSection } from '../ui/common';
+import { metricLabel } from '../ui/common';
 import { CanvasHeader } from '../ui/Shell';
+import { Band, Bands, TabBox, useGroupStatus, useTab, type TabDef } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { weekLabel, weeksEnding } from '../ui/weekly';
 import { BreakdownVisual, KpiStrip, Scorecard, TrendVisual } from '../ui/widgets';
@@ -22,66 +25,109 @@ const ACCESS_IDS = [
   'medicaid_in_scope', 'medicaid_screening_rate', 'medicaid_eligible_completion', 'coverage_found_rate', 'front_end_denial_rate',
 ];
 
+const TABS: { id: string; label: string; kpis: string[] }[] = [
+  { id: 'summary', label: 'Summary', kpis: ['eligibility_rate', 'auth_rate', 'preservice_auth_rate', 'registration_accuracy', 'fin_clearance_rate', 'pos_rate', 'front_end_denial_rate'] },
+  { id: 'scheduling', label: 'Scheduling', kpis: ['scheduled_rate', 'scheduled_rate_final', 'orders_received', 'open_orders', 'open_orders_24h_pct', 'lead_time_3plus_pct', 'schedule_lead_time'] },
+  { id: 'prereg', label: 'Pre-registration and clearance', kpis: ['prereg_rate', 'prereg_rate_72h', 'fin_clearance_rate', 'fin_clearance_rate_72h', 'scheduled_under_72h_pct'] },
+  { id: 'eligibility', label: 'Eligibility and enrollment', kpis: ['eligibility_rate', 'medicaid_in_scope', 'medicaid_screening_rate', 'coverage_found_rate', 'medicaid_eligible_completion'] },
+  { id: 'pos', label: 'POS collections', kpis: ['pos_collections', 'pos_rate', 'pos_yield', 'pos_estimate_accuracy', 'pos_missed_residual_pct', 'pos_pct_net'] },
+  { id: 'contact', label: 'Contact center', kpis: ['call_volume_total', 'call_volume', 'calls_outbound', 'call_abandon_rate_all', 'call_abandon_rate', 'cbo_call_abandon_rate', 'asa'] },
+];
+const TAB_KPIS = TABS.map((t) => t.kpis);
+
 export function PatientAccess() {
+  const status = useGroupStatus(TAB_KPIS);
+  const tabs: TabDef[] = TABS.map((t, i) => ({ id: t.id, label: t.label, status: status[i], home: i === 0 }));
+  const [tab, open] = useTab(tabs);
   const { go } = useApp();
   const drill = (k: number) => go('facility', { id: String(k) }, { drill: true });
+  const t = TABS.find((x) => x.id === tab)!;
   return (
     <div className="page">
       <CanvasHeader />
-      <KpiStrip ids={['eligibility_rate', 'auth_rate', 'preservice_auth_rate', 'registration_accuracy', 'fin_clearance_rate', 'pos_rate', 'front_end_denial_rate']} />
-      <div className="row cols-7-5">
-        <Scorecard ids={ACCESS_IDS} title="Patient access scorecard" groupByArea={false} />
-        <div className="stack">
-          <TrendVisual id="front_end_denial_rate" months={18} title="Front-end denial rate trend" height={200} />
-          <WeeklyScheduling />
-        </div>
-      </div>
-
-      <PageSection title="Contact center" note="Patient access line (front end) and business office customer service line (back end)" />
-      <KpiStrip ids={['call_volume_total', 'call_volume', 'calls_outbound', 'call_abandon_rate_all', 'call_abandon_rate', 'cbo_call_abandon_rate', 'asa']} />
-      <div className="row cols-2">
-        <BreakdownVisual id="call_abandon_rate_all" alt={['call_abandon_rate', 'cbo_call_abandon_rate']} dim="facility" onDrill={drill} />
-        <TrendVisual id="call_volume_total" alt={['call_abandon_rate_all']} months={18} title="Call volume and abandonment, all lines" />
-      </div>
-
-      <PageSection title="Scheduling" note="Order inflow, open inventory and lead time" />
-      <KpiStrip ids={['scheduled_rate', 'scheduled_rate_final', 'orders_received', 'open_orders', 'open_orders_24h_pct', 'lead_time_3plus_pct', 'schedule_lead_time']} />
-      <div className="row cols-3">
-        <OrderOutcomes />
-        <BreakdownVisual id="open_orders_24h_pct" alt={['open_orders']} dim="facility" title="Open orders in process > 24 hours by hospital" onDrill={drill} />
-        <BreakdownVisual id="lead_time_3plus_pct" alt={['schedule_lead_time']} dim="facility" onDrill={drill} />
-      </div>
-
-      <PageSection title="Pre-registration and financial clearance" note="72-hour and before-service windows" />
-      <KpiStrip ids={['prereg_rate', 'prereg_rate_72h', 'fin_clearance_rate', 'fin_clearance_rate_72h', 'scheduled_under_72h_pct']} />
-      <div className="row cols-3">
-        <BreakdownVisual id="prereg_rate_72h" alt={['prereg_rate']} dim="facility" onDrill={drill} />
-        <BreakdownVisual id="fin_clearance_rate_72h" alt={['fin_clearance_rate']} dim="facility" onDrill={drill} />
-        <BreakdownVisual id="scheduled_under_72h_pct" dim="facility" onDrill={drill} />
-      </div>
-
-      <PageSection title="Point-of-service collections" note="Collections against the patient liability estimate" />
-      <KpiStrip ids={['pos_collections', 'pos_rate', 'pos_yield', 'pos_estimate_accuracy', 'pos_missed_residual_pct', 'pos_pct_net']} />
-      <div className="row cols-3">
-        <BreakdownVisual id="pos_collections" dim="facility" title="POS collections by hospital" onDrill={drill} />
-        <BreakdownVisual id="pos_yield" alt={['pos_missed_residual_pct']} dim="facility" title="POS yield by hospital" onDrill={drill} />
-        <BreakdownVisual id="pos_estimate_accuracy" dim="facility" title="Estimate accuracy by hospital" onDrill={drill} />
-      </div>
-
-      <PageSection title="Eligibility and enrollment" note="Insurance verification and Medicaid eligibility for uninsured patients" />
-      <KpiStrip ids={['eligibility_rate', 'medicaid_in_scope', 'medicaid_screening_rate', 'coverage_found_rate', 'medicaid_eligible_completion']} />
-      <div className="row cols-3">
-        <BreakdownVisual id="eligibility_rate" dim="facility" title="Eligibility rate by hospital" onDrill={drill} />
-        <BreakdownVisual id="medicaid_screening_rate" alt={['medicaid_in_scope']} dim="facility" onDrill={drill} />
-        <BreakdownVisual id="medicaid_eligible_completion" alt={['coverage_found_rate']} dim="facility" onDrill={drill} />
-      </div>
-
-      <PageSection title="Registration quality and authorization" />
-      <div className="row cols-3">
-        <BreakdownVisual id="registration_accuracy" alt={['registration_edits']} dim="facility" onDrill={drill} />
-        <BreakdownVisual id="preservice_auth_rate" dim="facility" onDrill={drill} />
-        <BreakdownVisual id="front_end_denial_rate" dim="payer" title="Front-end denial rate by payer" top={11} />
-      </div>
+      <TabBox id="access" tabs={tabs} current={tab} onOpen={open} label="Patient access areas"
+        spec={<><b>Container (tabbed)</b> · 6 tabs: Summary, then each front-end area in process order · Tab label: area name with its status · Each tab: Performance, Trend, Where, Why (where data allows), Act</>}>
+        <Band type="kpi" />
+        <KpiStrip ids={t.kpis} />
+        {tab === 'summary' && (
+          <Bands
+            trend={[
+              <TrendVisual id="front_end_denial_rate" months={18} title="Front-end denial rate trend" height={220} />,
+              <TrendVisual id="registration_accuracy" alt={['eligibility_rate', 'auth_rate']} months={18} height={220} />,
+            ]}
+            where={[
+              <BreakdownVisual id="front_end_denial_rate" dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="registration_accuracy" alt={['registration_edits']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="preservice_auth_rate" dim="facility" onDrill={drill} />,
+            ]}
+            why={[
+              <BreakdownVisual id="front_end_denial_rate" dim="payer" title="Front-end denial rate by payer" top={11} />,
+              <BreakdownVisual id="registration_accuracy" dim="patientType" title="Registration accuracy by patient type" />,
+            ]}
+            act={<Scorecard ids={ACCESS_IDS} title="Patient access scorecard" groupByArea={false} />}
+            actNote="Detail: every patient access metric" />
+        )}
+        {tab === 'scheduling' && (
+          <Bands
+            trend={[
+              <WeeklyScheduling />,
+              <TrendVisual id="scheduled_rate" alt={['scheduled_rate_final']} months={18} height={220} />,
+            ]}
+            where={[
+              <BreakdownVisual id="open_orders_24h_pct" alt={['open_orders']} dim="facility" title="Open orders in process > 24 hours by hospital" onDrill={drill} />,
+              <BreakdownVisual id="lead_time_3plus_pct" alt={['schedule_lead_time']} dim="facility" onDrill={drill} />,
+            ]}
+            why={[<OrderOutcomes />]} />
+        )}
+        {tab === 'prereg' && (
+          <Bands
+            trend={[
+              <TrendVisual id="prereg_rate_72h" alt={['prereg_rate']} months={18} height={220} />,
+              <TrendVisual id="fin_clearance_rate_72h" alt={['fin_clearance_rate']} months={18} height={220} />,
+            ]}
+            where={[
+              <BreakdownVisual id="prereg_rate_72h" alt={['prereg_rate']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="fin_clearance_rate_72h" alt={['fin_clearance_rate']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="scheduled_under_72h_pct" dim="facility" onDrill={drill} />,
+            ]} />
+        )}
+        {tab === 'eligibility' && (
+          <Bands
+            trend={[
+              <TrendVisual id="eligibility_rate" months={18} height={220} />,
+              <TrendVisual id="medicaid_screening_rate" alt={['coverage_found_rate', 'medicaid_eligible_completion']} months={18} height={220} />,
+            ]}
+            where={[
+              <BreakdownVisual id="eligibility_rate" dim="facility" title="Eligibility rate by hospital" onDrill={drill} />,
+              <BreakdownVisual id="medicaid_screening_rate" alt={['medicaid_in_scope']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="medicaid_eligible_completion" alt={['coverage_found_rate']} dim="facility" onDrill={drill} />,
+            ]} />
+        )}
+        {tab === 'pos' && (
+          <Bands
+            trend={[
+              <TrendVisual id="pos_collections" months={18} height={220} />,
+              <TrendVisual id="pos_yield" alt={['pos_estimate_accuracy']} months={18} height={220} />,
+            ]}
+            where={[
+              <BreakdownVisual id="pos_collections" dim="facility" title="POS collections by hospital" onDrill={drill} />,
+              <BreakdownVisual id="pos_yield" alt={['pos_missed_residual_pct']} dim="facility" title="POS yield by hospital" onDrill={drill} />,
+              <BreakdownVisual id="pos_estimate_accuracy" dim="facility" title="Estimate accuracy by hospital" onDrill={drill} />,
+            ]}
+            why={[<BreakdownVisual id="pos_yield" dim="patientType" title="POS yield by patient type" />]} />
+        )}
+        {tab === 'contact' && (
+          <Bands
+            trend={[
+              <TrendVisual id="call_volume_total" alt={['call_abandon_rate_all']} months={18} title="Call volume and abandonment, all lines" height={220} />,
+              <TrendVisual id="asa" months={18} height={220} />,
+            ]}
+            where={[
+              <BreakdownVisual id="call_abandon_rate_all" alt={['call_abandon_rate', 'cbo_call_abandon_rate']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="asa" dim="facility" onDrill={drill} />,
+            ]} />
+        )}
+      </TabBox>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 // Denials Analytics: which payers, hospitals, categories and root causes drive denials.
 // Drill path: Total denials -> payer -> hospital -> category -> root cause -> denied claims.
+// Standard stage-page order: Performance, Trend, Where, Why, Act.
 
 import { useMemo } from 'react';
 import type { Selections } from '../engine/engine';
@@ -12,8 +13,10 @@ import { Chart } from '../ui/Chart';
 import { barOption, SERIES, stackedColumnsOption } from '../ui/charts';
 import { fmtMetric, snapshotLabel } from '../ui/common';
 import { Grid, gridExport, type GridColumn } from '../ui/Grid';
+import { Icon } from '../ui/icons';
 import { InvestigationPath } from '../ui/InvestigationPath';
 import { CanvasHeader } from '../ui/Shell';
+import { Band, Bands } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, DecompositionTree, KpiStrip, TrendVisual, useMetric } from '../ui/widgets';
 
@@ -24,9 +27,12 @@ export function Denials() {
   const { go, sel } = useApp();
   const startSel = useMemo(() => ({ ...sel, facility: [], payer: [], denialCategory: [], rootCause: [] }), [sel]);
   const rate = useMetric('denial_rate', 0, startSel);
+  const work = () => go('wl-denials', {}, { drill: true });
+  const claims = () => go('accounts', { mode: 'denied' }, { drill: true });
   return (
     <div className="page">
       <CanvasHeader />
+      <Band type="kpi" />
       <KpiStrip ids={['denial_rate', 'denial_dollars', 'denial_pct_npsr', 'appeal_rate', 'appeal_success', 'denial_writeoffs', 'recoverable_pct']} />
       <InvestigationPath title="Investigate denials" steps={[
         { label: 'Denial rate', hint: '', value: <>{fmtMetric('denial_rate', rate.value)} <span className="muted">target {fmtMetric('denial_rate', rate.target)}</span></> },
@@ -34,31 +40,35 @@ export function Denials() {
         { label: 'Hospital', field: 'facility', hint: 'click a hospital' },
         { label: 'Category', field: 'denialCategory', hint: 'click a category' },
         { label: 'Root cause', field: 'rootCause', hint: 'click a driver row' },
-        { label: 'Act', hint: '', action: { label: 'Work these claims in the Denials worklist ›', onClick: () => go('wl-denials', {}, { drill: true }) },
-          secondary: { label: 'View denied claims', onClick: () => go('accounts', { mode: 'denied' }, { drill: true }) } },
+        { label: 'Act', hint: '', action: { label: 'Work these claims in the Denials worklist ›', onClick: work },
+          secondary: { label: 'View denied claims', onClick: claims } },
       ]} />
-      <DecompositionTree id="denial_dollars" title="Denial decomposition" dims={['payer', 'facility', 'denialCategory', 'rootCause', 'financialClass', 'serviceLine', 'patientType']}
-        initial={['payer', 'facility', 'denialCategory', 'rootCause']} />
-      <div className="row cols-2">
-        <TrendVisual id="denial_rate" months={18} />
-        <CategoryTrend />
-      </div>
-      <div className="row cols-3">
-        <BreakdownVisual id="denial_rate" dim="payer" title="Denial rate by payer" top={11} />
-        <BreakdownVisual id="denial_rate" dim="facility" title="Denial rate by hospital" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
-        <BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by category" />
-      </div>
-      <TopDrivers />
-      <KpiStrip ids={['appeals_filed', 'appeals_resolved', 'appeals_open', 'appeal_success', 'appeal_upheld_rate', 'denial_wo_pct_npsr']} />
-      <div className="row cols-3">
-        <AppealStatus />
-        <BreakdownVisual id="appeals_filed" alt={['appeal_rate']} dim="denialCategory" title="Appeals by denial category" subtitle="Clinical appeals: click Medical necessity and Documentation to filter" />
-        <BreakdownVisual id="appeal_upheld_rate" alt={['appeal_success']} dim="denialCategory" title="Appeal outcome by denial category" />
-      </div>
-      <div className="row cols-2">
-        <PayerCategoryMatrix />
-        <Recoverability />
-      </div>
+      <Bands
+        trend={[<TrendVisual id="denial_rate" months={18} />, <CategoryTrend />]}
+        where={[
+          <BreakdownVisual id="denial_rate" dim="payer" title="Denial rate by payer" top={11} />,
+          <BreakdownVisual id="denial_rate" dim="facility" title="Denial rate by hospital" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />,
+        ]}
+        why={[
+          [<BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by category" />, <PayerCategoryMatrix />],
+          [<DecompositionTree id="denial_dollars" title="Denial decomposition" dims={['payer', 'facility', 'denialCategory', 'rootCause', 'financialClass', 'serviceLine', 'patientType']}
+            initial={['payer', 'facility', 'denialCategory', 'rootCause']} />],
+          [<TopDrivers />],
+        ]}
+        actNote="Appeals, recoverable dollars and the denied claims to work"
+        actActions={<>
+          <button type="button" className="btn" onClick={claims}>View denied claims</button>
+          <button type="button" className="btn btn-primary btn-cta" onClick={work}>Work these claims in the Denials worklist <Icon name="chevronRight" size={11} /></button>
+        </>}
+        act={<>
+          <KpiStrip ids={['appeals_filed', 'appeals_resolved', 'appeals_open', 'appeal_success', 'appeal_upheld_rate', 'denial_wo_pct_npsr']} />
+          <div className="row cols-3">
+            <AppealStatus />
+            <BreakdownVisual id="appeals_filed" alt={['appeal_rate']} dim="denialCategory" title="Appeals by denial category" subtitle="Clinical appeals: click Medical necessity and Documentation to filter" />
+            <BreakdownVisual id="appeal_upheld_rate" alt={['appeal_success']} dim="denialCategory" title="Appeal outcome by denial category" />
+          </div>
+          <Recoverability />
+        </>} />
     </div>
   );
 }
