@@ -1,5 +1,6 @@
 // A/R Analytics: where A/R is accumulating and why.
 // Workflow: Net A/R days -> hospital -> aging bucket -> payer -> accounts.
+// Standard stage-page order: Performance, Trend, Where, Why, Act.
 
 import { useMemo, useState } from 'react';
 import { monthEndDay } from '../data/dates';
@@ -13,8 +14,10 @@ import { Chart } from '../ui/Chart';
 import { ORDINAL, paretoOption, stackedColumnsOption } from '../ui/charts';
 import { fmtMetric, snapshotLabel } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
+import { Icon } from '../ui/icons';
 import { InvestigationPath } from '../ui/InvestigationPath';
 import { CanvasHeader } from '../ui/Shell';
+import { Band, Bands } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, KpiStrip, TrendVisual, useMetric } from '../ui/widgets';
 import { AccountsTable } from './AccountDetail';
@@ -37,6 +40,7 @@ export function ArAnalytics() {
           ))}
         </div>
       )} />
+      <Band type="kpi" />
       <KpiStrip ids={['net_ar_days', 'net_ar', 'gross_ar', 'gross_ar_days', 'ar_gt90_pct', 'ar_gt180_pct']} />
       <InvestigationPath title="Investigate A/R" steps={[
         { label: 'Net A/R days', hint: '', value: <>{fmtMetric('net_ar_days', days.value)} <span className="muted">target {fmtMetric('net_ar_days', days.target)}{sel.facility?.length ? ' · before drill' : ''}</span></> },
@@ -46,26 +50,28 @@ export function ArAnalytics() {
         { label: 'Act', hint: '', action: { label: 'Work these in the A/R worklist ›', onClick: () => go('wl-ar', {}, { drill: true }) },
           secondary: { label: 'View accounts', onClick: () => go('accounts', { mode: 'open' }, { drill: true }) } },
       ]} />
-      <div className="row cols-2">
-        <TrendVisual id="net_ar_days" months={18} />
-        <AgingTrend basis={basis} />
-      </div>
-      <div className="row cols-3">
-        <BreakdownVisual id={arId} dim="facility" title={`${basis === 'net' ? 'Net' : 'Gross'} A/R by hospital`} onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
-        <BreakdownVisual id={arId} dim="arAge" sortBy="natural" title="Aging" subtitle="Days from discharge · current vs comparison · click a bucket to filter" />
-        <BreakdownVisual id={arId} dim="payer" title={`${basis === 'net' ? 'Net' : 'Gross'} A/R by payer`} top={12} />
-      </div>
-      <div className="row cols-3">
-        <BreakdownVisual id={arId} dim="financialClass" title="A/R by financial class" />
-        <BreakdownVisual id={arId} dim="accountStatus" title="A/R by account status" subtitle="Where the open balance sits in the workflow · click to filter" />
-        <Concentration basis={basis} />
-      </div>
-      <div className="row cols-2">
-        <BreakdownVisual id="credit_balance_dollars" alt={['credit_balance_days']} dim="payer" top={11} />
-        <TrendVisual id="credit_balance_dollars" months={18} />
-      </div>
-      <AgingMatrix basis={basis} />
-      <TopAccounts sel={sel} />
+      <Bands
+        trend={[<TrendVisual id="net_ar_days" months={18} />, <AgingTrend basis={basis} />]}
+        where={[
+          <BreakdownVisual id={arId} dim="facility" title={`${basis === 'net' ? 'Net' : 'Gross'} A/R by hospital`} onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />,
+          <BreakdownVisual id={arId} dim="payer" title={`${basis === 'net' ? 'Net' : 'Gross'} A/R by payer`} top={12} />,
+          <BreakdownVisual id={arId} dim="financialClass" title="A/R by financial class" />,
+        ]}
+        why={[
+          [
+            <BreakdownVisual id={arId} dim="arAge" sortBy="natural" title="Aging" subtitle="Days from discharge · current vs comparison · click a bucket to filter" />,
+            <BreakdownVisual id={arId} dim="accountStatus" title="A/R by account status" subtitle="Where the open balance sits in the workflow · click to filter" />,
+            <Concentration basis={basis} />,
+          ],
+          [<AgingMatrix basis={basis} />],
+          [<BreakdownVisual id="credit_balance_dollars" alt={['credit_balance_days']} dim="payer" top={11} />, <TrendVisual id="credit_balance_dollars" months={18} />],
+        ]}
+        actNote="The largest open accounts, and the A/R worklist"
+        actActions={<>
+          <button type="button" className="btn" onClick={() => go('accounts', { mode: 'open' }, { drill: true })}>View accounts</button>
+          <button type="button" className="btn btn-primary btn-cta" onClick={() => go('wl-ar', {}, { drill: true })}>Work these in the A/R worklist <Icon name="chevronRight" size={11} /></button>
+        </>}
+        act={<TopAccounts sel={sel} />} />
     </div>
   );
 }

@@ -299,8 +299,10 @@ function step(v: number) {
   const mag = Math.pow(10, Math.floor(Math.log10(a)) - 1);
   return mag;
 }
-function niceFloor(v: number) { const st = step(v); return Math.floor(v / st) * st; }
-function niceCeil(v: number) { const st = step(v); return Math.ceil(v / st) * st; }
+// Rounded to 12 significant digits: small rates (e.g. 0.0043) otherwise carry float noise that
+// fails the chart library's axis checks.
+function niceFloor(v: number) { const st = step(v); return +(Math.floor(v / st) * st).toPrecision(12); }
+function niceCeil(v: number) { const st = step(v); return +(Math.ceil(v / st) * st).toPrecision(12); }
 
 /**
  * Executive trend: one series, the target as a dashed line, and a faint tint on the side of the

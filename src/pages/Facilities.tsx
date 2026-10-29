@@ -1,4 +1,5 @@
-// Facility Comparison: how hospitals compare, and which need attention.
+// Facility Comparison: how hospitals compare, and which need attention. The hospital performance
+// matrix (status by metric, moved here from the Revenue Cycle Overview) sits under the comparison.
 
 import { useMemo, useState } from 'react';
 import { evaluate, METRIC_BY_ID } from '../engine/metrics';
@@ -11,7 +12,7 @@ import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual } from '../ui/widgets';
-import { overallStatus } from './EnterpriseOverview';
+import { FacilityMatrix, overallStatus } from './EnterpriseOverview';
 
 const COMPARE_IDS = ['net_ar_days', 'cash_pct_npsr', 'denial_rate', 'dnfb_days', 'clean_claim_rate'];
 const RANK_IDS = ['net_ar_days', 'cash_pct_npsr', 'denial_rate', 'dnfb_days', 'clean_claim_rate', 'ar_gt90_pct', 'cost_to_collect', 'coding_tat', 'eligibility_rate'];
@@ -28,6 +29,7 @@ export function Facilities() {
     <div className="page">
       <CanvasHeader />
       <ComparisonTable />
+      <FacilityMatrix />
       <div className="row cols-2">
         <BreakdownVisual key={rankId} id={rankId} dim="facility" title={`Hospital ranking: ${METRIC_BY_ID[rankId].name}`}
           onDrill={(k) => go('facility', { id: String(k) }, { drill: true })}
