@@ -115,7 +115,7 @@ sit far from target.
 
 | Page | Question it answers |
 |---|---|
-| Revenue Cycle Overview | Full enterprise scorecard (ELT framework metrics first, with codes), ranked hospital exceptions ("where to look first"), lifecycle stages (Patient Access → Charge Capture → Coding → CDI → Billing → Denials → A/R → Cash), hospital performance matrix |
+| Revenue Cycle Overview | One tabbed container: **Overview** (headline KPIs, the eight stages at a glance, "where to look first", stage status by hospital, then the full enterprise scorecard and hospital matrix) and one tab per stage (Patient Access → Charge Capture → Coding → CDI → Billing → Denials → A/R → Cash) with its KPIs, trend and hospital breakdown, and a prominent **Open … analysis** call to action. Each tab label shows the stage status |
 | Patient Access | Sections: contact center (all lines), scheduling (order outcomes, open orders > 24 h, lead time), pre-registration and financial clearance (72-hour windows), POS collections (yield and accuracy vs estimate), eligibility and Medicaid enrollment, registration quality |
 | Mid-Cycle | Charge lag, late charges ($ and %), missed charges, final coded volume, coding turnaround by type, CDI, documentation denials |
 | Billing / DNFB | DNFB $ and days, hold reasons, aging, claims exported (# and $), billed not exported, first pass yield, clean claims, edits, billing lag |
