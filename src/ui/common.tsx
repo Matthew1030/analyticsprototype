@@ -7,9 +7,22 @@ import { dayOf, isoDay, monthEndDay, monthStartDay } from '../data/dates';
 import { availablePeriods, longDayLabel } from '../engine/periods';
 import { useApp } from '../state/AppState';
 import { Icon } from './icons';
+import { GAP_NOTE, notInDataset } from '../config/datasetGaps';
+
+/** Asterisk on a data point that is not in the current dataset. */
+export function GapMark({ id, show }: { id?: string | null; show?: boolean }) {
+  if (!(show ?? notInDataset(id))) return null;
+  return <span className="gap-mark" title={GAP_NOTE} aria-label="Not in the current dataset">*</span>;
+}
+
+/** Legend for the asterisk, shown under each page title. */
+export function GapLegend() {
+  return <p className="gap-legend"><span className="gap-mark" aria-hidden="true">*</span> {GAP_NOTE}</p>;
+}
 
 /** Info button: opens the definition and calculation of a metric, or a free text note. */
-export function InfoIcon({ metricId, text, title }: { metricId?: string; text?: ReactNode; title?: string }) {
+/** Info button. Next to a metric that is not in the current dataset it also shows the asterisk (noMark: the caller shows it). */
+export function InfoIcon({ metricId, text, title, noMark }: { metricId?: string; text?: ReactNode; title?: string; noMark?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -23,6 +36,7 @@ export function InfoIcon({ metricId, text, title }: { metricId?: string; text?: 
   const m = metricId ? METRIC_BY_ID[metricId] : undefined;
   return (
     <span className="info" ref={ref}>
+      {!noMark && <GapMark id={metricId} />}
       <button type="button" className="icon-btn info-btn" aria-label={`About ${m?.name ?? title ?? 'this item'}`} title="Definition"
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}>
         <Icon name="info" size={13} />
@@ -44,6 +58,7 @@ export function MetricInfo({ m }: { m: MetricDef }) {
     <>
       <strong>{m.code} · {m.name}</strong>
       <span className="tagline">{m.area} · {m.type === 'balance' ? 'Point in time (period end)' : 'Flow (sum over period)'} · <code>{m.id}</code></span>
+      {notInDataset(m.id) && <span className="info-row note"><b>*</b> {GAP_NOTE}</span>}
       <span className="info-row">{m.definition}</span>
       <span className="info-label">Calculation</span>
       <code className="info-code">{m.calculation}</code>

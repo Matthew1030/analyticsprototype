@@ -8,6 +8,7 @@ import { RCM_AREAS } from '../engine/metrics';
 import { useApp, type PageId } from '../state/AppState';
 import { Grid, type GridColumn } from '../ui/Grid';
 import { Icon } from '../ui/icons';
+import { GapLegend } from '../ui/common';
 import { PAGE_BY_ID } from '../ui/Shell';
 
 const WRAP = new Set<keyof DictionaryRow>(['name', 'definition', 'formula', 'views']);
@@ -50,6 +51,7 @@ export function MetricDictionary() {
           <div>
             <h1>{meta.title} <span className="proto-tag">Prototype only</span></h1>
             <p className="question">{meta.question} Not part of the design. Views are read from the prototype pages, so the export always matches the current build.</p>
+            <GapLegend />
           </div>
           <div className="canvas-right">
             <button type="button" className="btn btn-primary" onClick={doExport} disabled={!views} title="CSV file that opens in Excel. Always holds every metric, whatever the search or category.">

@@ -7,7 +7,7 @@ import { staticTarget, statusOf, type Status } from '../engine/status';
 import { fmt } from '../format';
 import { trend } from '../services/analytics';
 import { useApp } from '../state/AppState';
-import { fmtMetric, Sparkline, StatusMark } from '../ui/common';
+import { fmtMetric, GapMark, Sparkline, StatusMark } from '../ui/common';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
@@ -39,7 +39,7 @@ export function Facilities() {
             {RANK_IDS.map((id) => (
               <label key={id} className={`radio-item ${rankId === id ? 'on' : ''}`}>
                 <input type="radio" name="rank" checked={rankId === id} onChange={() => setRankId(id)} />
-                <span>{METRIC_BY_ID[id].name}</span><span className="muted small">{METRIC_BY_ID[id].area}</span>
+                <span>{METRIC_BY_ID[id].name}<GapMark id={id} /></span><span className="muted small">{METRIC_BY_ID[id].area}</span>
               </label>
             ))}
           </div>

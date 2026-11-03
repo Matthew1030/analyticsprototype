@@ -12,10 +12,11 @@ import type { BreakdownRow, DimensionId, MetricValue } from '../services/contrac
 import { useApp } from '../state/AppState';
 import { Chart } from './Chart';
 import { barOption, COMPARE, lineOption, SERIES } from './charts';
-import { Delta, InfoIcon, Sparkline, StatusMark } from './common';
+import { Delta, GapMark, InfoIcon, Sparkline, StatusMark } from './common';
 import { Grid, gridExport, type GridColumn, type GridRow } from './Grid';
 import { Icon } from './icons';
 import { Visual, type VisualSpec } from './Visual';
+import { gapStar } from '../config/datasetGaps';
 
 /** Catalog name with the metric code in front (e.g. "AR-06 · Gross A/R days"). */
 const codeName = (id: string) => `${METRIC_BY_ID[id].code} · ${METRIC_BY_ID[id].name}`;
@@ -48,7 +49,7 @@ function useMeasure(id: string, alt?: string[]): [string, ReactNode] {
   if (new Set(units).size < ids.length) {
     return [active, (
       <select className="sel-xs" value={active} onChange={(e) => setCur(e.target.value)} aria-label="Measure">
-        {ids.map((x) => <option key={x} value={x}>{METRIC_BY_ID[x].short ?? METRIC_BY_ID[x].name}</option>)}
+        {ids.map((x) => <option key={x} value={x}>{METRIC_BY_ID[x].short ?? METRIC_BY_ID[x].name}{gapStar(x)}</option>)}
       </select>
     )];
   }
@@ -74,8 +75,8 @@ export function KpiCard({ id, onOpen, selOverride }: { id: string; onOpen?: () =
     <div className="kpi" role="button" tabIndex={0} onClick={open} onKeyDown={(e) => { if (e.key === 'Enter') open(); }}
       title={`Analyze ${m.name}`}>
       <div className="kpi-top">
-        <span className="kpi-name">{m.code} · {m.short ?? m.name}</span>
-        <span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={id} /></span>
+        <span className="kpi-name">{m.code}<GapMark id={id} /> · {m.short ?? m.name}</span>
+        <span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={id} noMark /></span>
       </div>
       {v.value === null ? <div className="kpi-nodata">{v.no_data_reason}</div> : (
         <>

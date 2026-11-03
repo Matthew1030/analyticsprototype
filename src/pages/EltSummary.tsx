@@ -25,7 +25,8 @@ import { scopeText, useApp, type PageId } from '../state/AppState';
 import { usePriorities, usePriorityItem } from '../state/Priorities';
 import { Chart } from '../ui/Chart';
 import { eltTrendOption, multiTrendOption, SERIES, type TrendLine } from '../ui/charts';
-import { fmtMetric, InfoIcon, metricLabel, PeriodInput, Sparkline, StatusMark } from '../ui/common';
+import { fmtMetric, GapLegend, GapMark, InfoIcon, metricLabel, PeriodInput, Sparkline, StatusMark } from '../ui/common';
+import { gapStar } from '../config/datasetGaps';
 import { Icon } from '../ui/icons';
 import { PriorityPicker } from '../ui/Priority';
 import { downloadCsv } from '../ui/Visual';
@@ -154,6 +155,7 @@ function EltHeader() {
         <h1>ELT Summary</h1>
         <p>Revenue Cycle Performance · {scopeText(sel, valueLabel, ds.dims.organization.name, ds.dims.facilities.length)} · {period.label}
           {periodStatus(period) === 'Preliminary' && <span className="pill pill-prelim">Preliminary</span>}</p>
+        <GapLegend />
       </div>
       <EltSlicers />
     </header>
@@ -279,7 +281,7 @@ function TrendCard({ r, onOpen }: { r: Row; onOpen: () => void }) {
   return (
     <div className="elt-trend">
       <div className="elt-trend-head">
-        <span className="elt-trend-name">{shortLabel(r.id)}</span>
+        <span className="elt-trend-name">{shortLabel(r.id)}<GapMark id={r.id} /></span>
         <span className="elt-trend-kv"><span>Actual <b><Cell id={r.id} r={{ value: r.v.value, noData: r.v.no_data_reason }} /></b></span><span>Target <b>{fmtMetric(r.id, r.v.target)}</b></span></span>
       </div>
       <Chart height={150} ariaLabel={`${m.name}, monthly, 12 months`} option={option} onClick={onOpen} />
@@ -438,7 +440,7 @@ function SelectedTrend({ chosen, cols, grid, grain }: { chosen: Chosen; cols: Pe
   const [showTargets, setShowTargets] = useState(true);
   const units = [...new Set(chosen.ids.map((id) => METRIC_BY_ID[id].unit))];
   const lines: TrendLine[] = chosen.ids.map((id) => ({
-    name: metricLabel(id), color: chosen.color[id], axis: units.indexOf(METRIC_BY_ID[id].unit) as 0 | 1,
+    name: `${metricLabel(id)}${gapStar(id)}`, color: chosen.color[id], axis: units.indexOf(METRIC_BY_ID[id].unit) as 0 | 1,
     data: grid[id].map((r) => r.value),
     // No target line for a metric that has no values at this time scale.
     target: grid[id].every((r) => r.value === null) ? undefined : grid[id].map((r) => r.target),

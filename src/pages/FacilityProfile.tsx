@@ -7,7 +7,8 @@ import { FACILITY_TYPES, type Selections } from '../engine/engine';
 import { evaluate, METRIC_BY_ID } from '../engine/metrics';
 import { changeOf, statusOf, type Status } from '../engine/status';
 import { useApp } from '../state/AppState';
-import { Delta, fmtMetric, StatusMark } from '../ui/common';
+import { Delta, fmtMetric, GapMark, StatusMark } from '../ui/common';
+import { gapStar } from '../config/datasetGaps';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { CanvasHeader } from '../ui/Shell';
 import { Visual } from '../ui/Visual';
@@ -74,7 +75,7 @@ function VsSystem({ facKey }: { facKey: number }) {
   }, [engine, period, sel, f, ds]);
   const unit = (r: VRow) => METRIC_BY_ID[r.id]?.unit ?? 'count';
   const cols: GridColumn<VRow>[] = [
-    { key: 'label', label: 'Metric', value: (r) => r.label, width: 210, render: (r) => (r.isArea ? <b>{r.label}</b> : r.label) },
+    { key: 'label', label: 'Metric', value: (r) => r.label, width: 210, render: (r) => (r.isArea ? <b>{r.label}</b> : <>{r.label}<GapMark id={r.id} /></>), exportText: (r) => `${r.label}${r.isArea ? '' : gapStar(r.id)}` },
     { key: 'v', label: 'Hospital', value: (r) => r.v, render: (r) => (r.isArea ? null : <b>{fmtMetric(r.id, r.v)}</b>), status: (r) => r.st, exportText: (r) => (r.isArea ? '' : fmtMetric(r.id, r.v)) },
     { key: 't', label: 'Target', value: (r) => r.t, render: (r) => (r.isArea ? null : fmtMetric(r.id, r.t)), exportText: (r) => (r.isArea ? '' : fmtMetric(r.id, r.t)) },
     { key: 'st', label: 'Status', value: (r) => r.st ?? '', align: 'left', render: (r) => (r.isArea ? null : <StatusMark status={r.st} />) },

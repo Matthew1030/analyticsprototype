@@ -14,6 +14,7 @@ import { useApp, type PageId } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { barOption, waterfallOption } from '../ui/charts';
 import { Delta, fmtMetric, MetricInfo, Sparkline, StatusMark } from '../ui/common';
+import { gapStar } from '../config/datasetGaps';
 import { Grid, gridExport, type GridColumn } from '../ui/Grid';
 import { Icon } from '../ui/icons';
 import { CanvasHeader, PAGE_BY_ID } from '../ui/Shell';
@@ -38,14 +39,14 @@ export function MetricAnalysis() {
 
   return (
     <div className="page">
-      <CanvasHeader title={`${m.code} · ${m.name}`} question={m.definition}
+      <CanvasHeader title={`${m.code} · ${m.name}${gapStar(m.id)}`} question={m.definition}
         right={(
           <div className="metric-switch">
             <label className="fld inline">Metric
               <select value={id} onChange={(e) => go('metric', { id: e.target.value })}>
                 {RCM_AREAS.map((a) => (
                   <optgroup key={a} label={a}>
-                    {METRICS.filter((x) => x.area === a).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                    {METRICS.filter((x) => x.area === a).map((x) => <option key={x.id} value={x.id}>{x.name}{gapStar(x.id)}</option>)}
                   </optgroup>
                 ))}
               </select>

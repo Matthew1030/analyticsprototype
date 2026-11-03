@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { KPI_COVERAGE, type Coverage, type KpiCoverage } from '../config/kpiCoverage';
 import { kpiItemId } from '../config/priorities';
+import { gapStar, kpiNotInDataset, notInDataset } from '../config/datasetGaps';
 import type { SelField } from '../engine/engine';
 import { METRIC_BY_ID, METRICS, type MetricDef } from '../engine/metrics';
 import { CONFIG, staticTarget, watchFor } from '../engine/status';
@@ -15,6 +16,7 @@ import { usePriorities } from '../state/Priorities';
 import { Grid, gridExport, type GridColumn } from '../ui/Grid';
 import { Icon } from '../ui/icons';
 import { PriorityPicker } from '../ui/Priority';
+import { GapMark } from '../ui/common';
 import { CanvasHeader } from '../ui/Shell';
 import { Skeleton, Visual } from '../ui/Visual';
 
@@ -45,7 +47,8 @@ function Catalog() {
   const [q, setQ] = useState('');
   const list = METRICS.filter((m) => (!areas.length || areas.includes(m.area)) && (!q || `${m.name} ${m.id} ${m.definition}`.toLowerCase().includes(q.toLowerCase())));
   const cols: GridColumn<MetricDef>[] = [
-    { key: 'name', label: 'Metric', value: (m) => m.name, width: 200, render: (m) => <span><b>{m.name}</b><br /><code className="small">{m.id}</code></span> },
+    { key: 'name', label: 'Metric', value: (m) => m.name, width: 200, render: (m) => <span><b>{m.name}</b><GapMark id={m.id} /><br /><code className="small">{m.id}</code></span>, exportText: (m) => `${m.name}${gapStar(m.id)}` },
+    { key: 'inds', label: 'In current dataset', value: (m) => (notInDataset(m.id) ? 'No' : 'Yes'), align: 'left', render: (m) => (notInDataset(m.id) ? <b>No *</b> : 'Yes') },
     { key: 'area', label: 'RCM area', value: (m) => m.area, align: 'left' },
     { key: 'type', label: 'Type', value: (m) => (m.type === 'balance' ? 'Balance' : 'Flow'), align: 'left' },
     { key: 'unit', label: 'Unit', value: (m) => m.unit, align: 'left' },
@@ -83,11 +86,12 @@ function KpiCoverageTable() {
   type R = KpiCoverage & { n: number };
   const cols: GridColumn<R>[] = [
     { key: 'n', label: '#', value: (r) => r.n, width: 32 },
-    { key: 'kpi', label: 'Client KPI', value: (r) => r.kpi, align: 'left', width: 230, render: (r) => <span className="wrap"><b>{r.kpi}</b><br /><span className="muted small">{r.dashboard} · {r.stage}</span></span>, exportText: (r) => r.kpi },
+    { key: 'kpi', label: 'Client KPI', value: (r) => r.kpi, align: 'left', width: 230, render: (r) => <span className="wrap"><b>{r.kpi}</b><GapMark show={kpiNotInDataset(r.dashboard, r.kpi)} /><br /><span className="muted small">{r.dashboard} · {r.stage}</span></span>, exportText: (r) => `${r.kpi}${kpiNotInDataset(r.dashboard, r.kpi) ? ' *' : ''}` },
+    { key: 'inds', label: 'In current dataset', value: (r) => (kpiNotInDataset(r.dashboard, r.kpi) ? 'No' : 'Yes'), align: 'left', render: (r) => (kpiNotInDataset(r.dashboard, r.kpi) ? <b>No *</b> : 'Yes') },
     { key: 'cov', label: 'Coverage', value: (r) => COVERAGE_ORDER.indexOf(r.coverage), align: 'left',
       render: (r) => <span className={`status status-${COVERAGE_CLASS[r.coverage]}`}><span className="status-shape" />{r.coverage}</span>, exportText: (r) => r.coverage },
-    { key: 'metrics', label: 'Dashboard metric', value: (r) => r.metrics.map((id) => METRIC_BY_ID[id].name).join('; '), align: 'left',
-      render: (r) => <span className="wrap">{r.metrics.map((id) => METRIC_BY_ID[id].name).join(' · ') || <span className="muted">–</span>}</span> },
+    { key: 'metrics', label: 'Dashboard metric', value: (r) => r.metrics.map((id) => `${METRIC_BY_ID[id].name}${gapStar(id)}`).join('; '), align: 'left',
+      render: (r) => <span className="wrap">{r.metrics.map((id) => `${METRIC_BY_ID[id].name}${gapStar(id)}`).join(' · ') || <span className="muted">–</span>}</span> },
     { key: 'how', label: 'Where to find it', value: (r) => r.how, align: 'left', render: (r) => <span className="wrap small">{r.how}</span> },
     { key: 'src', label: 'Data the client must supply', value: (r) => r.source ?? '', align: 'left', render: (r) => <span className="wrap small">{r.source ?? ''}</span> },
     ...(prioOn ? [{ key: 'prio', label: 'Release', align: 'left' as const, width: 150, sortable: false,
