@@ -1,7 +1,14 @@
 // Data points the prototype shows that are NOT in the client's current dataset
 // (2026_1019_QHC_RCM_Dashboard.xlsx, the data available today). The prototype still shows
 // modeled values for them. Each one is marked with an asterisk (*) on every view.
-// Source of the list: the client's own comparison of the prototype against that workbook.
+// Source of the list: the client's comparison of the prototype against that workbook, checked
+// column by column against its Daily, Weekly and Monthly Data tabs. The very hidden dashboard tabs
+// also name some of these items (late charges, CDI queries, RQA, retractions, statements, lead
+// time, charts coded); those rows look up columns the data tabs do not have, so they are empty.
+// Not marked, because the data tabs can calculate them: POS cash % net revenue, front-end, coding
+// and documentation denial rates (denials by reason / claims sent gross $), net to gross, bad debt
+// % gross revenue, cash goal (from net revenue), A/R > 180 days and the self-pay vs insurance split
+// (insurance and self-pay A/R aging buckets), and claims failing edits (total claims − clean claims).
 
 /** Name of the current dataset, for notes and tooltips. */
 export const CURRENT_DATASET = 'QHC RCM Dashboard workbook (2026-10-19)';
@@ -12,26 +19,24 @@ export const GAP_NOTE = `Not in the current dataset (${CURRENT_DATASET}). The va
 /** Catalog metric ids that are not in the current dataset. */
 export const METRICS_NOT_IN_DATASET = new Set<string>([
   // Patient Access
-  'pos_rate', 'pos_yield', 'pos_estimate_accuracy', 'pos_missed_residual_pct', 'pos_pct_net',
+  'pos_rate', 'pos_yield', 'pos_estimate_accuracy', 'pos_missed_residual_pct',
   'open_orders_24h_pct', 'schedule_lead_time', 'lead_time_3plus_pct', 'scheduled_under_72h_pct',
   'registration_accuracy', 'registration_edits', 'eligibility_rate', 'auth_rate',
-  'orders_closed_unscheduled', 'coverage_found_rate', 'front_end_denial_rate',
+  'orders_closed_unscheduled', 'coverage_found_rate',
   // Mid-cycle: coding, CDI, charge capture
-  'coding_tat', 'coding_tat_ip', 'final_coded_volume', 'coding_denial_rate', 'dnfb_coding',
-  'cdi_query_rate', 'documentation_denial_rate', 'dnfb_query',
+  'coding_tat', 'coding_tat_ip', 'final_coded_volume', 'dnfb_coding',
+  'cdi_query_rate', 'dnfb_query',
   'late_charges_dollars', 'late_charge_pct', 'charge_lag', 'missed_charge_rate', 'missing_charges',
   // Billing
-  'rework_claims', 'first_pass_yield', 'billing_lag',
+  'first_pass_yield', 'billing_lag',
   // Denials and appeals
   'appeals_filed', 'appeals_resolved', 'appeals_open', 'appeal_rate', 'appeal_success', 'appeal_upheld_rate',
   'denial_pct_npsr', 'recoverable_pct', 'avoidable_wo_pct_net', 'avoidable_wo_unrealized_pct',
-  // A/R
-  'ar_gt180_pct',
   // Cash
   'net_collection_rate', 'service_month_yield', 'retractions', 'retraction_pct_cash',
-  'payment_variance', 'payment_variance_pct', 'cash_goal',
+  'payment_variance', 'payment_variance_pct',
   // Financial
-  'net_to_gross', 'cost_to_collect', 'bad_debt_pct_gross', 'bad_debt_unrealized_pct',
+  'cost_to_collect', 'bad_debt_unrealized_pct',
 ]);
 
 export const notInDataset = (metricId?: string | null) => !!metricId && METRICS_NOT_IN_DATASET.has(metricId);
@@ -44,7 +49,6 @@ export const gapStar = (metricId?: string | null) => (notInDataset(metricId) ? '
  * cannot fill. The key is the visual title; the value is the data point that is missing.
  */
 export const VIEWS_NOT_IN_DATASET: Record<string, string> = {
-  'A/R by financial class': 'A/R self-pay vs insurance split',
   'DNFB $ by hold reason': 'DNFB by hold reason (coding / physician query)',
   'DNFB held by mid-cycle reasons': 'DNFB by hold reason (coding / physician query)',
 };
@@ -73,7 +77,6 @@ export const KPIS_NOT_IN_DATASET = new Set<string>([
   'Revenue and Usage|Charge Correction',
   'Revenue and Usage|Missed Charge Rate',
   'First Pass Yield|% of claims accepted, processed, and paid on first submission',
-  'Open ATB|Self Pay vs. Insurance',
   'Open ATB|Unapplied PT Holding Accounts',
   'Total Cash Posted|Insurance Retractions $',
   'Total Cash Posted|Insurance Retractions % of Total Cash',

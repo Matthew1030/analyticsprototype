@@ -253,7 +253,7 @@ The lists are in `src/config/datasetGaps.ts`: catalog metrics, client KPI rows t
 metric (for example coding accuracy, collector QA scores, total deposits), and views that need a
 missing breakdown (A/R by financial class, DNFB by hold reason). Remove an entry when the data
 becomes available. `tests/datasetGaps.test.ts` checks that each entry points at a real metric,
-KPI row or visual.
+KPI row or visual. `docs/dataset-gap-check.md` gives the workbook check for each item.
 
 ## Release prioritization (facilitated session)
 
