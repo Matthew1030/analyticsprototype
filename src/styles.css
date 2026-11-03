@@ -805,3 +805,8 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
 .band-actions { margin-left: auto; display: inline-flex; gap: 6px; flex-wrap: wrap; }
 .band-act .band-num { background: var(--accent); }
 .tabbox-panel > .band:first-child, .page > .band:first-of-type { margin-top: 0; }
+
+/* Data point not in the current dataset (src/config/datasetGaps.ts) */
+.gap-mark { color: var(--watch); font-weight: 700; margin-left: 2px; cursor: help; }
+.gap-legend { margin: 2px 0 0; color: var(--ink-2); font-size: 11px; }
+.gap-legend .gap-mark { margin-left: 0; }

@@ -9,7 +9,7 @@ import { COMPARE_LABEL, comparePeriod, PERIOD_KIND_LABEL, periodDates, type Peri
 import { fmtDate, fmtDateTime } from '../format';
 import { DIMENSION_LABEL, members } from '../services/analytics';
 import { scopeText, useApp, type Audience, type PageId, type Route, type SimState } from '../state/AppState';
-import { PeriodInput } from './common';
+import { GapLegend, PeriodInput } from './common';
 import { Icon } from './icons';
 import { PriorityToggle } from './Priority';
 
@@ -413,6 +413,7 @@ export function CanvasHeader({ title, question, crumbs, right }: { title?: strin
           <Crumbs extra={crumbs} />
           <h1>{title ?? meta.title}</h1>
           <p className="question">{question ?? meta.question}</p>
+          <GapLegend />
         </div>
         {right && <div className="canvas-right">{right}</div>}
       </div>

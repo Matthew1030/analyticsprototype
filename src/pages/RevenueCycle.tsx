@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import { evaluate, METRIC_BY_ID } from '../engine/metrics';
 import { statusOf, STATUS_RANK, type Status } from '../engine/status';
 import { useApp, type PageId } from '../state/AppState';
-import { fmtMetric, PageSection, StatusMark } from '../ui/common';
+import { fmtMetric, GapMark, PageSection, StatusMark } from '../ui/common';
 import { Grid, gridExport, type GridColumn } from '../ui/Grid';
 import { Icon } from '../ui/icons';
 import { CanvasHeader, PAGE_BY_ID } from '../ui/Shell';
@@ -142,7 +142,7 @@ function FlowMetric({ id }: { id: string }) {
   const st = statusOf(v.value, v.target, m.direction, v.watch);
   return (
     <span className="flow-metric">
-      <span className="flow-mname">{m.short ?? m.name}</span>
+      <span className="flow-mname">{m.short ?? m.name}<GapMark id={id} /></span>
       <span className={`flow-mval ${st === 'On target' ? 'txt-ok' : st === 'Watch' ? 'txt-watch' : st ? 'txt-off' : ''}`}>{fmtMetric(id, v.value)}</span>
     </span>
   );

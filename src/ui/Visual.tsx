@@ -6,7 +6,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { visualItemId } from '../config/priorities';
 import { useApp } from '../state/AppState';
 import { usePriorities, usePriorityItem } from '../state/Priorities';
-import { InfoIcon } from './common';
+import { VIEWS_NOT_IN_DATASET, notInDataset } from '../config/datasetGaps';
+import { GapMark, InfoIcon } from './common';
 import { Icon } from './icons';
 import { PriorityPicker } from './Priority';
 import { PAGE_BY_ID } from './Shell';
@@ -37,10 +38,13 @@ interface Props {
   /** Source system this visual depends on (used by the "source delayed" state). */
   source?: 'clearinghouse' | 'scheduling' | 'gl';
   className?: string;
+  /** Mark the visual with an asterisk: it shows a data point that is not in the current dataset (default: from the metric or the title). */
+  gap?: boolean;
   children: ReactNode;
 }
 
-export function Visual({ title, pid, subtitle, metricId, info, spec, table, actions, noData, source, className, children }: Props) {
+export function Visual({ title, pid, subtitle, metricId, info, spec, table, actions, noData, source, className, gap, children }: Props) {
+  const isGap = gap ?? (!!VIEWS_NOT_IN_DATASET[title] || (metricId ? notInDataset(metricId) : !!spec?.metrics?.some(notInDataset)));
   const { sim, specMode, clearAll, toast, sel, route } = useApp();
   const { on: prioOn } = usePriorities();
   const prioName = pid ?? title;
@@ -94,13 +98,13 @@ export function Visual({ title, pid, subtitle, metricId, info, spec, table, acti
       <section className={`visual ${focus ? 'visual-focus' : ''} ${prio.cls} ${className ?? ''}`} aria-label={title}>
         <header className="visual-head">
           <div className="visual-titles">
-            <h3>{title}</h3>
+            <h3>{title}<GapMark show={isGap} /></h3>
             {subtitle && <div className="visual-sub">{subtitle}</div>}
           </div>
           {prioOn && <PriorityPicker id={prioId} label={prioName} tier={prio.tier} inherited={prio.inherited} />}
           <div className="visual-tools no-print">
             {actions}
-            {(metricId || info) && <InfoIcon metricId={metricId} text={info} title={title} />}
+            {(metricId || info) && <InfoIcon metricId={metricId} text={info} title={title} noMark />}
             {table && (
               <button type="button" className={`icon-btn ${asTable ? 'on' : ''}`} title={asTable ? 'Show as visual' : 'Show as table'} aria-pressed={asTable} onClick={() => setAsTable((v) => !v)}>
                 <Icon name={asTable ? 'chart' : 'table'} />

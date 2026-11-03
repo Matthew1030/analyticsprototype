@@ -240,6 +240,21 @@ the cash goal. For a shorter period these metrics show "–" with the reason in 
 also on Metric Analysis (drill-through), which has a selector over the whole catalog. A new page file
 must be added to `FILE_PAGE` (or `FILES_WITHOUT_VIEWS`); a test checks this.
 
+## Data points not in the current dataset (*)
+
+An orange asterisk (*) marks each data point that the prototype shows but the client's current
+dataset (QHC RCM Dashboard workbook, 2026-10-19) does not hold. The prototype shows modeled sample
+data for these. The asterisk shows on KPI tiles, visual titles, table rows and columns, measure
+switches, the metric definition pop-up, Metric Analysis, the Metric catalog and the Client KPI
+coverage table ("In current dataset" column), and the Metric Dictionary export. Each page has a
+legend under its title.
+
+The lists are in `src/config/datasetGaps.ts`: catalog metrics, client KPI rows that have no catalog
+metric (for example coding accuracy, collector QA scores, total deposits), and views that need a
+missing breakdown (A/R by financial class, DNFB by hold reason). Remove an entry when the data
+becomes available. `tests/datasetGaps.test.ts` checks that each entry points at a real metric,
+KPI row or visual.
+
 ## Release prioritization (facilitated session)
 
 A prototype-only tool to decide, live with business leaders, what goes into each release. One person

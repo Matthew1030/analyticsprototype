@@ -13,7 +13,8 @@ import { trend } from '../services/analytics';
 import { useApp } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { barLineOption, COMPARE, SERIES } from '../ui/charts';
-import { Delta, fmtMetric, metricLabel, StatusMark } from '../ui/common';
+import { Delta, fmtMetric, GapMark, metricLabel, StatusMark } from '../ui/common';
+import { gapStar } from '../config/datasetGaps';
 import { Grid, gridExport, type GridColumn, type GridRow } from '../ui/Grid';
 import { Visual } from '../ui/Visual';
 
@@ -56,7 +57,8 @@ export function AttentionList() {
 
   const cols: GridColumn<Flag>[] = [
     { key: 'fac', label: 'Hospital', value: (r) => r.facName, width: 140 },
-    { key: 'metric', label: 'Metric', value: (r) => METRIC_BY_ID[r.id].short ?? METRIC_BY_ID[r.id].name, align: 'left' },
+    { key: 'metric', label: 'Metric', value: (r) => METRIC_BY_ID[r.id].short ?? METRIC_BY_ID[r.id].name, align: 'left',
+      render: (r) => <>{METRIC_BY_ID[r.id].short ?? METRIC_BY_ID[r.id].name}<GapMark id={r.id} /></>, exportText: (r) => `${METRIC_BY_ID[r.id].short ?? METRIC_BY_ID[r.id].name}${gapStar(r.id)}` },
     { key: 'value', label: 'Actual', value: (r) => r.value, format: (_, r) => fmtMetric(r.id, r.value), status: (r) => r.status },
     { key: 'target', label: 'Target', value: (r) => r.target, format: (_, r) => fmtMetric(r.id, r.target) },
     { key: 'gap', label: 'Gap', value: (r) => r.gap, format: (v) => fmt(v, 'pct', 0), info: 'Distance from target as a share of the target. The list is ranked by gap weighted by hospital size (square root of NPSR share), so large hospitals with material misses come first.' },
