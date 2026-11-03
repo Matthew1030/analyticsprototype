@@ -75,6 +75,7 @@ export const WORKBOOK_SOURCE: Record<string, string> = {
   claims_submitted_dollars: 'SSI Payor Claims Sent - Gross Charges $',
   dnfb_dollars: 'DNFB Gross Balance ($)',
   dnfb_days: 'DNFB Gross Days',
+  dnfb_4plus_pct: 'DNFB % Gross 4+ Days from Discharge',
   dnsp_dollars: 'DNSP Gross Balance ($)',
   dnsp_days: 'DNSP Gross Days',
 };
@@ -91,7 +92,7 @@ export const METRICS_NOT_IN_DATASET = new Set<string>([
   'charge_lag', 'late_charge_pct', 'late_charges_dollars', 'missing_charges', 'missed_charge_rate', 'charges_posted',
   'coding_tat', 'coding_tat_ip', 'final_coded_volume', 'dnfb_coding', 'cdi_query_rate', 'dnfb_query',
   // Billing
-  'first_pass_yield', 'billing_lag', 'dnsp_accounts', 'unbilled_accounts', 'dnfb_15plus_pct',
+  'first_pass_yield', 'billing_lag', 'dnsp_accounts', 'unbilled_accounts',
   // Denials and appeals
   'denial_rate', 'denied_claims', 'denial_pct_npsr', 'recoverable_pct',
   'appeal_rate', 'appeal_success', 'appeal_upheld_rate', 'appeals_filed', 'appeals_resolved', 'appeals_open',
@@ -127,8 +128,6 @@ export const DIMENSION_METRICS: Record<string, string[]> = {
   // Workbook aging buckets.
   arAge: ['gross_ar'],
   dnfbAge: ['dnfb_dollars'],
-  // POS by service (ED, Inpatient, SDC, Other).
-  patientType: ['pos_collections'],
 };
 
 /** Labels of dimensions the workbook never has (for visuals that name their dimensions in the spec). */

@@ -29,7 +29,7 @@ export function BillingDnfb() {
         <button type="button" className="btn btn-sm btn-primary" onClick={work}>Work these in the DNFB worklist ›</button>
       </>} />
       <Band type="kpi" />
-      <KpiStrip ids={['dnfb_dollars', 'dnfb_days', 'unbilled_accounts', 'dnfb_15plus_pct', 'dnsp_days', 'clean_claim_rate', 'billing_lag']} />
+      <KpiStrip ids={['dnfb_dollars', 'dnfb_days', 'unbilled_accounts', 'dnfb_4plus_pct', 'dnsp_days', 'clean_claim_rate', 'billing_lag']} />
       <KpiStrip ids={['claims_submitted', 'claims_submitted_dollars', 'dnsp_dollars', 'dnsp_accounts', 'first_pass_yield', 'rework_claims']} />
       <Bands
         trend={[<WeeklyDnfb />, <TrendVisual id="dnfb_days" months={18} />]}

@@ -26,8 +26,8 @@ const FACT_FIELDS: Record<FactName, CoreField[]> = {
 
 export const FIELD_LABEL: Record<SelField, string> = {
   facility: 'Hospital', region: 'Region', facilityType: 'Facility type', payer: 'Payer',
-  financialClass: 'Financial class', serviceLine: 'Service line', patientType: 'Patient type',
-  denialCategory: 'Denial category', rootCause: 'Root cause', editCategory: 'Claim edit category',
+  financialClass: 'Payor group', serviceLine: 'Service line', patientType: 'Patient type',
+  denialCategory: 'Denial reason', rootCause: 'Root cause', editCategory: 'Claim edit category',
   dnfbHold: 'DNFB hold reason', arAge: 'A/R aging bucket', accountStatus: 'Account status',
 };
 

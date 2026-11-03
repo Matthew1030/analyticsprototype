@@ -75,9 +75,9 @@
       "target": 1,
       "watch": 1.5
     },
-    "dnfb_15plus_pct": {
-      "target": 0.1,
-      "watch": 0.15
+    "dnfb_4plus_pct": {
+      "target": 0.35,
+      "watch": 0.45
     },
     "charge_lag": {
       "target": 1.5,

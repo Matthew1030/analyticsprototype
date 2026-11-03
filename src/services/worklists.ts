@@ -64,15 +64,18 @@ export const STATUS_OPTIONS: Record<WorklistKind, string[]> = {
 };
 
 const DENIAL_ACTION: Record<string, string> = {
-  Eligibility: 'Verify coverage and rebill',
   Authorization: 'Request retro-authorization',
-  'Medical necessity': 'Prepare clinical appeal',
+  'Benefits Exhausted': 'Bill secondary or patient',
+  Billing: 'Correct and rebill the claim',
   Coding: 'Coding review and corrected claim',
-  Documentation: 'Send records for CDI review',
-  'Coordination of benefits': 'Obtain primary EOB and update COB',
-  'Duplicate claim': 'Confirm original claim status',
-  'Timely filing': 'Appeal with proof of timely filing',
-  'Missing information / records': 'Submit requested information',
+  'Coordination Of Benefits': 'Obtain primary EOB and update COB',
+  Eligibility: 'Verify coverage and rebill',
+  'Lacks Information/Med Records': 'Submit requested records',
+  'Medical Necessity': 'Prepare clinical appeal',
+  'Non-Covered': 'Review coverage and appeal or bill patient',
+  Payer: 'Escalate to payer representative',
+  Provider: 'Send to provider for documentation',
+  'Timely Filing': 'Appeal with proof of timely filing',
 };
 
 const DNFB_ACTION = [

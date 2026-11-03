@@ -32,7 +32,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ACCOUNT_STATUS, AR_AGE, BILLED_STATUS, DENIAL_CATEGORIES, DNFB_AGE, DNFB_HOLDS, EDIT_CATEGORIES,
   FACILITIES, FC_SELF_PAY, FINANCIAL_CLASSES, ORGANIZATION, PATIENT_TYPES, PAYERS, REGIONS,
-  ROOT_CAUSES, SERVICE_LINES, SOURCE_SYSTEMS,
+  ROOT_CAUSES, SERVICE_LINES, SOURCE_SYSTEMS, DNFB_OWNERS, POS_SERVICES, WRITEOFF_REASONS,
 } from './dimensions';
 import {
   monthEndDay, monthIndexOfDay, monthIndexOfKey, monthStartDay, weekday,
@@ -290,7 +290,7 @@ for (let day = genStartDay; day <= asOfDay; day++) {
         }
         if (fc === 1) { [3, 4, 5].forEach((k) => { rcMix[k] *= 1.5; }); [6, 7].forEach((k) => { rcMix[k] *= 1.4; }); }
         if (fc === 2 || fc === 3) [0, 1, 2].forEach((k) => { rcMix[k] *= 1.6; });
-        if (fc === 4) [3, 9, 10].forEach((k) => { rcMix[k] *= 1.3; });
+        if (payer >= 6 && payer <= 9) [3, 9, 10].forEach((k) => { rcMix[k] *= 1.3; }); // commercial payers
         if (!inpatient) { rcMix[6] *= 0.1; rcMix[11] *= 0.1; }
         if (pr.maCobSpike && fc === 1) {
           const spike = clamp((p - 0.3) / 0.55, 0, 1);
@@ -330,7 +330,7 @@ for (let day = genStartDay; day <= asOfDay; day++) {
             payAmt = Math.round(net * PAY_RATIO[payer] * uniform(0.985, 1.005));
             closeD = payD;
           } else {
-            woD = denD + (apl ? randInt(90, 210) : r.category === 7 ? randInt(20, 60) : randInt(45, 130));
+            woD = denD + (apl ? randInt(90, 210) : r.category === 11 ? randInt(20, 60) : randInt(45, 130)); // 11 = Timely Filing
             closeD = woD;
           }
         } else {
@@ -605,6 +605,7 @@ sizes['dims.json'] = write('dims.json', {
   rootCauses: ROOT_CAUSES.map(({ key, name, category, recoverable }) => ({ key, name, category, recoverable })),
   editCategories: EDIT_CATEGORIES, dnfbHolds: DNFB_HOLDS, dnfbAge: DNFB_AGE, arAge: AR_AGE,
   billedStatus: BILLED_STATUS, accountStatus: ACCOUNT_STATUS, sourceSystems: SOURCE_SYSTEMS,
+  dnfbOwners: DNFB_OWNERS, posServices: POS_SERVICES, writeoffReasons: WRITEOFF_REASONS,
 });
 // Planned availability date: Nth business day after each month closes.
 const availability: Record<string, string> = {};

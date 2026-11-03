@@ -44,7 +44,7 @@ describe('ELT metric framework', () => {
     const d = e.snapshotDayOnOrBefore('ar', last.endDay)!;
     const ins = { financialClass: ds.dims.financialClasses.map((_, i) => i).slice(0, -1) };
     const billed = e.snapshot('ar', 'gross', d, ins, { billed: [1, 2] });
-    const old = e.snapshot('ar', 'gross', d, ins, { billed: [1, 2], ageMin: 3 });
+    const old = e.snapshot('ar', 'gross', d, ins, { billed: [1, 2], ageMin: 1 });
     expect(evaluate(METRIC_BY_ID.ar_gt90_pct, e, last, {}).value).toBeCloseTo(old / billed, 9);
   });
 

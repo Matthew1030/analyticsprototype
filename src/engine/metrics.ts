@@ -508,7 +508,7 @@ export const METRICS: MetricDef[] = [
     calculation: '(Billed Insurance AR in 91+ Buckets ÷ Total Billed Insurance AR) × 100, period-end snapshot',
     formula: 'Billed insurance A/R aged 91+ days / total billed insurance A/R',
     sourceFields: ['ar_snapshot.gross_balance', 'ar_snapshot.aging_bucket', 'ar_snapshot.billed_status', 'ar_snapshot.financial_class'], fact: 'ar',
-    compute: (c0) => { const c = insuredSel(whole(c0)); const a = ar(c, 'gross', { ageMin: 3, billed: [1, 2] }); const b = ar(c, 'gross', { billed: [1, 2] }); return a === null || b === null ? null : div(a, b); },
+    compute: (c0) => { const c = insuredSel(whole(c0)); const a = ar(c, 'gross', { ageMin: 1, billed: [1, 2] }); const b = ar(c, 'gross', { billed: [1, 2] }); return a === null || b === null ? null : div(a, b); },
   },
   {
     id: 'ar_gt180_pct', code: 'AR-08', name: 'A/R > 180 days', area: 'A/R', unit: 'pct', direction: 'down', type: 'balance', page: 'ar', finest: 'month',
@@ -516,7 +516,7 @@ export const METRICS: MetricDef[] = [
     calculation: 'Gross A/R aged 181+ days / gross A/R, period-end snapshot',
     formula: 'Gross A/R aged 181+ days / total gross A/R',
     sourceFields: ['ar_snapshot.gross_balance', 'ar_snapshot.aging_bucket'], fact: 'ar',
-    compute: (c0) => { const c = whole(c0); const a = ar(c, 'gross', { ageMin: 5 }); const b = ar(c, 'gross'); return a === null || b === null ? null : div(a, b); },
+    compute: (c0) => { const c = whole(c0); const a = ar(c, 'gross', { ageMin: 2 }); const b = ar(c, 'gross'); return a === null || b === null ? null : div(a, b); },
   },
   // ================= Denials =================
   {
@@ -585,7 +585,7 @@ export const METRICS: MetricDef[] = [
   },
   {
     id: 'appeal_upheld_rate', code: 'DN-11', name: 'Appeal upheld rate', short: 'Upheld rate', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials',
-    definition: 'Share of resolved appeals where the payer upheld the denial (not overturned). For clinical appeals, filter the denial category to Medical necessity and Documentation.',
+    definition: 'Share of resolved appeals where the payer upheld the denial (not overturned). For clinical appeals, filter the denial reason to Medical Necessity and Lacks Information/Med Records.',
     calculation: 'COUNT(appeal WHERE resolved AND NOT overturned) / COUNT(appeal WHERE resolved), by resolution date',
     formula: 'Appeals upheld (not overturned) / appeals resolved',
     sourceFields: ['appeal.status', 'appeal.outcome', 'appeal.resolved_date'], fact: 'acc',
@@ -640,7 +640,7 @@ export const METRICS: MetricDef[] = [
     calculation: 'SUM(denial.gross_amount WHERE category IN (Eligibility, Authorization, COB)) / SUM(claim.gross_charges, submit date)',
     formula: 'Denied $ (eligibility, authorization, COB) / gross charges submitted',
     sourceFields: ['denial.gross_amount', 'denial.category', 'claim.gross_charges'], fact: 'acc',
-    compute: (c) => div(deniedIn(c, [0, 1, 5]), submittedGross(c)),
+    compute: (c) => div(deniedIn(c, [0, 4, 5]), submittedGross(c)), // Authorization, COB, Eligibility
   },
   // ================= Billing =================
   {
@@ -741,12 +741,12 @@ export const METRICS: MetricDef[] = [
     compute: (c) => dnfb(c, 0, { col: 'count' }),
   },
   {
-    id: 'dnfb_15plus_pct', code: 'BL-13', name: 'DNFB aged 15+ days', short: 'DNFB 15+ days %', area: 'Billing', unit: 'pct', direction: 'down', type: 'balance', page: 'billing', finest: 'week',
-    definition: 'Share of DNFB dollars 15 or more days past discharge.',
-    calculation: 'DNFB $ aged 15+ days / DNFB $, period-end snapshot',
-    formula: 'DNFB $ aged 15+ days / total DNFB $',
+    id: 'dnfb_4plus_pct', code: 'BL-13', name: 'DNFB % gross 4+ days from discharge', short: 'DNFB 4+ days %', area: 'Billing', unit: 'pct', direction: 'down', type: 'balance', page: 'billing', finest: 'week',
+    definition: 'Share of DNFB gross dollars 4 or more days past discharge (workbook: DNFB % Gross 4+ Days from Discharge). Replaces DNFB aged 15+ days.',
+    calculation: 'DNFB $ aged 4+ days / DNFB $, period-end snapshot',
+    formula: 'DNFB $ aged 4+ days / total DNFB $',
     sourceFields: ['dnfb_snapshot.gross_amount', 'dnfb_snapshot.age_bucket'], fact: 'dnfb',
-    compute: (c) => { const a = dnfb(c, 0, { ageMin: 3 }); const b = dnfb(c, 0); return a === null || b === null ? null : div(a, b); },
+    compute: (c) => { const a = dnfb(c, 0, { ageMin: 1 }); const b = dnfb(c, 0); return a === null || b === null ? null : div(a, b); },
   },
   // ================= Charge capture =================
   {
@@ -849,11 +849,11 @@ export const METRICS: MetricDef[] = [
   },
   {
     id: 'documentation_denial_rate', code: 'CD-02', name: 'Documentation-related denial rate', short: 'Doc. denial rate', area: 'Clinical Documentation', unit: 'pct', direction: 'down', type: 'flow', page: 'midcycle', digits: 2,
-    definition: 'Denied dollars in Documentation and Medical necessity categories as a share of gross charges submitted.',
-    calculation: 'SUM(denial.gross_amount WHERE category IN (Documentation, Medical necessity)) / SUM(claim.gross_charges, submit date)',
+    definition: 'Denied dollars with the reasons Lacks Information/Med Records and Medical Necessity as a share of gross charges submitted (claims sent).',
+    calculation: 'SUM(denial.gross_amount WHERE reason IN (Lacks Information/Med Records, Medical Necessity)) / SUM(claim.gross_charges, submit date)',
     formula: 'Denied $ (documentation, medical necessity) / gross charges submitted',
     sourceFields: ['denial.gross_amount', 'denial.category'], fact: 'acc',
-    compute: (c) => div(deniedIn(c, [2, 4]), submittedGross(c)),
+    compute: (c) => div(deniedIn(c, [6, 7]), submittedGross(c)), // Lacks Information/Med Records, Medical Necessity
   },
   {
     id: 'dnfb_query', code: 'CD-03', name: 'DNFB on physician query', area: 'Clinical Documentation', unit: 'usd', direction: 'down', type: 'balance', page: 'midcycle', finest: 'week',

@@ -64,7 +64,7 @@ export function Denials() {
           <KpiStrip ids={['appeals_filed', 'appeals_resolved', 'appeals_open', 'appeal_success', 'appeal_upheld_rate', 'denial_wo_pct_npsr']} />
           <div className="row cols-3">
             <AppealStatus />
-            <BreakdownVisual id="appeals_filed" alt={['appeal_rate']} dim="denialCategory" title="Appeals by denial category" subtitle="Clinical appeals: click Medical necessity and Documentation to filter" />
+            <BreakdownVisual id="appeals_filed" alt={['appeal_rate']} dim="denialCategory" title="Appeals by denial category" subtitle="Clinical appeals: click Medical Necessity and Lacks Information/Med Records to filter" />
             <BreakdownVisual id="appeal_upheld_rate" alt={['appeal_success']} dim="denialCategory" title="Appeal outcome by denial category" />
           </div>
           <Recoverability />
@@ -151,7 +151,7 @@ function PayerCategoryMatrix() {
   }), [engine, period, sel, ds, cats]);
   const cols: GridColumn<PcRow>[] = [
     { key: 'name', label: 'Payer', value: (r) => r.name, width: 200 },
-    ...cats.map((c, i) => ({ key: `c${i}`, label: c.name.replace('Missing information / records', 'Missing info').replace('Coordination of benefits', 'COB').replace('Medical necessity', 'Med. necessity'), group: 'Denied $ by category', value: (r: PcRow) => r.vals[i], format: (v: number | null) => (v ? usd(v) : '–'), heat: 'magnitude' as const })),
+    ...cats.map((c, i) => ({ key: `c${i}`, label: c.name.replace('Lacks Information/Med Records', 'Lacks info').replace('Coordination Of Benefits', 'COB').replace('Medical Necessity', 'Med. necessity').replace('Benefits Exhausted', 'Benefits exh.'), group: 'Denied $ by category', value: (r: PcRow) => r.vals[i], format: (v: number | null) => (v ? usd(v) : '–'), heat: 'magnitude' as const })),
     { key: 'total', label: 'Total', value: (r) => r.total, format: (v) => <b>{usd(v ?? 0)}</b> },
     { key: 'rate', label: 'Denial rate', value: (r) => r.rate, format: (v) => fmt(v, 'pct') },
   ];
