@@ -14,7 +14,7 @@ import { useApp, type PageId } from '../state/AppState';
 import { Chart } from '../ui/Chart';
 import { barOption, waterfallOption } from '../ui/charts';
 import { Delta, fmtMetric, MetricInfo, Sparkline, StatusMark } from '../ui/common';
-import { gapStar } from '../config/datasetGaps';
+import { dimensionInDataset, gapStar } from '../config/datasetGaps';
 import { Grid, gridExport, type GridColumn } from '../ui/Grid';
 import { Icon } from '../ui/icons';
 import { CanvasHeader, PAGE_BY_ID } from '../ui/Shell';
@@ -63,7 +63,7 @@ export function MetricAnalysis() {
       </div>
       <div className="row cols-2">
         <BreakdownVisual id={id} dim="facility" title={`${m.short ?? m.name} by hospital`} pid="Metric by hospital" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
-        <BreakdownVisual key={id} id={id} pid="Metric breakdown" dim={dims.includes('payer') ? 'payer' : dims[1]} dims={dims.filter((d) => d !== 'facility')} top={12} />
+        <BreakdownVisual key={id} id={id} pid="Metric breakdown" dim={dims.find((d) => d !== 'facility' && dimensionInDataset(d, id)) ?? (dims.includes('payer') ? 'payer' : dims[1])} dims={dims.filter((d) => d !== 'facility')} top={12} />
       </div>
       <div className="row cols-2">
         {isAdditive ? <ContributionBridge id={id} /> : <ChangeByHospital id={id} />}
@@ -117,11 +117,11 @@ function ContributionBridge({ id }: { id: string }) {
   const other = steps.slice(7).reduce((a, r) => a + (r.change ?? 0), 0);
   const fm = (v: number) => fmt(v, m.unit, m.digits);
   return (
-    <Visual title="Contribution to change" metricId={id}
+    <Visual title="Contribution to change" metricId={id} gap={!dimensionInDataset(dim, id)}
       subtitle={`${cp.short} to ${period.short}: which ${DIMENSION_LABEL[dim].toLowerCase()} drove the change`}
       actions={(
         <select className="sel-xs" value={dim} onChange={(e) => setDim(e.target.value as DimensionId)} aria-label="Contribution by">
-          {(['facility', 'financialClass', 'payer', 'serviceLine'] as DimensionId[]).filter((d) => DIMS_BY_FACT[m.fact].includes(d)).map((d) => <option key={d} value={d}>{DIMENSION_LABEL[d]}</option>)}
+          {(['facility', 'financialClass', 'payer', 'serviceLine'] as DimensionId[]).filter((d) => DIMS_BY_FACT[m.fact].includes(d)).map((d) => <option key={d} value={d}>{DIMENSION_LABEL[d]}{dimensionInDataset(d, id) ? '' : ' *'}</option>)}
         </select>
       )}
       table={{ columns: [DIMENSION_LABEL[dim], cp.short, period.short, 'Change'], rows: steps.map((r) => [r.label, fm(r.compare_value ?? 0), fm(r.value ?? 0), fmtDelta(r.change, m.unit)]) }}

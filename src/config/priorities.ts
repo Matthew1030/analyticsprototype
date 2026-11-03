@@ -56,8 +56,17 @@ export const LEGACY_VISUAL_TITLE: [string, string, string][] = [
   ['billing', 'Billed, not exported (open edits) by hospital', 'DNSP $ by hospital'],
   ['cash', 'Collections by payer', 'Cash collections by payer'],
   ['cash', 'Cash % NPSR by hospital', 'Cash % net rev by hospital'],
-  ['cash', 'Cash by financial class', 'Cash collections by financial class'],
-  ['cash', 'Contractual adjustments by financial class', 'Contractual adj. $ by financial class'],
+  ['cash', 'Cash by financial class', 'Cash collections by payor group'],
+  ['cash', 'Cash collections by financial class', 'Cash collections by payor group'],
+  ['cash', 'Contractual adjustments by financial class', 'Contractual adj. $ by payor group'],
+  ['cash', 'Contractual adj. $ by financial class', 'Contractual adj. $ by payor group'],
+  ['cash', 'Net collection rate by financial class', 'Net collection rate by payor group'],
+  // Workbook alignment: payor groups, denial reasons, DNFB owners.
+  ['ar', 'A/R by financial class', 'Gross A/R by payor group'],
+  ['billing', 'DNFB by hospital and hold reason', 'DNFB by hospital and owner'],
+  ['denials', 'Denied claims by category, monthly', 'Denied $ by reason, monthly'],
+  ['denials', 'Denied $ by category', 'Denied $ by reason'],
+  ['midcycle', 'DNFB held by mid-cycle reasons', 'DNFB $ by owner'],
   ['cash', 'Cash vs goal by hospital: month and year to date', 'Cash collections vs cash goal by hospital: month and year to date'],
   ['cycle', 'Cash collected vs cash goal', 'Cash collections vs cash goal'],
   ['midcycle', 'Missed charges by hospital', 'Missed charge rate by hospital'],
@@ -70,6 +79,7 @@ export const LEGACY_VISUAL_TITLE: [string, string, string][] = [
   ['access', 'Medicaid application completion by hospital', 'Medicaid eligible completion by hospital'],
   ['access', 'Registration quality by hospital', 'Registration accuracy by hospital'],
   ['payers', 'Denials vs days in A/R', 'Denial rate vs Gross A/R days'],
+  ['payers', 'Payer mix (gross charges by financial class)', 'Gross charges by payor group'],
 ];
 const LEGACY_VISUAL_ID: Record<string, string> = Object.fromEntries(LEGACY_VISUAL_TITLE.map(([p, a, b]) => [visualItemId(p, a), visualItemId(p, b)]));
 

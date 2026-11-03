@@ -185,9 +185,8 @@ export function dimensionInDataset(dim: string, metricId: string): boolean {
  * cannot fill. The key is the visual title; the value is the data point that is missing.
  */
 export const VIEWS_NOT_IN_DATASET: Record<string, string> = {
+  'Largest open accounts': 'Account-level data (the workbook is facility-level)',
   'DNFB $ by hold reason': 'DNFB by hold reason (coding / physician query)',
-  'DNFB by hospital and hold reason': 'DNFB by hold reason (coding / physician query)',
-  'DNFB held by mid-cycle reasons': 'DNFB by hold reason (coding / physician query)',
 };
 
 /**

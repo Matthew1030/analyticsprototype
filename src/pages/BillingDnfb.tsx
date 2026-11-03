@@ -16,6 +16,7 @@ import { Band, Bands } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { weekLabel, weeksEnding } from '../ui/weekly';
 import { BreakdownVisual, KpiStrip, TrendVisual } from '../ui/widgets';
+import { DnfbByOwner, DnspByAge, EparsByOwner } from '../ui/workbook';
 
 export function BillingDnfb() {
   const { go } = useApp();
@@ -29,22 +30,26 @@ export function BillingDnfb() {
         <button type="button" className="btn btn-sm btn-primary" onClick={work}>Work these in the DNFB worklist ›</button>
       </>} />
       <Band type="kpi" />
-      <KpiStrip ids={['dnfb_dollars', 'dnfb_days', 'unbilled_accounts', 'dnfb_4plus_pct', 'dnsp_days', 'clean_claim_rate', 'billing_lag']} />
-      <KpiStrip ids={['claims_submitted', 'claims_submitted_dollars', 'dnsp_dollars', 'dnsp_accounts', 'first_pass_yield', 'rework_claims']} />
+      <KpiStrip ids={['dnfb_dollars', 'dnfb_days', 'dnfb_4plus_pct', 'dnsp_dollars', 'dnsp_days', 'clean_claim_rate', 'rework_claims']} />
+      <KpiStrip ids={['claims_submitted_dollars', 'claims_submitted', 'claim_import_dollars', 'claim_import_volume', 'epars_total', 'epars_7plus', 'epars_7plus_count']} />
+      <KpiStrip ids={['unbilled_accounts', 'billing_lag', 'dnsp_accounts', 'first_pass_yield']} />
       <Bands
-        trend={[<WeeklyDnfb />, <TrendVisual id="dnfb_days" months={18} />]}
+        trend={[<WeeklyDnfb />, <TrendVisual id="dnfb_days" alt={['dnsp_days', 'dnfb_4plus_pct']} months={18} />]}
         where={[
           [
             <BreakdownVisual id="dnfb_dollars" dim="facility" title="DNFB $ by hospital" onDrill={drill} />,
             <BreakdownVisual id="clean_claim_rate" dim="facility" title="Clean claim rate by hospital" onDrill={drill} />,
-            <BreakdownVisual id="billing_lag" dim="facility" title="Billing lag by hospital" showCompare={false} onDrill={drill} />,
+            <BreakdownVisual id="dnsp_dollars" alt={['dnsp_days']} dim="facility" onDrill={drill} />,
           ],
           [
-            <BreakdownVisual id="claims_submitted_dollars" alt={['claims_submitted']} dim="facility" onDrill={drill} />,
-            <BreakdownVisual id="dnsp_dollars" alt={['dnsp_accounts', 'dnsp_days']} dim="facility" onDrill={drill} />,
+            <BreakdownVisual id="claims_submitted_dollars" alt={['claims_submitted', 'claim_import_dollars', 'claim_import_volume']} dim="facility" onDrill={drill} />,
+            <EparsByOwner />,
+            <BreakdownVisual id="billing_lag" dim="facility" title="Billing lag by hospital" showCompare={false} onDrill={drill} />,
           ],
         ]}
         why={[
+          <DnfbByOwner />,
+          <DnspByAge />,
           <BreakdownVisual id="dnfb_dollars" dim="dnfbHold" title="DNFB $ by hold reason" subtitle="Click to filter the hold reason (applies to DNFB measures)" />,
           <BreakdownVisual id="rework_claims" dim="editCategory" title="Claims failing edits by edit category" subtitle="Click to filter the edit category (applies to edit measures)" />,
           <BreakdownVisual id="first_pass_yield" dim="payer" dims={['payer', 'facility', 'financialClass', 'patientType']} title="First pass yield" top={11} />,
@@ -90,26 +95,28 @@ function DnfbMatrix() {
     const mk = (s: Selections) => { const by = engine.snapshotBy('dnfb', 'amount', 'age', day, s, { stage: 0 }); return ds.dims.dnfbAge.map((a) => by.get(a.key) ?? 0); };
     return ds.dims.facilities.filter((f) => !facs || facs.has(f.key)).map((f) => {
       const vals = mk({ ...sel, facility: [f.key] });
-      const kids = ds.dims.dnfbHolds.filter((h) => !sel.dnfbHold?.length || sel.dnfbHold.includes(h.key)).map((h) => {
-        const v = mk({ ...sel, facility: [f.key], dnfbHold: [h.key] });
-        return { id: `f${f.key}h${h.key}`, data: { name: `${h.name}`, key: h.key, parent: f.key, isHold: true, vals: v, total: v.reduce((a, b) => a + b, 0), days: null } };
+      // Children: the workbook's DNFB owners (Front End, Mid Cycle, Back End, Other).
+      const kids = ds.dims.dnfbOwners.map((o, g) => {
+        const holds = ds.dims.dnfbHolds.filter((h) => h.group === g && (!sel.dnfbHold?.length || sel.dnfbHold.includes(h.key))).map((h) => h.key);
+        const v = holds.length ? mk({ ...sel, facility: [f.key], dnfbHold: holds }) : ds.dims.dnfbAge.map(() => 0);
+        return { id: `f${f.key}o${g}`, data: { name: o, key: g, parent: f.key, isHold: true, vals: v, total: v.reduce((a, b) => a + b, 0), days: null } };
       }).filter((k) => k.data.total > 0);
       return { id: `f${f.key}`, data: { name: f.short, key: f.key, vals, total: vals.reduce((a, b) => a + b, 0), days: evaluate(METRIC_BY_ID.dnfb_days, engine, period, { ...sel, facility: [f.key] }).value }, children: kids };
     }).filter((r) => r.data.total > 0);
   }, [engine, day, period, sel, ds, facs]);
   const total: DRow = { name: 'Total', key: -1, vals: ds.dims.dnfbAge.map((_, i) => rows.reduce((a, r) => a + r.data.vals[i], 0)), total: rows.reduce((a, r) => a + r.data.total, 0), days: evaluate(METRIC_BY_ID.dnfb_days, engine, period, sel).value };
   const cols: GridColumn<DRow>[] = [
-    { key: 'name', label: 'Hospital / hold reason', value: (r) => r.name, width: 220 },
+    { key: 'name', label: 'Hospital / owner', value: (r) => r.name, width: 220 },
     ...ds.dims.dnfbAge.map((a, i) => ({ key: `a${i}`, label: a.name, group: 'Days since discharge', value: (r: DRow) => r.vals[i], format: (v: number | null) => (v ? usd(v) : '–'), heat: i >= 2 ? 'magnitude' as const : undefined })),
     { key: 'total', label: 'DNFB $', value: (r) => r.total, format: (v) => <b>{usd(v ?? 0)}</b>, exportText: (r) => usd(r.total) },
     { key: 'days', label: 'DNFB days', value: (r) => r.days, format: (v) => fmt(v, 'days'), metricId: 'dnfb_days' },
   ];
   return (
-    <Visual title="DNFB by hospital and hold reason" subtitle={`Snapshot at ${snapshotLabel(day)} · expand a hospital for hold reasons · click to filter`}
+    <Visual title="DNFB by hospital and owner" subtitle={`Snapshot at ${snapshotLabel(day)} · expand a hospital for the workbook owners (Front End, Mid Cycle, Back End, Other) · click to filter`}
       table={gridExport(cols, rows, total)} noData={rows.length ? null : 'No DNFB for the current filters.'}
-      spec={{ type: 'Matrix (pivot) table with hierarchy and heat', metrics: ['dnfb_dollars', 'dnfb_days'], dimensions: ['Hospital', 'Hold reason', 'DNFB age'], interactions: 'Expand/collapse; row click filters hospital (and hold reason)' }}>
-      <Grid caption="DNFB by hospital and hold reason" columns={cols} rows={rows} total={total} defaultSort={{ key: 'total', dir: 'desc' }} maxHeight={430}
-        onRowClick={(r) => { if (r.isHold) { selectOnly('facility', [r.parent!]); selectOnly('dnfbHold', [r.key]); } else selectOnly('facility', [r.key]); }} />
+      spec={{ type: 'Matrix (pivot) table with hierarchy and heat', metrics: ['dnfb_dollars', 'dnfb_days'], dimensions: ['Hospital', 'DNFB owner', 'DNFB age'], interactions: 'Expand/collapse; row click filters hospital (and owner)' }}>
+      <Grid caption="DNFB by hospital and owner" columns={cols} rows={rows} total={total} defaultSort={{ key: 'total', dir: 'desc' }} maxHeight={430}
+        onRowClick={(r) => { if (r.isHold) { selectOnly('facility', [r.parent!]); selectOnly('dnfbHold', ds.dims.dnfbHolds.filter((h) => h.group === r.key).map((h) => h.key)); } else selectOnly('facility', [r.key]); }} />
     </Visual>
   );
 }

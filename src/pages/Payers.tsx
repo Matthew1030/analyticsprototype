@@ -1,4 +1,5 @@
-// Payer Performance: which payers pay slowly, deny more, or underpay.
+// Payer Performance: which payor groups pay slowly or deny more (the workbook's payor groups), and,
+// as v3+, which named payers underpay (the workbook has no named payers or expected reimbursement).
 
 import { useMemo } from 'react';
 import type { Selections } from '../engine/engine';
@@ -26,15 +27,81 @@ export function Payers() {
   return (
     <div className="page">
       <CanvasHeader />
-      <KpiStrip ids={['payment_variance', 'payment_variance_pct', 'contractual_adj_pct', 'denial_rate', 'net_collection_rate', 'gross_ar_days']} />
-      <PayerTable />
+      <KpiStrip ids={['gross_charges', 'cash', 'gross_ar', 'gross_ar_days', 'denial_dollars', 'denial_dollar_rate', 'contractual_adj_pct']} />
+      <PayorGroupTable />
       <div className="row cols-3">
+        <GroupScatter />
+        <BreakdownVisual id="gross_charges" dim="financialClass" title="Gross charges by payor group" />
+        <BreakdownVisual id="cash" dim="financialClass" title="Cash collections by payor group" />
+      </div>
+      <KpiStrip ids={['payment_variance', 'payment_variance_pct', 'denial_rate', 'net_collection_rate']} />
+      <PayerTable />
+      <div className="row cols-2">
         <PayerScatter />
         <PaymentVariance />
-        <BreakdownVisual id="gross_charges" dim="financialClass" title="Payer mix (gross charges by financial class)" />
       </div>
       <p className="footnote">Payer names are used for realism only. All figures are synthetic and do not describe any real payer's performance or contracts.</p>
     </div>
+  );
+}
+
+interface GRow { key: number; name: string; gross: number | null; mix: number | null; cash: number | null; ar: number | null; arDays: number | null; denied: number | null; denialRate: number | null }
+
+/** One row per workbook payor group, with the measures the workbook splits by payor group. */
+function usePayorGroupRows() {
+  const { engine, period, sel, ds } = useApp();
+  return useMemo(() => {
+    const allGross = evaluate(METRIC_BY_ID.gross_charges, engine, period, { ...sel, payer: [], financialClass: [] }).value ?? 0;
+    const row = (s: Selections, key: number, name: string): GRow => {
+      const v = (id: string) => evaluate(METRIC_BY_ID[id], engine, period, s).value;
+      const gross = v('gross_charges');
+      return { key, name, gross, mix: allGross && gross !== null ? gross / allGross : null, cash: v('cash'), ar: v('gross_ar'), arDays: v('gross_ar_days'), denied: v('denial_dollars'), denialRate: v('denial_dollar_rate') };
+    };
+    const rows = ds.dims.financialClasses.map((name, fc) => ({ fc, name })).filter((g) => !sel.financialClass?.length || sel.financialClass.includes(g.fc))
+      .map((g) => ({ id: `g${g.fc}`, data: row({ ...sel, financialClass: [g.fc] }, g.fc, g.name) }));
+    return { rows, total: row(sel, -1, 'Total') };
+  }, [engine, period, sel, ds]);
+}
+
+function PayorGroupTable() {
+  const { sel, toggle } = useApp();
+  const { rows, total } = usePayorGroupRows();
+  const cols: GridColumn<GRow>[] = [
+    { key: 'name', label: 'Payor group', value: (r) => r.name, width: 200 },
+    { key: 'gross', label: metricLabel('gross_charges'), value: (r) => r.gross, format: (v) => usd(v ?? 0), metricId: 'gross_charges' },
+    { key: 'mix', label: 'Mix', value: (r) => r.mix, format: (v) => fmt(v, 'pct'), bar: true, info: 'Share of gross charges across all payor groups (ignores the payor group filter).' },
+    { key: 'cash', label: metricLabel('cash'), value: (r) => r.cash, format: (v) => usd(v ?? 0), metricId: 'cash' },
+    { key: 'ar', label: metricLabel('gross_ar'), value: (r) => r.ar, format: (v) => usd(v ?? 0), group: 'A/R', metricId: 'gross_ar' },
+    { key: 'arDays', label: metricLabel('gross_ar_days'), value: (r) => r.arDays, format: (v) => fmt(v, 'days'), heat: 'high', group: 'A/R', metricId: 'gross_ar_days' },
+    { key: 'denied', label: metricLabel('denial_dollars'), value: (r) => r.denied, format: (v) => usd(v ?? 0), group: 'Denials', metricId: 'denial_dollars' },
+    { key: 'denialRate', label: metricLabel('denial_dollar_rate'), value: (r) => r.denialRate, format: (v) => fmt(v, 'pct'), heat: 'high', group: 'Denials', metricId: 'denial_dollar_rate' },
+  ];
+  return (
+    <Visual title="Payor group performance" subtitle="Workbook payor groups · shading = worse relative to other groups · click a row to filter"
+      table={gridExport(cols, rows, total)}
+      spec={{ type: 'Table with column groups, heat formatting and totals', metrics: ['gross_charges', 'cash', 'gross_ar', 'gross_ar_days', 'denial_dollars', 'denial_dollar_rate'], dimensions: ['Payor group'], interactions: 'Row click toggles the payor group filter' }}>
+      <Grid caption="Payor group performance" columns={cols} rows={rows} total={total} defaultSort={{ key: 'gross', dir: 'desc' }}
+        selected={(r) => !!sel.financialClass?.includes(r.key)} onRowClick={(r) => { if (r.key >= 0) toggle('financialClass', r.key); }} />
+    </Visual>
+  );
+}
+
+function GroupScatter() {
+  const { sel, toggle } = useApp();
+  const { rows } = usePayorGroupRows();
+  const list = rows.map((r) => r.data).filter((r) => r.arDays !== null && r.denialRate !== null && r.name !== 'Self Pay');
+  const pts = list.map((r) => ({ name: r.name, x: r.arDays, y: r.denialRate, size: r.ar ?? 0 }));
+  const med = (a: number[]) => { const s2 = [...a].sort((x, y) => x - y); return s2.length ? s2[Math.floor(s2.length / 2)] : undefined; };
+  return (
+    <Visual title={`${metricLabel('denial_dollar_rate')} vs ${metricLabel('gross_ar_days')}`} subtitle="Each bubble is a payor group (size = gross A/R) · dashed lines = medians · top right = slow and denying"
+      table={{ columns: ['Payor group', metricLabel('gross_ar_days'), metricLabel('denial_dollar_rate'), metricLabel('gross_ar')], rows: list.map((r) => [r.name, fmt(r.arDays, 'days'), fmt(r.denialRate, 'pct'), usd(r.ar ?? 0)]) }}
+      spec={{ type: 'Scatter / bubble chart with median reference lines', metrics: ['gross_ar_days', 'denial_dollar_rate', 'gross_ar'], dimensions: ['Payor group'], interactions: 'Click toggles the payor group filter' }}>
+      <Chart height={300} ariaLabel="Payor group denial rate vs gross A/R days"
+        option={scatterOption({ points: pts, xName: metricLabel('gross_ar_days'), yName: metricLabel('denial_dollar_rate'), xFmt: (v) => fmt(v, 'days', 0), yFmt: (v) => fmt(v, 'pct', 0),
+          xRef: med(list.map((r) => r.arDays!)), yRef: med(list.map((r) => r.denialRate!)),
+          selected: list.map((r, i) => (sel.financialClass?.includes(r.key) ? i : -1)).filter((i) => i >= 0) })}
+        onClick={(i) => toggle('financialClass', list[i].key)} />
+    </Visual>
   );
 }
 
@@ -67,7 +134,7 @@ function PayerTable() {
   const { sel, toggle, go } = useApp();
   const { tree, total } = usePayerRows();
   const cols: GridColumn<PRow>[] = [
-    { key: 'name', label: 'Financial class / payer', value: (r) => r.name, width: 240, render: (r) => (r.isClass ? <b>{r.name}</b> : r.name) },
+    { key: 'name', label: 'Payor group / payer', value: (r) => r.name, width: 240, render: (r) => (r.isClass ? <b>{r.name}</b> : r.name) },
     { key: 'gross', label: metricLabel('gross_charges'), value: (r) => r.gross, format: (v) => usd(v ?? 0) },
     { key: 'mix', label: 'Mix', value: (r) => r.mix, format: (v) => fmt(v, 'pct'), bar: true, info: 'Share of gross charges across all payers (ignores the payer filter).' },
     { key: 'ar', label: metricLabel('net_ar'), value: (r) => r.ar, format: (v) => usd(v ?? 0), group: 'A/R' },
@@ -83,9 +150,9 @@ function PayerTable() {
     { key: 'contr', label: metricLabel('contractual_adj_pct'), value: (r) => r.contractual, format: (v) => fmt(v, 'pct'), metricId: 'contractual_adj_pct' },
   ];
   return (
-    <Visual title="Payer performance" subtitle="Grouped by financial class with subtotals · shading = worse relative to other payers · click a payer to filter"
+    <Visual title="Payer performance" subtitle="Named payers, grouped by payor group with subtotals · shading = worse relative to other payers · click a payer to filter"
       table={gridExport(cols, tree, total)}
-      spec={{ type: 'Matrix table: grouped rows, column groups, heat formatting, flags, totals', metrics: ['gross_charges', 'net_ar', 'gross_ar_days', 'ar_gt90_pct', 'denial_rate', 'net_collection_rate', 'contractual_adj_pct', 'payment_variance'], dimensions: ['Financial class', 'Payer'], interactions: 'Expand/collapse; sort within level; row click toggles payer filter; header info opens definitions' }}>
+      spec={{ type: 'Matrix table: grouped rows, column groups, heat formatting, flags, totals', metrics: ['gross_charges', 'net_ar', 'gross_ar_days', 'ar_gt90_pct', 'denial_rate', 'net_collection_rate', 'contractual_adj_pct', 'payment_variance'], dimensions: ['Payor group', 'Payer'], interactions: 'Expand/collapse; sort within level; row click toggles payer filter; header info opens definitions' }}>
       <Grid caption="Payer performance" columns={cols} rows={tree} total={total} defaultExpanded
         selected={(r) => !r.isClass && !!sel.payer?.includes(r.key)}
         onRowClick={(r) => { if (!r.isClass) toggle('payer', r.key); }}

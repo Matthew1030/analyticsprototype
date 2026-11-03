@@ -57,6 +57,28 @@ metric is in exactly one of the two lists.
 | DNFB by hold reason | DNFB Balance by owner (Front End, Mid Cycle, Back End, Other) | By owner, not by hold reason |
 | CBO tasks | ePars ("R1 Assigned Tasks") | Confirm if ePars are the CBO tasks |
 
+## Changes to the views
+
+Each page now leads with workbook metrics. Items the workbook cannot fill stay on the page after
+them, with the asterisk and the v3+ default release.
+
+| View | Now leads with (workbook) | Kept as v3+ |
+|---|---|---|
+| Revenue Cycle Overview | Stage metrics: pre-registration, financial clearance, scheduled rate, front-end denials; coding denials, DNFB 4+ Mid Cycle, ePars HIM; clean claims, DNFB and DNSP days; denial rate ($), denied $, denial write-offs % NPSR; gross A/R days, A/R > 90, gross A/R; cash % NPSR, cash, bad debt % NPSR | Charge Capture stage, CDI query rate, DNFB on query |
+| Patient Access: Summary | Pre-registration and clearance trends, PAC deferrals by hospital, denied $ by reason, pre-reg outcome (RS / WN / OB) | Eligibility, authorization and registration accuracy |
+| Patient Access: Scheduling | Open orders, average age of open orders, open order days, schedule turnaround | Final-outcome rate, open orders > 24 hours, lead time, closed without scheduling |
+| Patient Access: Pre-registration and clearance | DPA I and DPA II 24h / 48h, inpatient prior day, completion by team (Pre-reg, HTR, SDC: same day vs 1 day out), pre-reg outcome, deferrals by type | 72-hour rates, scheduled < 72 hours |
+| Patient Access: Eligibility and enrollment | Self-pay volume, not screened, screening rate, eligible application rate, conversion rate, application outcomes | Eligibility verification, coverage discovery |
+| Patient Access: POS | POS $, POS % self-pay cash, POS % net revenue, POS by service (ED, Inpatient, SDC, Other) | POS rate, yield, estimate accuracy, missed POS |
+| Patient Access: Contact center | PAC calls, abandonment, speed to answer, average call time | All-lines and business office line |
+| Mid-Cycle | Coding: coding denial rate, DNFB 4+ Mid Cycle, ePars HIM. CDI: documentation denial rate, denied $ by reason, denial write-offs by reason. DNFB $ by owner | Charge Capture tab, coding turnaround and volume, CDI queries, DNFB holds |
+| Billing / DNFB | DNFB $ / days / % 4+, DNSP $ / days, clean claims, claims failing edits, claims sent, claim imports, ePars (by owner), DNFB $ by owner, DNSP by age, DNFB by hospital and owner | Unbilled accounts, billing lag, DNSP claims, first pass yield, hold reason, edit category |
+| Denials | Denied $, denial rate ($), front-end / coding / documentation rates, denial write-offs; denied $ by payor group and by reason; drivers by reason; write-offs by reason and by age | Claim-count denial rate, appeals, recoverable, payer and root-cause views |
+| A/R | Gross A/R (default basis), gross and debit net A/R days, billed Ins > 90 and > 360, A/R > 180, credit A/R; A/R by payor group, insurance vs self-pay aging, payor group concentration, aging matrix by insurance / self pay | Named payers, account status, largest accounts |
+| Cash | Cash, cash % NPSR (2-month lag), cash % < 90 days, self-pay cash, adjustments (contractual, admin, charity), bad debt, denial write-offs; cash, write-offs and bad debt by age | Net collection rate, payment variance, retractions, LTD yield, cost to collect |
+| Payers | Payor group performance table, denial rate ($) vs gross A/R days by payor group, gross charges and cash by payor group | Named-payer table, payment variance |
+| Facilities, Hospital Profile, ELT Summary | Ranking and matrix metrics swapped to workbook metrics; profile breakdowns by payor group and reason | Cost to collect, coding turnaround, eligibility, unrealized and avoidable write-offs |
+
 ## Every catalog metric
 
 Metrics PA-38 to PA-63, BL-14 to BL-21, AR-09, FN-13 to FN-15 and CA-12 are workbook metrics added to the catalog.
