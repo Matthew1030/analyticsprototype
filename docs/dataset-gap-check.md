@@ -59,6 +59,8 @@ metric is in exactly one of the two lists.
 
 ## Every catalog metric
 
+Metrics PA-38 to PA-63, BL-14 to BL-21, AR-09, FN-13 to FN-15 and CA-12 are workbook metrics added to the catalog.
+
 | Code | Metric | In dataset | Release | Workbook source |
 |---|---|---|---|---|
 | AR-01 | Net days in credit balance | Yes |  | Total Credit AR / (Net Revenue $ per day) |
@@ -69,6 +71,7 @@ metric is in exactly one of the two lists.
 | AR-06 | Gross A/R days | Yes |  | Gross AR Days |
 | AR-07 | A/R > 90 days | Yes |  | Billed Ins > 90 % Total Billed Ins |
 | AR-08 | A/R > 180 days | Yes |  | (181 - 360 + 361+ Days Ins AR and Self Pay AR) / Total Gross AR $ |
+| AR-09 | Billed insurance A/R > 360 days | Yes |  | Billed Ins > 360 % Total Billed Ins |
 | BL-01 | Clean claim rate | Yes |  | Clean Claims Rate |
 | BL-02 | Claims failing edits | Yes |  | Total Claim − Clean Claim |
 | BL-03 | Claims submitted | Yes |  | Total Claim |
@@ -81,7 +84,15 @@ metric is in exactly one of the two lists.
 | BL-10 | Billed not submitted ($) | Yes |  | DNSP Gross Balance ($) |
 | BL-11 | Billed claims not submitted | No * | v3+ |  |
 | BL-12 | Unbilled accounts (DNFB) | No * | v3+ |  |
-| BL-13 | DNFB aged 15+ days | No * | v3+ |  |
+| BL-13 | DNFB % gross 4+ days from discharge | Yes |  | DNFB % Gross 4+ Days from Discharge |
+| BL-14 | Claims imported to the scrubber ($) | Yes |  | Total Claim Import - Gross Charges $ |
+| BL-15 | Claims imported to the scrubber | Yes |  | Total Claim Import Volume |
+| BL-16 | ePars open task dollars | Yes |  | ePars Total $ Billed + ePars Total $ Unbilled (DNSP) |
+| BL-17 | ePars dollars unbilled (DNSP) | Yes |  | ePars Total $ Unbilled (DNSP) |
+| BL-18 | ePars dollars assigned 7+ days | Yes |  | ePars Total $ Assigned 7+ Days |
+| BL-19 | ePars tasks assigned 7+ days | Yes |  | ePars Total # Assigned 7+ Days |
+| BL-20 | ePars dollars assigned to HIM | Yes |  | ePars Total $ Assigned HIM |
+| BL-21 | DNFB 4+ days, Mid Cycle owner | Yes |  | DNFB Balance 4+ Days Mid Cycle |
 | CA-01 | Cash collections | Yes |  | Cash Posted $ |
 | CA-02 | Cash goal | Yes |  | Cash goal % (setting) × NPSR with 2 Month Lag |
 | CA-03 | Cash as % of net revenue | Yes |  | Cash Posted % NPSR (2 month lag) |
@@ -93,6 +104,7 @@ metric is in exactly one of the two lists.
 | CA-09 | Insurance retractions | No * | v3+ |  |
 | CA-10 | Insurance retractions % of total cash | No * | v3+ |  |
 | CA-11 | Life-to-date yield by service month | No * | v3+ |  |
+| CA-12 | Cash posted % < 90 days from discharge | Yes |  | Cash Posted % < 90 Days |
 | CC-01 | Charge lag | No * | v3+ |  |
 | CC-02 | Late charges | No * | v3+ |  |
 | CC-03 | Missing charges recovered | No * | v3+ |  |
@@ -135,6 +147,9 @@ metric is in exactly one of the two lists.
 | FN-10 | Net to gross ratio | Yes |  | Net Revenue $ / Gross Revenue $ |
 | FN-11 | Bad debt as % of gross revenue | Yes |  | Bad Debt Transfers $ / Gross Revenue $ |
 | FN-12 | Bad debt incl. unrealized as % of gross revenue | No * | v3+ |  |
+| FN-13 | Average daily gross revenue | Yes |  | Average Daily Gross Revenue |
+| FN-14 | Average daily net revenue | Yes |  | Net Revenue $ / days (the Average Daily Net Revenue column is empty) |
+| FN-15 | Admin adjustments | Yes |  | Admin Adjustments |
 | PA-01 | Point-of-service cash % of net revenue | Yes |  | POS Collections (Posted $) / Net Revenue $ |
 | PA-02 | Front-end denial rate | Yes |  | Initial Denials: Eligibility + Authorization + Coordination Of Benefits / SSI Payor Claims Sent - Gross Charges $ |
 | PA-03 | Eligibility verification rate | No * | v3+ |  |
@@ -172,3 +187,29 @@ metric is in exactly one of the two lists.
 | PA-35 | Medicaid screening rate | Yes |  | Total Screening Rate |
 | PA-36 | Medicaid eligible completion rate | Yes |  | Eligible Application Rate (confirm the match with the client) |
 | PA-37 | Coverage discovery rate | No * | v3+ |  |
+| PA-38 | Schedule turnaround time | Yes |  | Schedule Turn Around Time |
+| PA-39 | Average age of open orders | Yes |  | Average Age Open Orders |
+| PA-40 | Open order days | Yes |  | Open Order Days (with Avg # Scheduled/Day, last 2 week avg) |
+| PA-41 | Financial risk deferrals | Yes |  | Financial Risk - Deferral Volume |
+| PA-42 | Authorization deferrals | Yes |  | Authorization - Deferral Volume |
+| PA-43 | Referral deferrals | Yes |  | Referral - Deferral Volume |
+| PA-44 | PAC deferrals | Yes |  | Financial Risk + Authorization + Referral - Deferral Volume |
+| PA-45 | Pre-registration completion rate (48 hours) | Yes |  | DPA I - 48 hour out completion rate |
+| PA-46 | Pre-registration completion rate, same day | Yes |  | Pre Reg - Completion Rate - Same Day |
+| PA-47 | Pre-registration completion rate, 1 day out | Yes |  | Pre Reg - Completion Rate - 1 Day Out |
+| PA-48 | Financial clearance rate (48 hours) | Yes |  | DPA II - 48 hour out completion rate (All Teams) |
+| PA-49 | HTR completion rate, same day | Yes |  | HTR - Completion Rate - Same Day |
+| PA-50 | HTR completion rate, 1 day out | Yes |  | HTR - Completion Rate - 1 Day Out |
+| PA-51 | SDC completion rate, same day | Yes |  | SDC - Completion Rate - Same Day |
+| PA-52 | SDC completion rate, 1 day out | Yes |  | SDC - Completion Rate - 1 Day Out |
+| PA-53 | Inpatient completion rate, prior day | Yes |  | Inpatient Completion Rate - Prior Day |
+| PA-54 | Pre-reg closed in Ready for Service (RS) | Yes |  | Pre-Reg Closed Accounts in RS Status |
+| PA-55 | Pre-reg in Workup Needed (WN) or blank | Yes |  | Pre-Reg Accounts in WN or Blank Status |
+| PA-56 | Pre-reg in Open Balance (OB/CD) | Yes |  | Pre-Reg Accounts in OB/CD Status |
+| PA-57 | Average call time | Yes |  | Avg. Call Time |
+| PA-58 | POS collections % of total self-pay cash | Yes |  | POS Collections % Total Self Pay Cash Posted |
+| PA-59 | Self-pay accounts not screened | Yes |  | Not Screened Volume |
+| PA-60 | Eligible conversion rate | Yes |  | Eligible Conversion Rate |
+| PA-61 | Applications approved | Yes |  | Application Approved |
+| PA-62 | Applications denied | Yes |  | Application Denied |
+| PA-63 | Applications pending | Yes |  | Application Pending |

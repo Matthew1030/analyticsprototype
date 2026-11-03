@@ -286,7 +286,7 @@ export class Engine {
   }
 
   /** Accounts with an event date in a range (account drill-through). Returns row indexes. */
-  accountsByDate(dateCol: 'dd' | 'denD' | 'payD' | 'sbd' | 'woD', start: number, end: number, sel: Selections, detail: DetailKind = 'none'): number[] {
+  accountsByDate(dateCol: 'dd' | 'denD' | 'payD' | 'sbd' | 'woD' | 'bdD' | 'fbd', start: number, end: number, sel: Selections, detail: DetailKind = 'none'): number[] {
     const c = this.ds.acc as unknown as Record<string, Float64Array> & { n: number };
     const ok = this.rowOk('acc', sel, detail);
     const dates = c[dateCol];

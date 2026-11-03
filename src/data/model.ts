@@ -67,8 +67,16 @@ export type FeCol =
   | 'callsOutbound' | 'cboCallsOffered' | 'cboCallsAnswered' | 'cboCallsAbandoned'
   | 'openOrders24hEod' | 'ordersScheduled3Plus' | 'scheduledUnder72h' | 'preRegDone72' | 'finCleared72'
   | 'ordersDuplicate' | 'ordersCancelled' | 'ordersLeakage' | 'ordersAlreadyScheduled'
-  | 'effortsExhausted' | 'medicaidEligible' | 'applicationsCompleted';
-export type OpsCol = 'day' | 'fac' | 'rcmCost';
+  | 'effortsExhausted' | 'medicaidEligible' | 'applicationsCompleted'
+  // Workbook columns (QHC RCM Dashboard).
+  | 'scheduleTatSum' | 'openOrderAgeSum' | 'defFinRisk' | 'defAuth' | 'defReferral'
+  | 'preRegDone48' | 'finCleared48'
+  | 'preRegSdDue' | 'preRegSdDone' | 'preReg1dDue' | 'preReg1dDone'
+  | 'htrSdDue' | 'htrSdDone' | 'htr1dDue' | 'htr1dDone' | 'sdcSdDue' | 'sdcSdDone' | 'sdc1dDue' | 'sdc1dDone' | 'ipDue' | 'ipDone'
+  | 'preRegClosed' | 'preRegRs' | 'preRegWn' | 'preRegOb'
+  | 'talkSecs' | 'appsApproved' | 'appsDenied'
+  | 'eparsBilled' | 'eparsUnbilled' | 'epars7Plus' | 'epars7PlusCount' | 'eparsHim' | 'eparsPtAccess' | 'eparsOther';
+export type OpsCol = 'day' | 'fac' | 'rcmCost' | 'adminAdj';
 
 export interface Dataset {
   dims: Dims;

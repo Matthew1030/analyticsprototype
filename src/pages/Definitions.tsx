@@ -185,11 +185,11 @@ interface Scenario { title: string; question: string; page: PageId; params?: Rec
 
 const SCENARIOS: Scenario[] = [
   {
-    title: 'Why is net A/R increasing?', question: 'Net A/R days rose from about 53 to 60 in six months against a target of 50.', page: 'metric', params: { id: 'net_ar_days' }, filters: {},
+    title: 'Why is net A/R increasing?', question: 'Debit net A/R days rose from about 53 to 60 in six months against the workbook target of 40.', page: 'metric', params: { id: 'net_ar_days' }, filters: {},
     steps: ['Metric Analysis: trend shows the rise starting in spring 2026.', '“Change by hospital”, set to “vs 6 months earlier”: Williamson Regional rose most. Click its bar to filter.', 'Open A/R: “Aging trend” shows growth in 91–180. Click 91–180.', '“A/R by payor group”: Medicare Managed dominates the bucket. Click it.', '“A/R by account status”: most of it is “Pended, records requested”. Click “View accounts”.'],
   },
   {
-    title: 'Why are denials up at Valley Regional?', question: 'The system denial rate is above the 5% target, highest at Valley Regional.', page: 'denials', filters: {},
+    title: 'Why are denials up at Valley Regional?', question: 'Initial denials as a % of gross revenue are above the 5% benchmark, highest at Valley Regional.', page: 'denials', filters: {},
     steps: ['Decomposition tree: Payor group → Medicare Managed is the largest.', 'Next level Hospital → Valley Regional.', 'Denial reason → Coordination Of Benefits.', 'Apply the path as filters, then “View denied claims”.', 'Patient Access page: registration accuracy shows the front-end cause.'],
   },
   {

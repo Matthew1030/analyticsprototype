@@ -1015,7 +1015,195 @@ export const METRICS: MetricDef[] = [
   },
   feMetric('medicaid_eligible_completion', 'Medicaid eligible completion rate', 'Medicaid eligible completion', 'pct', 'up', 'Share of patients likely eligible for Medicaid whose application was completed (workbook: Eligible Application Rate; confirm the match with the client).', 'applicationsCompleted', 'medicaidEligible', { code: 'PA-36', formula: 'Applications completed / patients likely eligible' }),
   feMetric('coverage_found_rate', 'Coverage discovery rate', 'Coverage found', 'pct', 'none', 'Share of screened self-pay accounts where insurance or program coverage was found.', 'coverageFound', 'screened', { code: 'PA-37', formula: 'Accounts with coverage found / accounts screened' }),
+
+  // ================= Workbook metrics (QHC RCM Dashboard) =================
+  // Scheduling
+  { ...feMetric('schedule_tat', 'Schedule turnaround time', 'Schedule TAT', 'days', 'down', 'Average days from order received to appointment scheduled (workbook: Schedule Turn Around Time).', 'scheduleTatSum', 'ordersScheduled', { code: 'PA-38', formula: 'Total days from order to scheduled / orders scheduled' }), digits: 1 },
+  {
+    id: 'open_order_age', code: 'PA-39', name: 'Average age of open orders', short: 'Open order age', area: 'Patient Access', unit: 'days', direction: 'down', type: 'balance', page: 'access', digits: 1,
+    definition: 'Average days since the order was received, for orders not yet scheduled at period end (workbook: Average Age Open Orders).',
+    calculation: 'open_order_age_sum / open_orders_eod on the last day of the period',
+    formula: 'Total age of open orders / open orders, at period end',
+    sourceFields: ['scheduling_daily.open_order_age_sum', 'scheduling_daily.open_orders_eod'], fact: 'fe',
+    compute: (c) => { if (!c.e.feHasCol('openOrdersEod', c.sel)) return null; const d = endOf(c); return div(c.e.snapshot('fe', 'openOrderAgeSum', d, c.sel), c.e.snapshot('fe', 'openOrdersEod', d, c.sel)); },
+  },
+  {
+    id: 'open_order_days', code: 'PA-40', name: 'Open order days', area: 'Patient Access', unit: 'days', direction: 'down', type: 'balance', page: 'access', digits: 1,
+    definition: 'Open orders at period end expressed as days of scheduling work: open orders divided by the average orders scheduled per day over the last 2 weeks (workbook: Open Order Days and Avg # Scheduled/Day (last 2 week avg)).',
+    calculation: 'open_orders_eod (period end) / (SUM(orders_scheduled, last 14 days) / 14)',
+    formula: 'Open orders at period end / average orders scheduled per day (last 2 weeks)',
+    sourceFields: ['scheduling_daily.open_orders_eod', 'scheduling_daily.orders_scheduled'], fact: 'fe',
+    compute: (c) => { if (!c.e.feHasCol('openOrdersEod', c.sel)) return null; const d = endOf(c); return div(c.e.snapshot('fe', 'openOrdersEod', d, c.sel), c.e.sum('fe', 'ordersScheduled', 'day', d - 13, d, c.sel) / 14); },
+  },
+  // PAC deferrals
+  { ...feCountMetric('deferrals_fin_risk', 'Financial risk deferrals', 'Accounts at risk of deferral for financial risk (workbook: Financial Risk - Deferral Volume).', 'defFinRisk', { code: 'PA-41', formula: 'Count of financial risk deferrals' }), short: 'Fin. risk deferrals', direction: 'down' },
+  { ...feCountMetric('deferrals_auth', 'Authorization deferrals', 'Accounts at risk of deferral because the authorization is not obtained (workbook: Authorization - Deferral Volume).', 'defAuth', { code: 'PA-42', formula: 'Count of authorization deferrals' }), short: 'Auth deferrals', direction: 'down' },
+  { ...feCountMetric('deferrals_referral', 'Referral deferrals', 'Accounts at risk of deferral because the referral is not obtained (workbook: Referral - Deferral Volume).', 'defReferral', { code: 'PA-43', formula: 'Count of referral deferrals' }), direction: 'down' },
+  {
+    id: 'deferrals_total', code: 'PA-44', name: 'PAC deferrals', short: 'Deferrals', area: 'Patient Access', unit: 'count', direction: 'down', type: 'flow', page: 'access',
+    definition: 'Accounts at risk of deferral for financial risk, authorization or referral (workbook: the three Deferral Volume columns).',
+    calculation: 'SUM(deferrals_financial_risk + deferrals_authorization + deferrals_referral), by date',
+    formula: 'Financial risk + authorization + referral deferrals',
+    sourceFields: ['pac_deferrals.financial_risk', 'pac_deferrals.authorization', 'pac_deferrals.referral'], fact: 'fe',
+    compute: (c) => (c.e.feHasCol('defAuth', c.sel) ? fe(c, 'defFinRisk') + fe(c, 'defAuth') + fe(c, 'defReferral') : null),
+  },
+  // Pre-registration and financial clearance completion
+  feMetric('prereg_rate_48h', 'Pre-registration completion rate (48 hours)', 'Pre-registration 48h', 'pct', 'up', 'Share of scheduled encounters pre-registered at least 48 hours before service (workbook: DPA I - 48 hour out completion rate).', 'preRegDone48', 'preRegDue', { code: 'PA-45', formula: 'Encounters pre-registered 48+ hours before service / scheduled encounters due' }),
+  feMetric('prereg_same_day', 'Pre-registration completion rate, same day', 'Pre-reg same day', 'pct', 'up', 'Share of accounts scheduled for the same day that were pre-registered (workbook: Pre Reg - Completion Rate - Same Day).', 'preRegSdDone', 'preRegSdDue', { code: 'PA-46', formula: 'Same-day accounts pre-registered / same-day accounts' }),
+  feMetric('prereg_1day', 'Pre-registration completion rate, 1 day out', 'Pre-reg 1 day out', 'pct', 'up', 'Share of accounts scheduled 1 day out that were pre-registered (workbook: Pre Reg - Completion Rate - 1 Day Out).', 'preReg1dDone', 'preReg1dDue', { code: 'PA-47', formula: '1-day-out accounts pre-registered / 1-day-out accounts' }),
+  feMetric('fin_clearance_rate_48h', 'Financial clearance rate (48 hours)', 'Financial clearance 48h', 'pct', 'up', 'Share of scheduled patients financially cleared at least 48 hours before service (workbook: DPA II - 48 hour out completion rate, all teams).', 'finCleared48', 'finClearDue', { code: 'PA-48', formula: 'Patients cleared 48+ hours before service / scheduled patients due' }),
+  feMetric('htr_same_day', 'HTR completion rate, same day', 'HTR same day', 'pct', 'up', 'Share of high-tech radiology (HTR) accounts scheduled for the same day that were financially cleared (workbook: HTR - Completion Rate - Same Day).', 'htrSdDone', 'htrSdDue', { code: 'PA-49', formula: 'Same-day HTR accounts cleared / same-day HTR accounts' }),
+  feMetric('htr_1day', 'HTR completion rate, 1 day out', 'HTR 1 day out', 'pct', 'up', 'Share of HTR accounts scheduled 1 day out that were financially cleared (workbook: HTR - Completion Rate - 1 Day Out).', 'htr1dDone', 'htr1dDue', { code: 'PA-50', formula: '1-day-out HTR accounts cleared / 1-day-out HTR accounts' }),
+  feMetric('sdc_same_day', 'SDC completion rate, same day', 'SDC same day', 'pct', 'up', 'Share of same-day surgery (SDC) accounts scheduled for the same day that were financially cleared (workbook: SDC - Completion Rate - Same Day).', 'sdcSdDone', 'sdcSdDue', { code: 'PA-51', formula: 'Same-day SDC accounts cleared / same-day SDC accounts' }),
+  feMetric('sdc_1day', 'SDC completion rate, 1 day out', 'SDC 1 day out', 'pct', 'up', 'Share of SDC accounts scheduled 1 day out that were financially cleared (workbook: SDC - Completion Rate - 1 Day Out).', 'sdc1dDone', 'sdc1dDue', { code: 'PA-52', formula: '1-day-out SDC accounts cleared / 1-day-out SDC accounts' }),
+  feMetric('ip_prior_day', 'Inpatient completion rate, prior day', 'IP prior day', 'pct', 'up', 'Share of inpatient accounts completed by the prior day (workbook: Inpatient Completion Rate - Prior Day).', 'ipDone', 'ipDue', { code: 'PA-53', formula: 'Inpatient accounts completed by the prior day / inpatient accounts due' }),
+  // Pre-registration outcome
+  feMetric('prereg_rs_pct', 'Pre-reg closed in Ready for Service (RS)', 'Pre-reg RS %', 'pct', 'up', 'Share of closed pre-registration accounts handed to the site as Ready for Service (workbook: Pre-Reg Closed Accounts in RS Status).', 'preRegRs', 'preRegClosed', { code: 'PA-54', formula: 'Closed accounts in RS status / closed pre-registration accounts' }),
+  feMetric('prereg_wn_pct', 'Pre-reg in Workup Needed (WN) or blank', 'Pre-reg WN %', 'pct', 'down', 'Share of closed pre-registration accounts in Workup Needed or blank status (workbook: Pre-Reg Accounts in WN or Blank Status).', 'preRegWn', 'preRegClosed', { code: 'PA-55', formula: 'Accounts in WN or blank status / closed pre-registration accounts' }),
+  feMetric('prereg_ob_pct', 'Pre-reg in Open Balance (OB/CD)', 'Pre-reg OB %', 'pct', 'down', 'Share of closed pre-registration accounts in Open Balance (OB/CD) status (workbook: Pre-Reg Accounts in OB/CD Status).', 'preRegOb', 'preRegClosed', { code: 'PA-56', formula: 'Accounts in OB/CD status / closed pre-registration accounts' }),
+  // Calls and POS
+  { ...feMetric('avg_call_time', 'Average call time', 'Avg call time', 'sec', 'none', 'Average talk time in seconds per answered call, patient access line (workbook: Avg. Call Time).', 'talkSecs', 'callsAnswered', { code: 'PA-57', formula: 'Total talk seconds / calls answered' }), digits: 0 },
+  {
+    id: 'pos_pct_sp_cash', code: 'PA-58', name: 'POS collections % of total self-pay cash', short: 'POS % self-pay cash', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access',
+    definition: 'Point-of-service collections as a share of all self-pay cash posted in the period (workbook: POS Collections % Total Self Pay Cash Posted).',
+    calculation: 'SUM(pos cash, service date) / (SUM(self-pay payments, posting date) + SUM(pos cash))',
+    formula: 'POS collections / total self-pay cash posted',
+    sourceFields: ['transaction.amount', 'transaction.pos_flag', 'account.financial_class'], fact: 'acc',
+    compute: (c) => div(s(c, 'pos', 'dd'), s(c, 'payAmt', 'payD', { pred: 'selfPay' }) + s(c, 'pos', 'dd')),
+  },
+  // Self-pay eligibility and enrollment
+  {
+    id: 'sp_not_screened', code: 'PA-59', name: 'Self-pay accounts not screened', short: 'Not screened', area: 'Patient Access', unit: 'count', direction: 'down', type: 'flow', page: 'access',
+    definition: 'In-scope self-pay accounts not screened for eligibility (workbook: Not Screened Volume).',
+    calculation: 'SUM(self_pay_accounts − screened), by date',
+    formula: 'Self-pay accounts − accounts screened',
+    sourceFields: ['eligibility_screening.self_pay_accounts', 'eligibility_screening.screened'], fact: 'fe',
+    compute: (c) => (c.e.feHasCol('screened', c.sel) ? fe(c, 'selfPayAccounts') - fe(c, 'screened') : null),
+  },
+  feMetric('eligible_conversion_rate', 'Eligible conversion rate', 'Eligible conversion', 'pct', 'up', 'Share of patients screened as likely eligible whose application was approved (workbook: Eligible Conversion Rate).', 'appsApproved', 'medicaidEligible', { code: 'PA-60', formula: 'Applications approved / patients screened eligible' }),
+  { ...feCountMetric('apps_approved', 'Applications approved', 'Medicaid applications approved (workbook: Application Approved).', 'appsApproved', { code: 'PA-61', formula: 'Count of applications approved' }), direction: 'up' },
+  { ...feCountMetric('apps_denied', 'Applications denied', 'Medicaid applications denied (workbook: Application Denied).', 'appsDenied', { code: 'PA-62', formula: 'Count of applications denied' }), direction: 'down' },
+  {
+    id: 'apps_pending', code: 'PA-63', name: 'Applications pending', area: 'Patient Access', unit: 'count', direction: 'none', type: 'flow', page: 'access',
+    definition: 'Medicaid applications initiated and not yet approved or denied (workbook: Application Pending).',
+    calculation: 'SUM(applications_initiated − approved − denied), by date',
+    formula: 'Applications initiated − approved − denied',
+    sourceFields: ['eligibility_screening.applications_initiated', 'eligibility_screening.approved', 'eligibility_screening.denied'], fact: 'fe',
+    compute: (c) => (c.e.feHasCol('appsApproved', c.sel) ? fe(c, 'applicationsCompleted') - fe(c, 'appsApproved') - fe(c, 'appsDenied') : null),
+  },
+  // Billing: claim imports, ePars, DNFB by owner
+  {
+    id: 'claim_import_dollars', code: 'BL-14', name: 'Claims imported to the scrubber ($)', short: 'Claim imports $', area: 'Billing', unit: 'usd', direction: 'none', type: 'flow', page: 'billing',
+    definition: 'Gross charges on claims imported into the claim scrubber after final bill (workbook: Total Claim Import - Gross Charges $).',
+    calculation: 'SUM(account.gross_charges) by final bill date',
+    formula: 'Gross charges on claims imported (final billed) in the period',
+    sourceFields: ['account.gross_charges', 'account.final_bill_date'], fact: 'acc',
+    compute: (c) => s(c, 'gross', 'fbd'),
+  },
+  {
+    id: 'claim_import_volume', code: 'BL-15', name: 'Claims imported to the scrubber', short: 'Claim imports', area: 'Billing', unit: 'count', direction: 'none', type: 'flow', page: 'billing',
+    definition: 'Claims imported into the claim scrubber after final bill (workbook: Total Claim Import Volume).',
+    calculation: 'COUNT(account) by final bill date',
+    formula: 'Count of claims imported (final billed) in the period',
+    sourceFields: ['account.final_bill_date'], fact: 'acc',
+    compute: (c) => s(c, '__one', 'fbd'),
+  },
+  eparsMetric('epars_total', 'BL-16', 'ePars open task dollars', 'ePars $', 'Open R1 assigned task (ePars) dollars at period end, billed and unbilled (workbook: ePars Total $ Billed + ePars Total $ Unbilled (DNSP)).', ['eparsBilled', 'eparsUnbilled'], 'ePars $ billed + ePars $ unbilled, at period end'),
+  eparsMetric('epars_unbilled', 'BL-17', 'ePars dollars unbilled (DNSP)', 'ePars $ unbilled', 'Open ePars task dollars on claims not yet sent to the payer, at period end (workbook: ePars Total $ Unbilled (DNSP)).', ['eparsUnbilled'], 'ePars $ unbilled, at period end'),
+  eparsMetric('epars_7plus', 'BL-18', 'ePars dollars assigned 7+ days', 'ePars $ 7+ days', 'Open ePars task dollars assigned 7 or more days ago, at period end (workbook: ePars Total $ Assigned 7+ Days).', ['epars7Plus'], 'ePars $ assigned 7+ days, at period end'),
+  { ...eparsMetric('epars_7plus_count', 'BL-19', 'ePars tasks assigned 7+ days', 'ePars # 7+ days', 'Open ePars tasks assigned 7 or more days ago, at period end (workbook: ePars Total # Assigned 7+ Days).', ['epars7PlusCount'], 'Count of ePars tasks assigned 7+ days, at period end'), unit: 'count' },
+  eparsMetric('epars_him', 'BL-20', 'ePars dollars assigned to HIM', 'ePars $ HIM', 'Open ePars task dollars assigned to HIM (coding), at period end (workbook: ePars Total $ Assigned HIM).', ['eparsHim'], 'ePars $ assigned to HIM, at period end'),
+  {
+    id: 'dnfb_mid_cycle_4plus', code: 'BL-21', name: 'DNFB 4+ days, Mid Cycle owner', short: 'DNFB 4+ Mid Cycle', area: 'Billing', unit: 'usd', direction: 'down', type: 'balance', page: 'billing', finest: 'week',
+    definition: 'DNFB gross dollars 4 or more days past discharge owned by Mid Cycle (coding, CDI, charge capture), at the period-end snapshot (workbook: DNFB Balance 4+ Days Mid Cycle).',
+    calculation: 'SUM(dnfb_snapshot.gross_amount WHERE age >= 4 days AND owner = Mid Cycle), period-end snapshot',
+    formula: 'DNFB $ aged 4+ days with a Mid Cycle owner',
+    sourceFields: ['dnfb_snapshot.gross_amount', 'dnfb_snapshot.age_bucket', 'dnfb_snapshot.owner'], fact: 'dnfb',
+    compute: (c) => dnfb(c, 0, { ageMin: 1, hold: c.e.ds.dims.dnfbHolds.filter((h) => h.group === 1).map((h) => h.key) }),
+  },
+  // A/R
+  {
+    id: 'billed_ins_gt360_pct', code: 'AR-09', name: 'Billed insurance A/R > 360 days', short: 'Billed Ins > 360', area: 'A/R', unit: 'pct', direction: 'down', type: 'balance', page: 'ar', finest: 'month',
+    definition: 'Percentage of billed insurance A/R in the 361+ day aging bucket (workbook: Billed Ins > 360 % Total Billed Ins).',
+    calculation: '(Billed Insurance AR aged 361+ days ÷ Total Billed Insurance AR) × 100, period-end snapshot',
+    formula: 'Billed insurance A/R aged 361+ days / total billed insurance A/R',
+    sourceFields: ['ar_snapshot.gross_balance', 'ar_snapshot.aging_bucket', 'ar_snapshot.billed_status', 'ar_snapshot.financial_class'], fact: 'ar',
+    compute: (c0) => { const c = insuredSel(whole(c0)); const a = ar(c, 'gross', { ageMin: 3, billed: [1, 2] }); const b = ar(c, 'gross', { billed: [1, 2] }); return a === null || b === null ? null : div(a, b); },
+  },
+  // Revenue and other transactions
+  {
+    id: 'adgr', code: 'FN-13', name: 'Average daily gross revenue', short: 'ADGR', area: 'Financial', unit: 'usd', direction: 'none', type: 'flow', page: 'cash',
+    definition: 'Gross revenue over the last 90 days divided by 90, at period end (workbook: Average Daily Gross Revenue; Gross Revenue 90 Day Rolling Sum).',
+    calculation: 'SUM(gross_charges, last 90 days to period end) / 90',
+    formula: 'Gross revenue, last 90 days / 90',
+    sourceFields: ['account.gross_charges', 'account.discharge_date'], fact: 'acc',
+    compute: (c) => adgr(c, endOf(c)),
+  },
+  {
+    id: 'adnr', code: 'FN-14', name: 'Average daily net revenue', short: 'ADNR', area: 'Financial', unit: 'usd', direction: 'none', type: 'flow', page: 'cash',
+    definition: 'Net revenue over the last 90 days divided by 90, at period end (workbook: Net Revenue $; its Average Daily Net Revenue column is empty).',
+    calculation: 'SUM(expected_net, last 90 days to period end) / 90',
+    formula: 'Net revenue, last 90 days / 90',
+    sourceFields: ['account.expected_net', 'account.discharge_date'], fact: 'acc',
+    compute: (c) => adnr(c, endOf(c)),
+  },
+  {
+    id: 'admin_adj', code: 'FN-15', name: 'Admin adjustments', area: 'Financial', unit: 'usd', direction: 'down', type: 'flow', page: 'cash', finest: 'month',
+    definition: 'Administrative adjustments (small balances and other administrative write-offs) posted in the period (workbook: Admin Adjustments).',
+    calculation: 'SUM(admin_adjustments), by posting month',
+    formula: 'Admin adjustments posted',
+    sourceFields: ['transaction.amount', 'transaction.adjustment_type'], fact: 'acc',
+    compute: (c) => c.e.sum('ops', 'adminAdj', 'day', c.r.startDay, c.r.endDay, c.sel),
+  },
+  {
+    id: 'cash_lt90_pct', code: 'CA-12', name: 'Cash posted % < 90 days from discharge', short: 'Cash % < 90 days', area: 'Cash', unit: 'pct', direction: 'up', type: 'flow', page: 'cash',
+    definition: 'Share of cash posted in the period on accounts discharged 90 days or less before the posting date (workbook: Cash Posted % < 90 Days).',
+    calculation: 'SUM(cash WHERE posting date − discharge date <= 90) / SUM(cash)',
+    formula: 'Cash posted within 90 days of discharge / cash posted',
+    sourceFields: ['transaction.amount', 'transaction.posting_date', 'account.discharge_date'], fact: 'acc',
+    compute: (c) => { const b = cashByAge(c.e, c.r.startDay, c.r.endDay, c.sel, CASH_AGE); const t = b.reduce((a, x) => a + x, 0); return div(b[0] + b[1] + b[2], t); },
+  },
 ];
+
+/** Cash by discharge age buckets of the workbook (Cash by Discharge Age). */
+export const CASH_AGE = [
+  { name: '< 30 days', min: 0, max: 30 }, { name: '31–60', min: 31, max: 60 }, { name: '61–90', min: 61, max: 90 },
+  { name: '91–180', min: 91, max: 180 }, { name: '181–360', min: 181, max: 360 }, { name: '361+', min: 361, max: 99999 },
+];
+/** Write-off and bad debt age buckets of the workbook (Write Offs by Age, Bad Debt Transfers by Age). */
+export const WO_AGE = [{ name: '< 180 days', min: 0, max: 180 }, { name: '181–360', min: 181, max: 360 }, { name: '361+', min: 361, max: 99999 }];
+
+type AgeBucket = { name: string; min: number; max: number };
+const bucketOf = (b: AgeBucket[], age: number) => b.findIndex((x) => age >= x.min && age <= x.max);
+
+/** Cash posted in a period by days from discharge (point-of-service cash counts as day 0). */
+export function cashByAge(e: Engine, start: number, end: number, sel: Selections, buckets: AgeBucket[]): number[] {
+  const out = buckets.map(() => 0);
+  const a = e.ds.acc;
+  const w = e.ds.meta.sampleWeight;
+  for (const i of e.accountsByDate('payD', start, end, sel)) { const k = bucketOf(buckets, a.payD[i] - a.dd[i]); if (k >= 0) out[k] += a.payAmt[i] * w; }
+  for (const i of e.accountsByDate('dd', start, end, sel)) out[0] += a.pos[i] * w;
+  return out;
+}
+
+/** Write-offs (dateCol woD, value woAmt) or bad debt transfers (bdD, bdAmt) in a period by days from discharge. */
+export function amountByAge(e: Engine, dateCol: 'woD' | 'bdD', valCol: 'woAmt' | 'bdAmt', start: number, end: number, sel: Selections, buckets: AgeBucket[]): number[] {
+  const out = buckets.map(() => 0);
+  const a = e.ds.acc as unknown as Record<string, Float64Array>;
+  const w = e.ds.meta.sampleWeight;
+  for (const i of e.accountsByDate(dateCol, start, end, sel)) { const k = bucketOf(buckets, a[dateCol][i] - a.dd[i]); if (k >= 0) out[k] += a[valCol][i] * w; }
+  return out;
+}
+
+/** ePars balance on the last day of the period (sum of the given end-of-day columns). */
+function eparsMetric(id: string, code: string, name: string, short: string, definition: string, cols: string[], formula: string): MetricDef {
+  return {
+    id, code, name, short, area: 'Billing', unit: 'usd', direction: 'down', type: 'balance', page: 'billing', definition,
+    calculation: `${cols.map(snake).join(' + ')} on the last day of the period`, formula,
+    sourceFields: cols.map((x) => `epars_daily.${snake(x)}`), fact: 'fe',
+    compute: (c) => (c.e.feHasCol(cols[0], c.sel) ? cols.reduce((t, x) => t + c.e.snapshot('fe', x, endOf(c), c.sel), 0) : null),
+  };
+}
 
 function recoverableDollars(c: Ctx) {
   // Denied gross on recoverable root causes = SUM(denAmt * recov). Uses the recoverable root causes as a filter.
