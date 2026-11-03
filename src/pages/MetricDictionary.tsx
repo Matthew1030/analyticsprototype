@@ -11,8 +11,8 @@ import { Icon } from '../ui/icons';
 import { GapLegend } from '../ui/common';
 import { PAGE_BY_ID } from '../ui/Shell';
 
-const WRAP = new Set<keyof DictionaryRow>(['name', 'definition', 'formula', 'views']);
-const WIDTH: Partial<Record<keyof DictionaryRow, number>> = { name: 200, definition: 320, formula: 260, views: 220 };
+const WRAP = new Set<keyof DictionaryRow>(['name', 'definition', 'formula', 'views', 'source']);
+const WIDTH: Partial<Record<keyof DictionaryRow, number>> = { name: 200, definition: 320, formula: 260, views: 220, source: 240 };
 
 export function MetricDictionary() {
   const { go, toast } = useApp();

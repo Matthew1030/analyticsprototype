@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { KPI_COVERAGE, type Coverage, type KpiCoverage } from '../config/kpiCoverage';
 import { kpiItemId } from '../config/priorities';
-import { gapStar, kpiNotInDataset, notInDataset } from '../config/datasetGaps';
+import { datasetRelease, gapStar, kpiNotInDataset, notInDataset, WORKBOOK_SOURCE } from '../config/datasetGaps';
 import type { SelField } from '../engine/engine';
 import { METRIC_BY_ID, METRICS, type MetricDef } from '../engine/metrics';
 import { CONFIG, staticTarget, watchFor } from '../engine/status';
@@ -49,6 +49,8 @@ function Catalog() {
   const cols: GridColumn<MetricDef>[] = [
     { key: 'name', label: 'Metric', value: (m) => m.name, width: 200, render: (m) => <span><b>{m.name}</b><GapMark id={m.id} /><br /><code className="small">{m.id}</code></span>, exportText: (m) => `${m.name}${gapStar(m.id)}` },
     { key: 'inds', label: 'In current dataset', value: (m) => (notInDataset(m.id) ? 'No' : 'Yes'), align: 'left', render: (m) => (notInDataset(m.id) ? <b>No *</b> : 'Yes') },
+    { key: 'rel', label: 'Release', value: (m) => datasetRelease(m.id), align: 'left' },
+    { key: 'wb', label: 'Workbook source', value: (m) => WORKBOOK_SOURCE[m.id] ?? '', align: 'left', render: (m) => <span className="wrap small">{WORKBOOK_SOURCE[m.id] ?? ''}</span> },
     { key: 'area', label: 'RCM area', value: (m) => m.area, align: 'left' },
     { key: 'type', label: 'Type', value: (m) => (m.type === 'balance' ? 'Balance' : 'Flow'), align: 'left' },
     { key: 'unit', label: 'Unit', value: (m) => m.unit, align: 'left' },
@@ -88,6 +90,7 @@ function KpiCoverageTable() {
     { key: 'n', label: '#', value: (r) => r.n, width: 32 },
     { key: 'kpi', label: 'Client KPI', value: (r) => r.kpi, align: 'left', width: 230, render: (r) => <span className="wrap"><b>{r.kpi}</b><GapMark show={kpiNotInDataset(r.dashboard, r.kpi)} /><br /><span className="muted small">{r.dashboard} · {r.stage}</span></span>, exportText: (r) => `${r.kpi}${kpiNotInDataset(r.dashboard, r.kpi) ? ' *' : ''}` },
     { key: 'inds', label: 'In current dataset', value: (r) => (kpiNotInDataset(r.dashboard, r.kpi) ? 'No' : 'Yes'), align: 'left', render: (r) => (kpiNotInDataset(r.dashboard, r.kpi) ? <b>No *</b> : 'Yes') },
+    { key: 'rel', label: 'Release', value: (r) => (kpiNotInDataset(r.dashboard, r.kpi) ? 'v3+' : ''), align: 'left' },
     { key: 'cov', label: 'Coverage', value: (r) => COVERAGE_ORDER.indexOf(r.coverage), align: 'left',
       render: (r) => <span className={`status status-${COVERAGE_CLASS[r.coverage]}`}><span className="status-shape" />{r.coverage}</span>, exportText: (r) => r.coverage },
     { key: 'metrics', label: 'Dashboard metric', value: (r) => r.metrics.map((id) => `${METRIC_BY_ID[id].name}${gapStar(id)}`).join('; '), align: 'left',

@@ -16,7 +16,9 @@ import { Delta, GapMark, InfoIcon, Sparkline, StatusMark } from './common';
 import { Grid, gridExport, type GridColumn, type GridRow } from './Grid';
 import { Icon } from './icons';
 import { Visual, type VisualSpec } from './Visual';
-import { gapStar } from '../config/datasetGaps';
+import { dimensionInDataset, gapStar, notInDataset } from '../config/datasetGaps';
+import { GAP_TIER, inRelease } from '../config/priorities';
+import { usePriorities } from '../state/Priorities';
 
 /** Catalog name with the metric code in front (e.g. "AR-06 · Gross A/R days"). */
 const codeName = (id: string) => `${METRIC_BY_ID[id].code} · ${METRIC_BY_ID[id].name}`;
@@ -71,8 +73,11 @@ export function KpiCard({ id, onOpen, selOverride }: { id: string; onOpen?: () =
   const v = useMetric(id, 13, selOverride);
   const open = onOpen ?? (() => go('metric', { id }, { drill: true }));
   const fm = f(id);
+  // A metric the current dataset cannot fill is v3+: a release preview before v3 dims or hides it.
+  const { preview } = usePriorities();
+  const out = notInDataset(id) && !inRelease(GAP_TIER, preview);
   return (
-    <div className="kpi" role="button" tabIndex={0} onClick={open} onKeyDown={(e) => { if (e.key === 'Enter') open(); }}
+    <div className={`kpi ${out ? 'prio-out' : ''}`} role="button" tabIndex={0} onClick={open} onKeyDown={(e) => { if (e.key === 'Enter') open(); }}
       title={`Analyze ${m.name}`}>
       <div className="kpi-top">
         <span className="kpi-name">{m.code}<GapMark id={id} /> · {m.short ?? m.name}</span>
@@ -213,12 +218,12 @@ export function BreakdownVisual({ id: idProp, alt, dim: dimProp, dims, title, pi
   const noData = list.length === 0 ? (evaluateReason(rows) ?? 'No data for the current filters.') : null;
   const cmpName = compare === 'py' ? 'Prior year' : 'Prior period';
   return (
-    <Visual title={title ?? `${m.short ?? m.name} by ${DIMENSION_LABEL[dim].toLowerCase()}`} metricId={id}
+    <Visual title={title ?? `${m.short ?? m.name} by ${DIMENSION_LABEL[dim].toLowerCase()}`} metricId={id} gap={!dimensionInDataset(dim, id)}
       pid={pid ?? title ?? `${METRIC_BY_ID[idProp].short ?? METRIC_BY_ID[idProp].name} by ${DIMENSION_LABEL[dimProp].toLowerCase()}`} noData={noData}
       subtitle={subtitle ?? `${period.label} · click to ${mode === 'drill' ? 'drill through' : 'filter'}${more ? ` · top ${top} of ${top! + more}` : ''}`}
       actions={<>{measure}{dims ? (
         <select className="sel-xs" value={dim} onChange={(e) => setDim(e.target.value as DimensionId)} aria-label="Break down by">
-          {dims.map((d) => <option key={d} value={d}>{DIMENSION_LABEL[d]}</option>)}
+          {dims.map((d) => <option key={d} value={d}>{DIMENSION_LABEL[d]}{dimensionInDataset(d, id) ? '' : ' *'}</option>)}
         </select>
       ) : onDrill && (
         <span className="seg seg-xs" role="radiogroup" aria-label="Click action">
@@ -286,7 +291,7 @@ export function DecompositionTree({ id, dims, initial, title }: { id: string; di
   };
   const exportRows = levels.flatMap((l, li) => l.rows.map((r) => [`Level ${li + 1}: ${DIMENSION_LABEL[l.dim]}`, r.label, fm(r.value), fmt(r.share, 'pct')]));
   return (
-    <Visual title={title} metricId={id}
+    <Visual title={title} metricId={id} gap={!order.every((d) => dimensionInDataset(d, id))}
       subtitle={<>{m.name}, {period.label}: <b>{fm(total.value)}</b> · click a node to split it by the next dimension</>}
       table={{ columns: ['Level', 'Member', m.name, 'Share of parent'], rows: exportRows }}
       actions={path.length > 0 && (
@@ -309,7 +314,7 @@ export function DecompositionTree({ id, dims, initial, title }: { id: string; di
             <div className="decomp-col" key={li}>
               <div className="decomp-head">
                 <select value={l.dim} onChange={(e) => setDimAt(li, e.target.value as DimensionId)} aria-label={`Split level ${li + 1} by`}>
-                  {avail.map((d) => <option key={d} value={d}>{DIMENSION_LABEL[d]}</option>)}
+                  {avail.map((d) => <option key={d} value={d}>{DIMENSION_LABEL[d]}{dimensionInDataset(d, id) ? '' : ' *'}</option>)}
                 </select>
               </div>
               <div className="decomp-list">

@@ -4,6 +4,7 @@
 // items that do not depend on what is on screen, the rules, and the export / import file formats.
 
 import { KPI_COVERAGE } from './kpiCoverage';
+import { kpiNotInDataset, notInDataset } from './datasetGaps';
 import { FRAMEWORK, LEGACY_FRAMEWORK_CODE } from '../engine/framework';
 import { METRIC_BY_ID } from '../engine/metrics';
 
@@ -29,6 +30,8 @@ export interface PriorityItem {
   group: string;
   /** Page the item sits on (pages and visuals). A visual with no rating takes its page's rating. */
   page?: string;
+  /** Needs data that is not in the current dataset (datasetGaps.ts): v3+ until someone rates it. */
+  gap?: boolean;
 }
 
 export interface Decision { tier?: Tier; note?: string; at: string }
@@ -121,8 +124,13 @@ export const CAPABILITIES: PriorityItem[] = [
 
 /** Client KPI inventory rows (Definitions) and the ELT framework metrics. */
 export const KPI_ITEMS: PriorityItem[] = [
-  ...FRAMEWORK.flatMap((g) => g.metrics.map((m) => ({ id: eltItemId(m.id), kind: 'kpi' as const, group: 'ELT framework', label: `${m.code} ${METRIC_BY_ID[m.id].name}` }))),
-  ...KPI_COVERAGE.map((k) => ({ id: kpiItemId(k.dashboard, k.kpi), kind: 'kpi' as const, group: `Client KPI inventory · ${k.stage}`, label: `${k.kpi} (${k.dashboard})` })),
+  ...FRAMEWORK.flatMap((g) => g.metrics.map((m) => ({
+    id: eltItemId(m.id), kind: 'kpi' as const, group: 'ELT framework', label: `${m.code} ${METRIC_BY_ID[m.id].name}`, ...(notInDataset(m.id) ? { gap: true } : {}),
+  }))),
+  ...KPI_COVERAGE.map((k) => ({
+    id: kpiItemId(k.dashboard, k.kpi), kind: 'kpi' as const, group: `Client KPI inventory · ${k.stage}`, label: `${k.kpi} (${k.dashboard})`,
+    ...(kpiNotInDataset(k.dashboard, k.kpi) ? { gap: true } : {}),
+  })),
 ];
 
 export function kpiItemId(dashboard: string, kpi: string) { return `kpi:client:${dashboard}|${kpi}`; }
@@ -134,10 +142,18 @@ export const SEED: Decisions = Object.fromEntries(
 
 // ---------------------------------------------------------------- rules
 
-/** The item's own rating, or (for a visual) its page's rating. */
-export function effectiveTier(item: Pick<PriorityItem, 'id' | 'kind' | 'page'>, d: Decisions): { tier?: Tier; inherited: boolean } {
+/** Release of an item that needs data not in the current dataset, until someone rates it. */
+export const GAP_TIER: Tier = 'v3';
+
+/**
+ * The item's own rating; else v3+ when it needs data that is not in the current dataset
+ * (`byDefault`); else (for a visual) its page's rating. Defaults count as inherited: they are not
+ * stored as decisions and an export does not write them back as ratings.
+ */
+export function effectiveTier(item: Pick<PriorityItem, 'id' | 'kind' | 'page' | 'gap'>, d: Decisions): { tier?: Tier; inherited: boolean; byDefault?: true } {
   const own = d[item.id]?.tier;
   if (own) return { tier: own, inherited: false };
+  if (item.gap) return { tier: GAP_TIER, inherited: true, byDefault: true };
   if (item.kind === 'visual' && item.page) {
     const p = d[pageItemId(item.page)]?.tier;
     if (p) return { tier: p, inherited: true };
@@ -166,7 +182,7 @@ export interface PriorityFile {
   format: typeof FILE_FORMAT;
   version: 1;
   exportedAt: string;
-  items: (PriorityItem & { tier?: Tier; inherited?: boolean; note?: string; setAt?: string })[];
+  items: (PriorityItem & { tier?: Tier; inherited?: boolean; byDefault?: boolean; note?: string; setAt?: string })[];
 }
 
 export function toFile(items: PriorityItem[], d: Decisions, exportedAt: string): PriorityFile {
@@ -175,10 +191,13 @@ export function toFile(items: PriorityItem[], d: Decisions, exportedAt: string):
     items: items.map((it) => {
       const e = effectiveTier(it, d);
       const own = d[it.id];
-      return { ...it, tier: e.tier, inherited: e.inherited || undefined, note: own?.note || undefined, setAt: own?.at || undefined };
+      return { ...it, tier: e.tier, inherited: e.inherited || undefined, byDefault: e.byDefault, note: own?.note || undefined, setAt: own?.at || undefined };
     }),
   };
 }
+
+/** "From page rating" value for a v3+ default (it starts with "Yes", so an import treats it as not rated). */
+export const GAP_DEFAULT_TEXT = 'Yes (default v3+: data not in the current dataset)';
 
 const CSV_COLS = ['ID', 'Type', 'Page or group', 'Item', 'Release', 'MoSCoW', 'From page rating', 'Note', 'Set at'];
 
@@ -187,7 +206,7 @@ export function toCsv(items: PriorityItem[], d: Decisions): string {
     const e = effectiveTier(it, d);
     const t = e.tier ? TIER_BY_ID[e.tier] : null;
     const own = d[it.id];
-    return [it.id, KIND_LABEL[it.kind], it.group, it.label, t?.release ?? '', t?.moscow ?? '', e.inherited ? 'Yes' : '', own?.note ?? '', own?.at ?? ''];
+    return [it.id, KIND_LABEL[it.kind], it.group, it.label, t?.release ?? '', t?.moscow ?? '', e.byDefault ? GAP_DEFAULT_TEXT : e.inherited ? 'Yes' : '', own?.note ?? '', own?.at ?? ''];
   });
   return [CSV_COLS, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
 }
@@ -199,7 +218,7 @@ export function parseFile(text: string): { decisions: Decisions; items: Priority
   const items: PriorityItem[] = [];
   const add = (raw: PriorityItem, tier: Tier | undefined, inherited: boolean, note: string | undefined, at: string | undefined) => {
     const it = { ...raw, id: currentItemId(raw.id) };
-    items.push({ id: it.id, kind: it.kind, label: it.label, group: it.group, ...(it.page ? { page: it.page } : {}) });
+    items.push({ id: it.id, kind: it.kind, label: it.label, group: it.group, ...(it.page ? { page: it.page } : {}), ...(it.gap ? { gap: true } : {}) });
     const own = inherited ? undefined : tier;
     if (own || note) decisions[it.id] = { ...(own ? { tier: own } : {}), ...(note ? { note } : {}), at: at ?? '' };
   };
@@ -220,7 +239,7 @@ export function parseFile(text: string): { decisions: Decisions; items: Priority
     if (!id || !kindOf[kind]) continue;
     const tier = TIERS.find((t) => t.release === release || t.short === release || t.moscow === moscow)?.v;
     const page = kindOf[kind] === 'visual' ? id.split(':')[1] : kindOf[kind] === 'page' ? id.slice(5) : undefined;
-    add({ id, kind: kindOf[kind], group, label, page }, tier, inherited === 'Yes', note || undefined, at || undefined);
+    add({ id, kind: kindOf[kind], group, label, page }, tier, inherited.startsWith('Yes'), note || undefined, at || undefined);
   }
   return { decisions, items };
 }

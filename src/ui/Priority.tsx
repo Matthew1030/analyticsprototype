@@ -12,7 +12,7 @@ import { Icon } from './icons';
 import { PAGE_BY_ID, PAGES } from './Shell';
 
 /** Four-way release picker. A second click on the current release clears it. `compact` is a drop-down for narrow tables. */
-export function PriorityPicker({ id, label, tier, inherited = false, compact = false }: { id: string; label: string; tier?: Tier; inherited?: boolean; compact?: boolean }) {
+export function PriorityPicker({ id, label, tier, inherited = false, byDefault = false, compact = false }: { id: string; label: string; tier?: Tier; inherited?: boolean; byDefault?: boolean; compact?: boolean }) {
   const { setTier } = usePriorities();
   if (compact) {
     return (
@@ -30,7 +30,7 @@ export function PriorityPicker({ id, label, tier, inherited = false, compact = f
         return (
           <button key={t.v} type="button" role="radio" aria-checked={on && !inherited}
             className={`prio-opt prio-opt-${t.v} ${on ? (inherited ? 'inh' : 'on') : ''}`}
-            title={`${t.moscow}: ${t.release}${on && inherited ? ' (from the page rating; click to set it on this item)' : on ? ' (click again to clear)' : ''}`}
+            title={`${t.moscow}: ${t.release}${on && byDefault ? ' (default: needs data that is not in the current dataset; click to set it on this item)' : on && inherited ? ' (from the page rating; click to set it on this item)' : on ? ' (click again to clear)' : ''}`}
             onClick={() => setTier(id, on && !inherited ? undefined : t.v)}>{t.short}</button>
         );
       })}
@@ -198,7 +198,7 @@ function ItemList({ kinds, show, q }: { kinds: ItemKind[]; show: Tier | 'unset' 
             return (
               <div key={i.id} className={`prio-row prio-row-${i.kind}`}>
                 <span className="prio-row-label"><span className="prio-kind">{KIND_LABEL[i.kind]}</span>{i.label}</span>
-                <PriorityPicker id={i.id} label={i.label} tier={e.tier} inherited={e.inherited} />
+                <PriorityPicker id={i.id} label={i.label} tier={e.tier} inherited={e.inherited} byDefault={e.byDefault} />
                 <input key={decisions[i.id]?.note ?? ''} className="prio-note" placeholder="Note (optional)" aria-label={`Note for ${i.label}`}
                   defaultValue={decisions[i.id]?.note ?? ''} onBlur={(ev) => { if (ev.target.value !== (decisions[i.id]?.note ?? '')) setNote(i.id, ev.target.value); }} />
               </div>

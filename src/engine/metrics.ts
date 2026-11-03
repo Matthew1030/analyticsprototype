@@ -99,15 +99,19 @@ const adnr = (c: Ctx, day: number) => net(c, day - 89, day) / 90;
 const cash = (c: Ctx, st = c.r.startDay, en = c.r.endDay) =>
   c.e.sum('acc', 'payAmt', 'payD', st, en, c.sel) + c.e.sum('acc', 'pos', 'dd', st, en, c.sel);
 /**
- * NPSR lagged for cash comparisons, scaled to the length of the period: average daily NPSR over
- * the same-length windows shifted back 1, 2 and 3 months, times the days in the period.
- * Normalizing per day removes the month-length effect (e.g. February).
+ * NPSR two months before the period, scaled to the length of the period (workbook: "Cash Posted %
+ * NPSR (2 month lag)"). Per-day normalization removes the month-length effect.
  */
-const lagNet = (c: Ctx) => {
-  let t = 0;
-  let days = 0;
-  for (const k of [1, 2, 3]) { const x = shiftMonths(c.r, -k); t += net(c, x.startDay, x.endDay); days += x.endDay - x.startDay + 1; }
-  return days ? (t / days) * (c.r.endDay - c.r.startDay + 1) : 0;
+const lag2Net = (c: Ctx) => {
+  const x = shiftMonths(c.r, -2);
+  const days = x.endDay - x.startDay + 1;
+  return days ? (net(c, x.startDay, x.endDay) / days) * (c.r.endDay - c.r.startDay + 1) : 0;
+};
+/** Financial classes other than Self Pay (the last class): the workbook's "insurance" A/R. */
+const insuredSel = (c: Ctx): Ctx => {
+  const all = c.e.ds.dims.financialClasses.map((_, i) => i).filter((i) => i !== c.e.ds.dims.financialClasses.length - 1);
+  const cur = c.sel.financialClass;
+  return { ...c, sel: { ...c.sel, financialClass: cur?.length ? all.filter((i) => cur.includes(i)) : all } };
 };
 const arDay = (c: Ctx) => c.e.snapshotDayOnOrBefore('ar', c.r.endDay);
 const dnfbDay = (c: Ctx) => c.e.snapshotDayOnOrBefore('dnfb', c.r.endDay);
@@ -135,7 +139,7 @@ const deniedIn = (c: Ctx, cats: number[]) => {
   if (!use.length) return 0;
   return c.e.sum('acc', 'denAmt', 'denD', c.r.startDay, c.r.endDay, { ...c.sel, denialCategory: use }, { detail: 'denial' });
 };
-const cashGoal = (c: Ctx) => CONFIG.cashGoalPctOfNpsr * lagNet(c);
+const cashGoal = (c: Ctx) => CONFIG.cashGoalPctOfNpsr * lag2Net(c);
 
 // ---------- modeled components (synthetic: the prototype data has no source for them) ----------
 const endOf = (c: Ctx) => Math.min(c.r.endDay, c.e.lastDay);
@@ -314,7 +318,7 @@ export const METRICS: MetricDef[] = [
   },
   {
     id: 'credit_balance_days', code: 'AR-01', name: 'Net days in credit balance', short: 'Credit balance days', area: 'A/R', unit: 'days', direction: 'down', type: 'balance', page: 'ar',
-    definition: 'Absolute patient-account credit-balance exposure expressed as days of average daily net patient service revenue. Prototype: credit balances are modeled, because the synthetic data has no overpayments.',
+    definition: 'Absolute patient-account credit-balance exposure expressed as days of average daily net patient service revenue (workbook: Total Credit AR over average daily Net Revenue $). Prototype: credit balances are modeled, because the synthetic data has no overpayments.',
     calculation: 'Absolute(Month-End Credit Balance AR) ÷ (Trailing 90-day Net Patient Service Revenue ÷ 90)',
     formula: 'Credit balances at period end (absolute value) / average daily net revenue (last 90 days)',
     sourceFields: ['account.credit_balance', 'account.expected_net'], fact: 'acc',
@@ -373,19 +377,19 @@ export const METRICS: MetricDef[] = [
   },
   {
     id: 'cash_goal', code: 'CA-02', name: 'Cash goal', area: 'Cash', unit: 'usd', direction: 'none', type: 'flow', page: 'cash', finest: 'month',
-    definition: 'Expected cash for the period: the cash-to-NPSR goal × lagged average daily NPSR (period shifted back 1, 2 and 3 months) × days in the period.',
-    calculation: 'cash_goal_pct × lagged average daily NPSR × days in period',
-    formula: 'Cash goal % × average daily NPSR of the 3 prior months × days in the period',
+    definition: 'Expected cash for the period: the cash-to-NPSR goal × net revenue two months before the period (workbook: NPSR with 2 Month Lag), scaled to the days in the period.',
+    calculation: 'cash_goal_pct × (NPSR of the period shifted back 2 months ÷ its days) × days in period',
+    formula: 'Cash goal % × NPSR two months earlier (per day) × days in the period',
     sourceFields: ['config.cash_goal_pct', 'account.expected_net'], fact: 'acc',
     compute: (c) => cashGoal(c),
   },
   {
     id: 'cash_pct_npsr', code: 'CA-03', name: 'Cash as % of net revenue', short: 'Cash % net rev', area: 'Cash', unit: 'pct', direction: 'up', type: 'flow', page: 'cash', finest: 'month',
-    definition: 'Total patient service cash collected in the reporting period as a percentage of average monthly net patient service revenue for the most recent 3 months (including the reporting month). Multi-month periods compare against the monthly average times the months in the period.',
-    calculation: '(Total Patient Service Cash Collected ÷ Average Monthly Net Patient Service Revenue for the Most Recent 3 Months) × 100',
-    formula: 'Cash collections / average monthly NPSR of the most recent 3 months',
+    definition: 'Cash posted in the period as a percentage of net patient service revenue two months earlier (workbook: Cash Posted % NPSR (2 month lag)). Periods shorter or longer than a month compare against the lagged NPSR per day times the days in the period.',
+    calculation: '(Cash Posted ÷ NPSR of the period shifted back 2 months, per day × days in period) × 100',
+    formula: 'Cash posted / NPSR two months earlier',
     sourceFields: ['transaction.amount', 'account.expected_net'], fact: 'acc',
-    compute: (c) => div(cash(c), avgMonthlyNet(c)),
+    compute: (c) => div(cash(c), lag2Net(c)),
   },
   {
     id: 'net_collection_rate', code: 'CA-04', name: 'Net collection rate', area: 'Cash', unit: 'pct', direction: 'up', type: 'flow', page: 'cash', finest: 'month',
@@ -476,7 +480,7 @@ export const METRICS: MetricDef[] = [
   },
   {
     id: 'net_ar', code: 'AR-04', name: 'Net A/R', area: 'A/R', unit: 'usd', direction: 'none', type: 'balance', page: 'ar', finest: 'month',
-    definition: 'Open debit balances net of expected contractual allowances at the period-end snapshot.',
+    definition: 'Open debit balances net of expected contractual allowances at the period-end snapshot (workbook: Debit Net AR).',
     calculation: 'SUM(ar_snapshot.net_balance) WHERE snapshot_date = period end',
     formula: 'Total open debit balances at period end, net of expected contractual allowances',
     sourceFields: ['ar_snapshot.net_balance'], fact: 'ar',
@@ -484,7 +488,7 @@ export const METRICS: MetricDef[] = [
   },
   {
     id: 'net_ar_days', code: 'AR-05', name: 'Net A/R days', area: 'A/R', unit: 'days', direction: 'down', type: 'balance', page: 'ar', finest: 'month',
-    definition: 'Net A/R at period end divided by average daily net revenue over the last 90 days. Ignores aging-bucket and account-status filters.',
+    definition: 'Debit net A/R at period end divided by average daily net revenue over the last 90 days (workbook: Debit Net AR Days; the workbook Net AR Days column is empty). Ignores aging-bucket and account-status filters.',
     calculation: 'Net A/R (period end) / (SUM(expected_net, last 90 days) / 90)',
     formula: 'Net A/R at period end / average daily net revenue (last 90 days)',
     sourceFields: ['ar_snapshot.net_balance', 'account.expected_net'], multiDef: true, fact: 'ar',
@@ -500,11 +504,11 @@ export const METRICS: MetricDef[] = [
   },
   {
     id: 'ar_gt90_pct', code: 'AR-07', name: 'A/R > 90 days', area: 'A/R', unit: 'pct', direction: 'down', type: 'balance', page: 'ar', finest: 'month',
-    definition: 'Percentage of billed gross AR in the aged trial balance 91+ day aging buckets.',
-    calculation: '(Billed Gross AR in 91+ Buckets ÷ Total Billed Gross AR) × 100, period-end snapshot',
-    formula: 'Billed gross A/R aged 91+ days / total billed gross A/R',
-    sourceFields: ['ar_snapshot.gross_balance', 'ar_snapshot.aging_bucket', 'ar_snapshot.billed_status'], fact: 'ar',
-    compute: (c0) => { const c = whole(c0); const a = ar(c, 'gross', { ageMin: 3, billed: [1, 2] }); const b = ar(c, 'gross', { billed: [1, 2] }); return a === null || b === null ? null : div(a, b); },
+    definition: 'Percentage of billed insurance A/R in the 91+ day aging buckets (workbook: Billed Ins > 90 % Total Billed Ins). Self-pay balances are left out.',
+    calculation: '(Billed Insurance AR in 91+ Buckets ÷ Total Billed Insurance AR) × 100, period-end snapshot',
+    formula: 'Billed insurance A/R aged 91+ days / total billed insurance A/R',
+    sourceFields: ['ar_snapshot.gross_balance', 'ar_snapshot.aging_bucket', 'ar_snapshot.billed_status', 'ar_snapshot.financial_class'], fact: 'ar',
+    compute: (c0) => { const c = insuredSel(whole(c0)); const a = ar(c, 'gross', { ageMin: 3, billed: [1, 2] }); const b = ar(c, 'gross', { billed: [1, 2] }); return a === null || b === null ? null : div(a, b); },
   },
   {
     id: 'ar_gt180_pct', code: 'AR-08', name: 'A/R > 180 days', area: 'A/R', unit: 'pct', direction: 'down', type: 'balance', page: 'ar', finest: 'month',
@@ -524,12 +528,12 @@ export const METRICS: MetricDef[] = [
     compute: (c) => div(c.e.sum('acc', '__one', 'denD', c.r.startDay, c.r.endDay, c.sel, { detail: 'denial' }), s(c, '__one', 'sbd')),
   },
   {
-    id: 'denial_dollar_rate', code: 'DN-04', name: 'Initial denial rate (claim dollars)', short: 'Denial rate ($)', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials',
-    definition: 'Gross charges on claims initially denied at first adjudication as a percentage of gross charges on claims submitted. Prototype: denials by denial date over claims by submit date in the same period (a period-matched approximation of the submission cohort).',
-    calculation: '(Gross Charges on Initially Denied Claims ÷ Gross Charges on Claims Submitted) × 100',
-    formula: 'Gross charges on initially denied claims / gross charges on claims submitted',
-    sourceFields: ['denial.gross_amount', 'denial.denial_date', 'claim.gross_charges', 'claim.submit_date'], multiDef: true, fact: 'acc',
-    compute: (c) => div(denied(c), submittedGross(c)),
+    id: 'denial_dollar_rate', code: 'DN-04', name: 'Initial denials % of gross revenue', short: 'Denial rate ($)', area: 'Denials', unit: 'pct', direction: 'down', type: 'flow', page: 'denials',
+    definition: 'Gross charges on claims initially denied in the period as a percentage of gross revenue in the period (workbook: Initial Denials % Gross Revenue).',
+    calculation: '(Gross Initial Denials $ by denial date ÷ Gross Revenue $ by service date) × 100',
+    formula: 'Gross initial denials $ / gross revenue',
+    sourceFields: ['denial.gross_amount', 'denial.denial_date', 'account.gross_charges'], multiDef: true, fact: 'acc',
+    compute: (c) => div(denied(c), gross(c)),
   },
   {
     id: 'denial_dollars', code: 'DN-05', name: 'Initial denials ($)', short: 'Denied $', area: 'Denials', unit: 'usd', direction: 'down', type: 'flow', page: 'denials',
@@ -879,8 +883,8 @@ export const METRICS: MetricDef[] = [
     sourceFields: ['claim_edit.category', 'claim.submit_date'], fact: 'acc',
     compute: (c) => s(c, 'regErr', 'sbd'),
   },
-  feMetric('fin_clearance_rate', 'Financial clearance rate', 'Financial clearance', 'pct', 'up', 'Share of scheduled patients financially cleared (eligibility, benefits, estimate and authorization) before service.', 'finCleared', 'finClearDue', { code: 'PA-08', formula: 'Patients financially cleared before service / scheduled patients due for clearance' }),
-  feMetric('prereg_rate', 'Pre-registration rate', 'Pre-registration', 'pct', 'up', 'Share of scheduled encounters pre-registered at least 24 hours before service.', 'preRegDone', 'preRegDue', { code: 'PA-09', formula: 'Encounters pre-registered 24+ hours before service / scheduled encounters due' }),
+  feMetric('fin_clearance_rate', 'Financial clearance rate', 'Financial clearance', 'pct', 'up', 'Share of scheduled patients financially cleared (eligibility, benefits, estimate and authorization) 24 hours before service (workbook: DPA II - 24 hour out completion rate, all teams).', 'finCleared', 'finClearDue', { code: 'PA-08', formula: 'Patients financially cleared before service / scheduled patients due for clearance' }),
+  feMetric('prereg_rate', 'Pre-registration rate', 'Pre-registration', 'pct', 'up', 'Share of scheduled encounters pre-registered at least 24 hours before service (workbook: DPA I - 24 hour out completion rate).', 'preRegDone', 'preRegDue', { code: 'PA-09', formula: 'Encounters pre-registered 24+ hours before service / scheduled encounters due' }),
   feMetric('scheduled_rate', 'Order scheduling rate', 'Scheduled rate', 'pct', 'up', 'Share of received orders that are scheduled.', 'ordersScheduled', 'ordersReceived', { code: 'PA-10', formula: 'Orders scheduled / orders received' }),
   feCountMetric('scheduled_volume', 'Scheduled volume', 'Appointments scheduled from orders in the period.', 'ordersScheduled', { code: 'PA-11', formula: 'Count of orders scheduled' }),
   feCountMetric('orders_received', 'Orders received', 'Orders received for scheduled services.', 'ordersReceived', { code: 'PA-12', formula: 'Count of orders received' }),
@@ -975,12 +979,12 @@ export const METRICS: MetricDef[] = [
   { ...feCountMetric('call_volume', 'Inbound calls (patient access)', 'Inbound calls offered to the patient access line.', 'callsOffered', { code: 'PA-27', formula: 'Count of inbound calls offered (patient access line)' }), short: 'Inbound calls' },
   { ...feCountMetric('calls_outbound', 'Outbound calls (patient access)', 'Outbound calls made by patient access staff.', 'callsOutbound', { code: 'PA-28', formula: 'Count of outbound calls (patient access)' }), short: 'Outbound calls' },
   {
-    id: 'call_volume_total', code: 'PA-29', name: 'Total call volume (all lines, inbound + outbound)', short: 'Total calls', area: 'Patient Access', unit: 'count', direction: 'none', type: 'flow', page: 'access',
-    definition: 'Inbound and outbound calls on all in-scope lines: patient access (front end) and the business office customer service line (back end).',
-    calculation: 'SUM(calls_offered + calls_outbound + cbo_calls_offered), by date',
-    formula: 'Inbound calls (all lines) + outbound calls',
+    id: 'call_volume_total', code: 'PA-29', name: 'Total call volume (patient access, inbound + outbound)', short: 'Total calls', area: 'Patient Access', unit: 'count', direction: 'none', type: 'flow', page: 'access',
+    definition: 'Inbound and outbound calls on the patient access (PAC) line (workbook: Total Call Volume).',
+    calculation: 'SUM(calls_offered + calls_outbound), patient access line, by date',
+    formula: 'Inbound calls + outbound calls (patient access line)',
     sourceFields: ['contact_center_daily.calls_offered', 'contact_center_daily.calls_outbound', 'contact_center_daily.line'], fact: 'fe',
-    compute: (c) => fe(c, 'callsOffered') + fe(c, 'callsOutbound') + fe(c, 'cboCallsOffered'),
+    compute: (c) => fe(c, 'callsOffered') + fe(c, 'callsOutbound'),
   },
   {
     id: 'call_abandon_rate_all', code: 'PA-30', name: 'Call abandonment rate (all lines)', short: 'Call abandonment (all lines)', area: 'Patient Access', unit: 'pct', direction: 'down', type: 'flow', page: 'access',
@@ -1000,7 +1004,7 @@ export const METRICS: MetricDef[] = [
     sourceFields: ['contact_center_daily.answer_wait_seconds', 'contact_center_daily.calls_answered'], fact: 'fe',
     compute: (c) => feRatio(c, 'answerWaitSecs', 'callsAnswered'),
   },
-  { ...feCountMetric('medicaid_in_scope', 'Uninsured accounts in scope (Medicaid E&E)', 'Self-pay (uninsured) accounts in scope for Medicaid eligibility screening.', 'selfPayAccounts', { code: 'PA-34', formula: 'Count of self-pay (uninsured) accounts in scope' }), short: 'Uninsured in scope' },
+  { ...feCountMetric('medicaid_in_scope', 'Uninsured accounts in scope (Medicaid E&E)', 'Self-pay (uninsured) accounts in scope for Medicaid eligibility screening (workbook: Total Self Pay Volume).', 'selfPayAccounts', { code: 'PA-34', formula: 'Count of self-pay (uninsured) accounts in scope' }), short: 'Uninsured in scope' },
   {
     id: 'medicaid_screening_rate', code: 'PA-35', name: 'Medicaid screening rate', short: 'Medicaid screening', area: 'Patient Access', unit: 'pct', direction: 'up', type: 'flow', page: 'access',
     definition: 'Share of in-scope uninsured accounts screened for Medicaid eligibility, excluding accounts where all contact efforts are exhausted.',
@@ -1009,7 +1013,7 @@ export const METRICS: MetricDef[] = [
     sourceFields: ['eligibility_screening.screened', 'eligibility_screening.self_pay_accounts', 'eligibility_screening.efforts_exhausted'], fact: 'fe',
     compute: (c) => div(fe(c, 'screened'), fe(c, 'selfPayAccounts') - fe(c, 'effortsExhausted')),
   },
-  feMetric('medicaid_eligible_completion', 'Medicaid eligible completion rate', 'Medicaid eligible completion', 'pct', 'up', 'Share of patients likely eligible for Medicaid whose application was completed.', 'applicationsCompleted', 'medicaidEligible', { code: 'PA-36', formula: 'Applications completed / patients likely eligible' }),
+  feMetric('medicaid_eligible_completion', 'Medicaid eligible completion rate', 'Medicaid eligible completion', 'pct', 'up', 'Share of patients likely eligible for Medicaid whose application was completed (workbook: Eligible Application Rate; confirm the match with the client).', 'applicationsCompleted', 'medicaidEligible', { code: 'PA-36', formula: 'Applications completed / patients likely eligible' }),
   feMetric('coverage_found_rate', 'Coverage discovery rate', 'Coverage found', 'pct', 'none', 'Share of screened self-pay accounts where insurance or program coverage was found.', 'coverageFound', 'screened', { code: 'PA-37', formula: 'Accounts with coverage found / accounts screened' }),
 ];
 
