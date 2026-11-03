@@ -4,8 +4,8 @@
   "cashGoalPctOfNpsr": 0.98,
   "targets": {
     "net_ar_days": {
-      "target": 50,
-      "watch": 55
+      "target": 40,
+      "watch": 45
     },
     "gross_ar_days": {
       "target": 45,
@@ -40,8 +40,8 @@
       "watch": 0.055
     },
     "denial_wo_pct_npsr": {
-      "target": 0.015,
-      "watch": 0.02
+      "target": 0.02,
+      "watch": 0.025
     },
     "appeal_success": {
       "target": 0.6,
@@ -68,16 +68,16 @@
       "watch": 1.3
     },
     "dnfb_days": {
-      "target": 4.5,
-      "watch": 5.5
+      "target": 4,
+      "watch": 5
     },
     "dnsp_days": {
       "target": 1,
       "watch": 1.5
     },
-    "dnfb_15plus_pct": {
-      "target": 0.1,
-      "watch": 0.15
+    "dnfb_4plus_pct": {
+      "target": 0.35,
+      "watch": 0.45
     },
     "charge_lag": {
       "target": 1.5,
@@ -92,8 +92,8 @@
       "watch": 2
     },
     "bad_debt_pct": {
-      "target": 0.01,
-      "watch": 0.013
+      "target": 0.02,
+      "watch": 0.025
     },
     "cost_to_collect": {
       "target": 0.032,
@@ -116,28 +116,28 @@
       "watch": 0.93
     },
     "scheduled_rate": {
-      "target": 0.92,
-      "watch": 0.88
-    },
-    "prereg_rate": {
       "target": 0.95,
       "watch": 0.92
     },
+    "prereg_rate": {
+      "target": 0.97,
+      "watch": 0.95
+    },
     "fin_clearance_rate": {
-      "target": 0.9,
-      "watch": 0.86
+      "target": 0.97,
+      "watch": 0.95
     },
     "pos_rate": {
       "target": 0.15,
       "watch": 0.12
     },
     "call_abandon_rate": {
-      "target": 0.05,
-      "watch": 0.07
+      "target": 0.03,
+      "watch": 0.05
     },
     "asa": {
-      "target": 30,
-      "watch": 45
+      "target": 45,
+      "watch": 55
     },
     "payment_variance_pct": {
       "target": -0.01,
@@ -170,6 +170,18 @@
     "avoidable_wo_unrealized_pct": {
       "target": 0.01,
       "watch": 0.015
+    },
+    "prereg_rate_48h": {
+      "target": 0.95,
+      "watch": 0.92
+    },
+    "fin_clearance_rate_48h": {
+      "target": 0.95,
+      "watch": 0.92
+    },
+    "billed_ins_gt360_pct": {
+      "target": 0.02,
+      "watch": 0.03
     }
   },
   "governance": {

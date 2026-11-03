@@ -37,7 +37,7 @@ export const PAGES: PageMeta[] = [
   { id: 'denials', section: 'analytics', label: 'Denials', title: 'Denials Analytics', question: 'Which payers, hospitals and root causes drive denials?', nav: true, pageFilters: ['denialCategory', 'rootCause'] },
   { id: 'ar', section: 'analytics', label: 'A/R', title: 'A/R Analytics', question: 'Where is A/R accumulating, and why?', nav: true, pageFilters: ['arAge', 'accountStatus'] },
   { id: 'cash', section: 'analytics', label: 'Cash', title: 'Cash and Collections', question: 'Are we on track to hit the cash goal?', nav: true },
-  { id: 'payers', section: 'analytics', label: 'Payers', title: 'Payer Performance', question: 'Which payers pay slowly, deny more, or underpay?', nav: true },
+  { id: 'payers', section: 'analytics', label: 'Payers', title: 'Payer Performance', question: 'Which payor groups pay slowly or deny more, and which payers underpay?', nav: true },
   { id: 'facilities', section: 'analytics', label: 'Facilities', title: 'Facility Comparison', question: 'How do our hospitals compare, and which need attention?', nav: true },
   { id: 'definitions', section: 'analytics', label: 'Definitions', title: 'Metric Definitions and Data', question: 'What does each measure mean, and how current is the data?', nav: true },
   { id: 'metric', section: 'analytics', label: 'Metric Analysis', title: 'Metric Analysis', question: 'What is happening, where is it happening, and why?' },

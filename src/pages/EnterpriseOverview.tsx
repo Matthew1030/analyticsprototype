@@ -21,9 +21,9 @@ import { Visual } from '../ui/Visual';
 /** The ELT framework metrics first, then the other enterprise measures. */
 export const EXEC_KPIS = [
   ...FRAMEWORK_METRICS.map((f) => f.id),
-  'net_ar_days', 'gross_ar', 'net_ar', 'npsr', 'cash', 'clean_claim_rate', 'dnfb_dollars', 'bad_debt_pct', 'charity_pct', 'cost_to_collect',
+  'net_ar_days', 'gross_ar', 'net_ar', 'npsr', 'cash', 'clean_claim_rate', 'dnfb_dollars', 'dnsp_days', 'bad_debt_pct', 'charity_pct', 'denial_wo_pct_npsr', 'cost_to_collect',
 ];
-export const MATRIX_KPIS = ['net_ar_days', 'cash_pct_npsr', 'denial_rate', 'clean_claim_rate', 'dnfb_days', 'ar_gt90_pct', 'cost_to_collect'];
+export const MATRIX_KPIS = ['gross_ar_days', 'cash_pct_npsr', 'denial_dollar_rate', 'clean_claim_rate', 'dnfb_days', 'dnsp_days', 'ar_gt90_pct'];
 
 // ---------------------------------------------------------------- attention list
 

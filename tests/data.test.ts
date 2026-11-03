@@ -141,9 +141,9 @@ describe('planted patterns trace to a cause', () => {
     expect(rise[0].f).toBe(fac('Williamson Regional'));
   });
 
-  it('Humana MA is the largest payer in the 121–180 bucket at Williamson Regional', () => {
+  it('Humana MA is the largest payer in the 91–180 bucket at Williamson Regional', () => {
     const day = e.snapshotDayOnOrBefore('ar', last.endDay)!;
-    const by = e.snapshotBy('ar', 'net', 'payer', day, { facility: [fac('Williamson Regional')], arAge: [4] });
+    const by = e.snapshotBy('ar', 'net', 'payer', day, { facility: [fac('Williamson Regional')], arAge: [1] });
     const top = [...by.entries()].sort((a, b) => b[1] - a[1])[0][0];
     expect(top).toBe(payer('Humana Medicare Advantage'));
   });
@@ -153,7 +153,7 @@ describe('planted patterns trace to a cause', () => {
     const rates = big.map((f) => v('denial_rate', lastQ, { facility: [f] }));
     expect(big[rates.indexOf(Math.max(...rates))]).toBe(fac('Valley Regional'));
     const cats = ds.dims.denialCategories.map((c) => e.sum('acc', '__one', 'denD', lastQ.startDay, lastQ.endDay, { facility: [fac('Valley Regional')], financialClass: [1], denialCategory: [c.key] }, { detail: 'denial' }));
-    expect(ds.dims.denialCategories[cats.indexOf(Math.max(...cats))].name).toBe('Coordination of benefits');
+    expect(ds.dims.denialCategories[cats.indexOf(Math.max(...cats))].name).toBe('Coordination Of Benefits');
   });
 
   it('Cigna has the most negative payment variance', () => {

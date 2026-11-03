@@ -14,8 +14,8 @@ export interface Member { key: number; label: string; sub?: string }
 
 export const DIMENSION_LABEL: Record<DimensionId, string> = {
   facility: 'Hospital', region: 'Region', facilityType: 'Facility type', payer: 'Payer',
-  financialClass: 'Financial class', serviceLine: 'Service line', patientType: 'Patient type',
-  denialCategory: 'Denial category', rootCause: 'Root cause', editCategory: 'Edit category',
+  financialClass: 'Payor group', serviceLine: 'Service line', patientType: 'Patient type',
+  denialCategory: 'Denial reason', rootCause: 'Root cause', editCategory: 'Edit category',
   dnfbHold: 'DNFB hold reason', arAge: 'Aging bucket', accountStatus: 'Account status',
 };
 

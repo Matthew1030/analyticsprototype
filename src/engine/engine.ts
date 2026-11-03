@@ -26,8 +26,8 @@ const FACT_FIELDS: Record<FactName, CoreField[]> = {
 
 export const FIELD_LABEL: Record<SelField, string> = {
   facility: 'Hospital', region: 'Region', facilityType: 'Facility type', payer: 'Payer',
-  financialClass: 'Financial class', serviceLine: 'Service line', patientType: 'Patient type',
-  denialCategory: 'Denial category', rootCause: 'Root cause', editCategory: 'Claim edit category',
+  financialClass: 'Payor group', serviceLine: 'Service line', patientType: 'Patient type',
+  denialCategory: 'Denial reason', rootCause: 'Root cause', editCategory: 'Claim edit category',
   dnfbHold: 'DNFB hold reason', arAge: 'A/R aging bucket', accountStatus: 'Account status',
 };
 
@@ -286,7 +286,7 @@ export class Engine {
   }
 
   /** Accounts with an event date in a range (account drill-through). Returns row indexes. */
-  accountsByDate(dateCol: 'dd' | 'denD' | 'payD' | 'sbd' | 'woD', start: number, end: number, sel: Selections, detail: DetailKind = 'none'): number[] {
+  accountsByDate(dateCol: 'dd' | 'denD' | 'payD' | 'sbd' | 'woD' | 'bdD' | 'fbd', start: number, end: number, sel: Selections, detail: DetailKind = 'none'): number[] {
     const c = this.ds.acc as unknown as Record<string, Float64Array> & { n: number };
     const ok = this.rowOk('acc', sel, detail);
     const dates = c[dateCol];

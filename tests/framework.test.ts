@@ -40,10 +40,11 @@ describe('ELT metric framework', () => {
     expect(staticTarget('avoidable_wo_unrealized_pct')).toBe(0.01);
   });
 
-  it('counts only billed A/R in % of AR over 90 days', () => {
+  it('counts only billed insurance A/R in % of AR over 90 days (workbook: Billed Ins > 90 %)', () => {
     const d = e.snapshotDayOnOrBefore('ar', last.endDay)!;
-    const billed = e.snapshot('ar', 'gross', d, {}, { billed: [1, 2] });
-    const old = e.snapshot('ar', 'gross', d, {}, { billed: [1, 2], ageMin: 3 });
+    const ins = { financialClass: ds.dims.financialClasses.map((_, i) => i).slice(0, -1) };
+    const billed = e.snapshot('ar', 'gross', d, ins, { billed: [1, 2] });
+    const old = e.snapshot('ar', 'gross', d, ins, { billed: [1, 2], ageMin: 1 });
     expect(evaluate(METRIC_BY_ID.ar_gt90_pct, e, last, {}).value).toBeCloseTo(old / billed, 9);
   });
 

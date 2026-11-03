@@ -19,41 +19,44 @@ import { CanvasHeader } from '../ui/Shell';
 import { Band, Bands } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, DecompositionTree, KpiStrip, TrendVisual, useMetric } from '../ui/widgets';
+import { AgeBucketsVisual, WriteoffsByReason } from '../ui/workbook';
 
-/** Category colors follow the category (fixed order), never its rank. Ninth folds to gray. */
-export const CATEGORY_COLORS = [...SERIES, '#9aa2ae'];
+/** Reason colors follow the reason (fixed order), never its rank: the 12 workbook denial reasons. */
+export const CATEGORY_COLORS = [...SERIES, '#0f7b8a', '#b5651d', '#7a7f87', '#9aa2ae'];
 
 export function Denials() {
   const { go, sel } = useApp();
   const startSel = useMemo(() => ({ ...sel, facility: [], payer: [], denialCategory: [], rootCause: [] }), [sel]);
-  const rate = useMetric('denial_rate', 0, startSel);
+  const rate = useMetric('denial_dollar_rate', 0, startSel);
   const work = () => go('wl-denials', {}, { drill: true });
   const claims = () => go('accounts', { mode: 'denied' }, { drill: true });
   return (
     <div className="page">
       <CanvasHeader />
       <Band type="kpi" />
-      <KpiStrip ids={['denial_rate', 'denial_dollars', 'denial_pct_npsr', 'appeal_rate', 'appeal_success', 'denial_writeoffs', 'recoverable_pct']} />
+      <KpiStrip ids={['denial_dollars', 'denial_dollar_rate', 'front_end_denial_rate', 'coding_denial_rate', 'documentation_denial_rate', 'denial_writeoffs', 'denial_wo_pct_npsr']} />
+      <KpiStrip ids={['denial_rate', 'denial_pct_npsr', 'appeal_rate', 'appeal_success', 'recoverable_pct']} />
       <InvestigationPath title="Investigate denials" steps={[
-        { label: 'Denial rate', hint: '', value: <>{fmtMetric('denial_rate', rate.value)} <span className="muted">target {fmtMetric('denial_rate', rate.target)}</span></> },
-        { label: 'Payer', field: 'payer', hint: 'click a payer' },
+        { label: 'Denial rate ($)', hint: '', value: <>{fmtMetric('denial_dollar_rate', rate.value)} <span className="muted">target {fmtMetric('denial_dollar_rate', rate.target)}</span></> },
+        { label: 'Payor group', field: 'financialClass', hint: 'click a payor group' },
         { label: 'Hospital', field: 'facility', hint: 'click a hospital' },
-        { label: 'Category', field: 'denialCategory', hint: 'click a category' },
-        { label: 'Root cause', field: 'rootCause', hint: 'click a driver row' },
+        { label: 'Reason', field: 'denialCategory', hint: 'click a reason' },
         { label: 'Act', hint: '', action: { label: 'Work these claims in the Denials worklist ›', onClick: work },
           secondary: { label: 'View denied claims', onClick: claims } },
       ]} />
       <Bands
-        trend={[<TrendVisual id="denial_rate" months={18} />, <CategoryTrend />]}
+        trend={[<TrendVisual id="denial_dollar_rate" alt={['front_end_denial_rate', 'coding_denial_rate', 'documentation_denial_rate']} months={18} />, <CategoryTrend />]}
         where={[
+          <BreakdownVisual id="denial_dollars" dim="financialClass" title="Denied $ by payor group" />,
+          <BreakdownVisual id="denial_dollar_rate" dim="facility" title="Denial rate ($) by hospital" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />,
           <BreakdownVisual id="denial_rate" dim="payer" title="Denial rate by payer" top={11} />,
-          <BreakdownVisual id="denial_rate" dim="facility" title="Denial rate by hospital" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />,
         ]}
         why={[
-          [<BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by category" />, <PayerCategoryMatrix />],
-          [<DecompositionTree id="denial_dollars" title="Denial decomposition" dims={['payer', 'facility', 'denialCategory', 'rootCause', 'financialClass', 'serviceLine', 'patientType']}
-            initial={['payer', 'facility', 'denialCategory', 'rootCause']} />],
-          [<TopDrivers />],
+          [<BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by reason" />, <TopDrivers by="reason" />],
+          [<DecompositionTree id="denial_dollars" title="Denial decomposition" dims={['facility', 'denialCategory', 'financialClass', 'payer', 'rootCause', 'serviceLine', 'patientType']}
+            initial={['facility', 'denialCategory']} />],
+          [<WriteoffsByReason />, <AgeBucketsVisual kind="writeoffs" title="Denial write-offs by age" />],
+          [<PayerCategoryMatrix />, <TopDrivers by="rootCause" />],
         ]}
         actNote="Appeals, recoverable dollars and the denied claims to work"
         actActions={<>
@@ -64,7 +67,7 @@ export function Denials() {
           <KpiStrip ids={['appeals_filed', 'appeals_resolved', 'appeals_open', 'appeal_success', 'appeal_upheld_rate', 'denial_wo_pct_npsr']} />
           <div className="row cols-3">
             <AppealStatus />
-            <BreakdownVisual id="appeals_filed" alt={['appeal_rate']} dim="denialCategory" title="Appeals by denial category" subtitle="Clinical appeals: click Medical necessity and Documentation to filter" />
+            <BreakdownVisual id="appeals_filed" alt={['appeal_rate']} dim="denialCategory" title="Appeals by denial category" subtitle="Clinical appeals: click Medical Necessity and Lacks Information/Med Records to filter" />
             <BreakdownVisual id="appeal_upheld_rate" alt={['appeal_success']} dim="denialCategory" title="Appeal outcome by denial category" />
           </div>
           <Recoverability />
@@ -78,15 +81,15 @@ function CategoryTrend() {
   const { engine, period, sel, ds, toggle } = useApp();
   const months = trailingMonths(period.endMi, 13).filter((p) => p.startMi >= ds.meta.windowStartMonth);
   const cats = ds.dims.denialCategories;
-  const data = useMemo(() => cats.map((c) => months.map((p) => engine.sum('acc', '__one', 'denD', p.startDay, p.endDay, { ...sel, denialCategory: [c.key] }, { detail: 'denial' }))),
+  const data = useMemo(() => cats.map((c) => months.map((p) => engine.sum('acc', 'denAmt', 'denD', p.startDay, p.endDay, { ...sel, denialCategory: [c.key] }, { detail: 'denial' }))),
     [engine, months.map((p) => p.key).join(), sel, cats]); // eslint-disable-line react-hooks/exhaustive-deps
   const series = cats.map((c, i) => ({ name: c.name, data: data[i], color: CATEGORY_COLORS[i] }));
   return (
-    <Visual title="Denied claims by category, monthly" subtitle="Claim count by denial date · click a segment to filter the category"
-      table={{ columns: ['Month', ...cats.map((c) => c.name)], rows: months.map((p, j) => [p.short, ...data.map((d) => fmt(d[j], 'count'))]) }}
-      spec={{ type: 'Stacked column chart', metrics: ['denied_claims'], dimensions: ['Month', 'Denial category'], interactions: 'Click a segment filters the category' }}>
-      <Chart height={250} ariaLabel="Denied claims by category by month"
-        option={stackedColumnsOption({ labels: months.map((p) => p.short), series, fmt: (v) => fmt(v, 'count'), selectedSeries: sel.denialCategory })}
+    <Visual title="Denied $ by reason, monthly" subtitle="Gross initial denials $ by denial date · click a segment to filter the reason"
+      table={{ columns: ['Month', ...cats.map((c) => c.name)], rows: months.map((p, j) => [p.short, ...data.map((d) => usd(d[j]))]) }}
+      spec={{ type: 'Stacked column chart', metrics: ['denial_dollars'], dimensions: ['Month', 'Denial reason'], interactions: 'Click a segment filters the reason' }}>
+      <Chart height={250} ariaLabel="Denied dollars by reason by month"
+        option={stackedColumnsOption({ labels: months.map((p) => p.short), series, fmt: (v) => usd(v), selectedSeries: sel.denialCategory })}
         onClick={(_, name) => { const c = cats.find((x) => x.name === name); if (c) toggle('denialCategory', c.key); }} />
     </Visual>
   );
@@ -94,16 +97,20 @@ function CategoryTrend() {
 
 interface Driver { key: number; name: string; category: string; owner: string; recoverable: boolean; dollars: number; prior: number; claims: number; share: number; appeal: number | null; wo: number }
 
-/** Top denial drivers by root cause, with change, appeal rate and write-offs. */
-function TopDrivers() {
+/**
+ * Denial drivers with change and write-offs: by workbook reason (what the dataset holds), or by root
+ * cause with claims, recoverability and appeal rate (v3+: the workbook has no root causes or claim counts).
+ */
+function TopDrivers({ by }: { by: 'reason' | 'rootCause' }) {
   const { engine, period, compare, sel, ds, toggle } = useApp();
   const cp = comparePeriod(period, compare);
+  const field = by === 'reason' ? 'denialCategory' : 'rootCause';
   const rows = useMemo(() => {
-    const base: Selections = { ...sel, rootCause: [] };
+    const base: Selections = { ...sel, [field]: [] };
     const all = engine.sum('acc', 'denAmt', 'denD', period.startDay, period.endDay, base, { detail: 'denial' });
-    return members(ds, 'rootCause', sel).filter((r) => !sel.rootCause?.length || sel.rootCause.includes(r.key)).map((r) => {
-      const rc = ds.dims.rootCauses[r.key];
-      const s: Selections = { ...sel, rootCause: [r.key] };
+    return members(ds, field, sel).filter((r) => !sel[field]?.length || sel[field]!.includes(r.key)).map((r) => {
+      const rc = by === 'reason' ? { name: ds.dims.denialCategories[r.key].name, category: r.key, recoverable: true } : ds.dims.rootCauses[r.key];
+      const s: Selections = { ...sel, [field]: [r.key] };
       const dollars = engine.sum('acc', 'denAmt', 'denD', period.startDay, period.endDay, s, { detail: 'denial' });
       const claims = engine.sum('acc', '__one', 'denD', period.startDay, period.endDay, s, { detail: 'denial' });
       return {
@@ -114,27 +121,32 @@ function TopDrivers() {
         wo: engine.sum('acc', 'woAmt', 'woD', period.startDay, period.endDay, s, { detail: 'denial' }),
       } as Driver;
     }).filter((r) => r.dollars > 0 || r.prior > 0);
-  }, [engine, period, cp, sel, ds]);
+  }, [engine, period, cp, sel, ds, field, by]);
+  const reason = by === 'reason';
   const cols: GridColumn<Driver>[] = [
-    { key: 'name', label: 'Root cause', value: (r) => r.name, width: 260 },
-    { key: 'cat', label: 'Category', value: (r) => r.category, align: 'left' },
-    { key: 'owner', label: 'Prevention owner', value: (r) => r.owner, align: 'left', info: 'Revenue cycle area that usually owns prevention of this root cause.' },
-    { key: 'rec', label: 'Recoverable', value: (r) => (r.recoverable ? 'Yes' : 'No'), align: 'center' },
-    { key: 'claims', label: 'Claims', value: (r) => r.claims, format: (v) => fmt(v, 'count') },
+    { key: 'name', label: reason ? 'Denial reason' : 'Root cause', value: (r) => r.name, width: 260 },
+    ...(reason ? [] : [{ key: 'cat', label: 'Reason', value: (r: Driver) => r.category, align: 'left' as const }]),
+    { key: 'owner', label: 'Prevention owner', value: (r) => r.owner, align: 'left', info: 'Revenue cycle area that usually owns prevention.' },
+    ...(reason ? [] : [
+      { key: 'rec', label: 'Recoverable', value: (r: Driver) => (r.recoverable ? 'Yes' : 'No'), align: 'center' as const },
+      { key: 'claims', label: 'Claims', value: (r: Driver) => r.claims, format: (v: number | null) => fmt(v, 'count') },
+    ]),
     { key: 'dollars', label: 'Denied $', value: (r) => r.dollars, format: (v) => usd(v ?? 0), bar: true, exportText: (r) => Math.round(r.dollars) },
     { key: 'share', label: 'Share', value: (r) => r.share, format: (v) => fmt(v, 'pct') },
     { key: 'chg', label: `vs ${cp.short}`, value: (r) => r.dollars - r.prior, format: (v) => <span className={(v ?? 0) > 0 ? 'txt-off' : 'txt-ok'}>{fmtDelta(v, 'usd')}</span>, exportText: (r) => Math.round(r.dollars - r.prior) },
-    { key: 'appeal', label: 'Appeal rate', value: (r) => r.appeal, format: (v) => fmt(v, 'pct', 0) },
+    ...(reason ? [] : [{ key: 'appeal', label: 'Appeal rate', value: (r: Driver) => r.appeal, format: (v: number | null) => fmt(v, 'pct', 0) }]),
     { key: 'wo', label: 'Written off', value: (r) => r.wo, format: (v) => usd(v ?? 0), heat: 'high' },
   ];
   const g = rows.map((r) => ({ id: String(r.key), data: r }));
   const total = useMemo<Driver>(() => ({ key: -1, name: 'Total', category: '', owner: '', recoverable: true, dollars: rows.reduce((a, r) => a + r.dollars, 0), prior: rows.reduce((a, r) => a + r.prior, 0), claims: rows.reduce((a, r) => a + r.claims, 0), share: 1, appeal: evaluate(METRIC_BY_ID.appeal_rate, engine, period, sel).value, wo: rows.reduce((a, r) => a + r.wo, 0) }), [rows, engine, period, sel]);
   return (
-    <Visual title="Top denial drivers" subtitle={`Root causes, ${period.label} · sorted by denied $ · click a row to filter the root cause`}
+    <Visual title={reason ? 'Denial drivers by reason' : 'Top denial drivers'} subtitle={`${reason ? 'Workbook denial reasons' : 'Root causes'}, ${period.label} · sorted by denied $ · click a row to filter`}
       table={gridExport(cols, g, total)}
-      spec={{ type: 'Ranked analytical table with data bars and heat', metrics: ['denial_dollars', 'denied_claims', 'appeal_rate', 'denial_writeoffs'], dimensions: ['Root cause', 'Category'], interactions: 'Row click toggles the root cause filter' }}>
-      <Grid caption="Top denial drivers" columns={cols} rows={g} total={total} pageSize={12} defaultSort={{ key: 'dollars', dir: 'desc' }}
-        selected={(r) => !!sel.rootCause?.includes(r.key)} onRowClick={(r) => { if (r.key >= 0) toggle('rootCause', r.key); }} />
+      spec={reason
+        ? { type: 'Ranked analytical table with data bars and heat', metrics: ['denial_dollars', 'denial_writeoffs'], dimensions: ['Denial reason'], interactions: 'Row click toggles the reason filter' }
+        : { type: 'Ranked analytical table with data bars and heat', metrics: ['denial_dollars', 'denied_claims', 'appeal_rate', 'denial_writeoffs'], dimensions: ['Root cause', 'Denial reason'], interactions: 'Row click toggles the root cause filter' }}>
+      <Grid caption={reason ? 'Denial drivers by reason' : 'Top denial drivers'} columns={cols} rows={g} total={total} pageSize={12} defaultSort={{ key: 'dollars', dir: 'desc' }}
+        selected={(r) => !!sel[field]?.includes(r.key)} onRowClick={(r) => { if (r.key >= 0) toggle(field, r.key); }} />
     </Visual>
   );
 }
@@ -151,7 +163,7 @@ function PayerCategoryMatrix() {
   }), [engine, period, sel, ds, cats]);
   const cols: GridColumn<PcRow>[] = [
     { key: 'name', label: 'Payer', value: (r) => r.name, width: 200 },
-    ...cats.map((c, i) => ({ key: `c${i}`, label: c.name.replace('Missing information / records', 'Missing info').replace('Coordination of benefits', 'COB').replace('Medical necessity', 'Med. necessity'), group: 'Denied $ by category', value: (r: PcRow) => r.vals[i], format: (v: number | null) => (v ? usd(v) : '–'), heat: 'magnitude' as const })),
+    ...cats.map((c, i) => ({ key: `c${i}`, label: c.name.replace('Lacks Information/Med Records', 'Lacks info').replace('Coordination Of Benefits', 'COB').replace('Medical Necessity', 'Med. necessity').replace('Benefits Exhausted', 'Benefits exh.'), group: 'Denied $ by category', value: (r: PcRow) => r.vals[i], format: (v: number | null) => (v ? usd(v) : '–'), heat: 'magnitude' as const })),
     { key: 'total', label: 'Total', value: (r) => r.total, format: (v) => <b>{usd(v ?? 0)}</b> },
     { key: 'rate', label: 'Denial rate', value: (r) => r.rate, format: (v) => fmt(v, 'pct') },
   ];

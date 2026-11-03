@@ -49,10 +49,10 @@ describe('worklists', () => {
   });
 
   it('apply the analytics context, so a drill path ends on the items behind it', () => {
-    const sel = { facility: [fac('Valley Regional')], denialCategory: [cat('Coordination of benefits')] };
+    const sel = { facility: [fac('Valley Regional')], denialCategory: [cat('Coordination Of Benefits')] };
     const items = worklist(e, { kind: 'denials', day }, sel);
     expect(items.length).toBeGreaterThan(0);
-    expect(items.every((r) => r.facility === 'Valley Regional' && r.category === 'Coordination of benefits')).toBe(true);
+    expect(items.every((r) => r.facility === 'Valley Regional' && r.category === 'Coordination Of Benefits')).toBe(true);
   });
 
   it('keep denied claims off the A/R follow-up list (no double work)', () => {

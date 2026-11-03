@@ -43,7 +43,8 @@ describe('KPI inventory metrics are consistent', () => {
   });
 
   it('all-line call measures include the patient access line', () => {
-    expect(v('call_volume_total')).toBeGreaterThan(v('call_volume') + v('calls_outbound'));
+    // Total call volume is the patient access line only (workbook: Total Call Volume).
+    expect(v('call_volume_total')).toBeCloseTo(v('call_volume') + v('calls_outbound'), 6);
     const all = v('call_abandon_rate_all');
     const lo = Math.min(v('call_abandon_rate'), v('cbo_call_abandon_rate'));
     const hi = Math.max(v('call_abandon_rate'), v('cbo_call_abandon_rate'));

@@ -11,7 +11,7 @@
 // names (Metric Dictionary): the full name in tables, the approved short name in compact places.
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { eltItemId, visualItemId } from '../config/priorities';
+import { effectiveTier, eltItemId, visualItemId } from '../config/priorities';
 import { shortDayLabel } from '../data/dates';
 import { FIELD_LABEL, type SelField } from '../engine/engine';
 import { FRAMEWORK, FRAMEWORK_BY_ID } from '../engine/framework';
@@ -26,7 +26,7 @@ import { usePriorities, usePriorityItem } from '../state/Priorities';
 import { Chart } from '../ui/Chart';
 import { eltTrendOption, multiTrendOption, SERIES, type TrendLine } from '../ui/charts';
 import { fmtMetric, GapLegend, GapMark, InfoIcon, metricLabel, PeriodInput, Sparkline, StatusMark } from '../ui/common';
-import { gapStar } from '../config/datasetGaps';
+import { gapStar, notInDataset } from '../config/datasetGaps';
 import { Icon } from '../ui/icons';
 import { PriorityPicker } from '../ui/Priority';
 import { downloadCsv } from '../ui/Visual';
@@ -360,7 +360,7 @@ function TargetTable({ rows, onOpen, pick }: { rows: Record<string, Row>; onOpen
               return (
                 <tr key={f.id} className="clickable" tabIndex={0} onClick={() => onOpen(f.id)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(f.id); }} title={`Analyze ${METRIC_BY_ID[f.id].name}`}>
                   <td className="al-left elt-mname"><MetricCheck id={f.id} pick={pick} />{label(f.id)}<span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={f.id} /></span>
-                    {prioOn && <> <PriorityPicker id={eltItemId(f.id)} label={`${f.code} ${METRIC_BY_ID[f.id].name}`} tier={decisions[eltItemId(f.id)]?.tier} compact /></>}</td>
+                    {prioOn && <> <PriorityPicker id={eltItemId(f.id)} label={`${f.code} ${METRIC_BY_ID[f.id].name}`} tier={effectiveTier({ id: eltItemId(f.id), kind: 'kpi', gap: notInDataset(f.id) }, decisions).tier} compact /></>}</td>
                   <td><b><Cell id={f.id} r={{ value: r.v.value, noData: r.v.no_data_reason }} /></b></td>
                   <td className="muted">{fmtMetric(f.id, r.v.target)}</td>
                   <td><Variance r={r} /></td>

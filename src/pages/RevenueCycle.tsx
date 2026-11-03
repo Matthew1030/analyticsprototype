@@ -24,14 +24,15 @@ export interface Stage {
 }
 
 export const STAGES: Stage[] = [
-  { id: 'access', name: 'Patient Access', page: 'access', metrics: ['eligibility_rate', 'auth_rate', 'registration_accuracy', 'front_end_denial_rate'] },
+  // Workbook metrics first. Charge Capture has no workbook data (late charges are pending): v3+.
+  { id: 'access', name: 'Patient Access', page: 'access', metrics: ['prereg_rate', 'fin_clearance_rate', 'scheduled_rate', 'front_end_denial_rate'] },
   { id: 'charge', name: 'Charge Capture', page: 'midcycle', tab: 'charge', metrics: ['charge_lag', 'late_charge_pct', 'missing_charges'] },
-  { id: 'coding', name: 'Coding', page: 'midcycle', tab: 'coding', metrics: ['coding_tat', 'coding_denial_rate', 'dnfb_coding'] },
+  { id: 'coding', name: 'Coding', page: 'midcycle', tab: 'coding', metrics: ['coding_denial_rate', 'dnfb_mid_cycle_4plus', 'epars_him'] },
   { id: 'cdi', name: 'Clinical Documentation', page: 'midcycle', tab: 'cdi', metrics: ['documentation_denial_rate', 'cdi_query_rate', 'dnfb_query'] },
-  { id: 'billing', name: 'Billing', page: 'billing', metrics: ['clean_claim_rate', 'dnfb_days', 'billing_lag'] },
-  { id: 'denials', name: 'Denials', page: 'denials', metrics: ['denial_rate', 'denial_dollars', 'appeal_success'] },
-  { id: 'ar', name: 'A/R', page: 'ar', metrics: ['net_ar_days', 'ar_gt90_pct', 'net_ar'] },
-  { id: 'cash', name: 'Cash', page: 'cash', metrics: ['cash_pct_npsr', 'cash', 'net_collection_rate'] },
+  { id: 'billing', name: 'Billing', page: 'billing', metrics: ['clean_claim_rate', 'dnfb_days', 'dnsp_days'] },
+  { id: 'denials', name: 'Denials', page: 'denials', metrics: ['denial_dollar_rate', 'denial_dollars', 'denial_wo_pct_npsr'] },
+  { id: 'ar', name: 'A/R', page: 'ar', metrics: ['gross_ar_days', 'ar_gt90_pct', 'gross_ar'] },
+  { id: 'cash', name: 'Cash', page: 'cash', metrics: ['cash_pct_npsr', 'cash', 'bad_debt_pct'] },
 ];
 const STAGE_METRICS = STAGES.map((s) => s.metrics);
 
@@ -65,7 +66,7 @@ function OverviewTab({ summaries, onPick }: { summaries: Summary[]; onPick: (id:
   const ids = areas.length ? EXEC_KPIS.filter((id) => areas.includes(METRIC_BY_ID[id].area)) : EXEC_KPIS;
   return (
     <>
-      <KpiStrip ids={['npsr', 'cash', 'cash_pct_npsr', 'net_ar_days', 'denial_rate', 'clean_claim_rate', 'dnfb_days']} />
+      <KpiStrip ids={['npsr', 'cash', 'cash_pct_npsr', 'gross_ar_days', 'denial_dollar_rate', 'clean_claim_rate', 'dnfb_days']} />
       <Visual title="Revenue cycle stages" subtitle="Worst status among each stage's metrics · select a stage to open its tab"
         table={{ columns: ['Stage', 'Status', 'Metrics off target', 'Metrics on watch'], rows: summaries.map(({ s, status, off, watch }) => [s.name, status ?? 'No target', off, watch]) }}
         spec={{ type: 'Stage cards (KPI objects in a row, or a button bar)', metrics: STAGES.flatMap((s) => s.metrics.slice(0, 3)), dimensions: ['RCM stage'], interactions: 'Card click opens the stage tab' }}>

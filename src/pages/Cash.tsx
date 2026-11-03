@@ -18,6 +18,7 @@ import { CanvasHeader } from '../ui/Shell';
 import { Band, Bands } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, KpiStrip, TrendVisual } from '../ui/widgets';
+import { AgeBucketsVisual } from '../ui/workbook';
 import { CashVsGoal } from './EnterpriseOverview';
 
 export function Cash() {
@@ -26,29 +27,31 @@ export function Cash() {
     <div className="page">
       <CanvasHeader />
       <Band type="kpi" />
-      <KpiStrip ids={['cash', 'cash_pct_npsr', 'net_collection_rate', 'payment_variance_pct', 'pos_collections', 'cost_to_collect']} />
-      <KpiStrip ids={['patient_cash', 'refunds', 'retractions', 'retraction_pct_cash', 'contractual_adj_dollars', 'service_month_yield']} />
+      <KpiStrip ids={['cash', 'cash_pct_npsr', 'cash_lt90_pct', 'patient_cash', 'pos_collections', 'refunds', 'contractual_adj_dollars']} />
+      <KpiStrip ids={['admin_adj', 'charity', 'bad_debt', 'bad_debt_pct', 'denial_writeoffs', 'denial_wo_pct_npsr', 'npsr']} />
+      <KpiStrip ids={['net_collection_rate', 'payment_variance_pct', 'retractions', 'retraction_pct_cash', 'service_month_yield', 'cost_to_collect']} />
       <Bands
         trend={[
           [<CashVsGoal months={18} />, <MonthPace />],
-          [<TrendVisual id="cash_pct_npsr" months={18} />, <TrendVisual id="net_collection_rate" months={18} />],
-          [<TrendVisual id="service_month_yield" months={18} title="Life-to-date yield by service month (recent months still maturing)" />],
+          [<TrendVisual id="cash_pct_npsr" alt={['cash_lt90_pct']} months={18} />, <TrendVisual id="bad_debt_pct" alt={['denial_wo_pct_npsr']} months={18} />],
+          [<TrendVisual id="net_collection_rate" months={18} />, <TrendVisual id="service_month_yield" months={18} title="Life-to-date yield by service month (recent months still maturing)" />],
         ]}
         where={[
           [<YtdByHospital />],
           [
             <BreakdownVisual id="cash_pct_npsr" dim="facility" onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />,
+            <BreakdownVisual id="cash" dim="financialClass" title="Cash collections by payor group" subtitle="Click Self Pay for patient cash" />,
             <BreakdownVisual id="cash" dim="payer" top={12} />,
-            <BreakdownVisual id="cash" dim="financialClass" subtitle="Click Self Pay for patient cash" />,
           ],
         ]}
         why={[
+          [<AgeBucketsVisual kind="cash" title="Cash collections by discharge age" />, <NonChargeTransactions />],
+          [<AgeBucketsVisual kind="writeoffs" title="Denial write-offs by age" />, <AgeBucketsVisual kind="baddebt" title="Bad debt write-offs by age" />],
           [
-            <BreakdownVisual id="net_collection_rate" dim="financialClass" title="Net collection rate by financial class" />,
-            <BreakdownVisual id="contractual_adj_dollars" alt={['contractual_adj_pct']} dim="financialClass" />,
+            <BreakdownVisual id="net_collection_rate" dim="financialClass" title="Net collection rate by payor group" />,
+            <BreakdownVisual id="contractual_adj_dollars" alt={['contractual_adj_pct']} dim="financialClass" title="Contractual adj. $ by payor group" />,
             <BreakdownVisual id="retractions" alt={['retraction_pct_cash']} dim="payer" title="Insurance retractions by payer" top={11} />,
           ],
-          [<NonChargeTransactions />],
         ]} />
     </div>
   );
@@ -140,8 +143,9 @@ function YtdByHospital() {
   );
 }
 
-const NON_CHARGE = ['bad_debt', 'charity', 'denial_writeoffs', 'refunds', 'retractions'];
-const NON_CHARGE_LABEL = ['bad_debt', 'charity', 'denial_writeoffs', 'refunds', 'retractions'].map(metricLabel);
+// Workbook "Other Patient AR Transactions". Insurance retractions are not in the workbook (v3+: KPI strip only).
+const NON_CHARGE = ['bad_debt', 'charity', 'denial_writeoffs', 'admin_adj', 'refunds'];
+const NON_CHARGE_LABEL = NON_CHARGE.map(metricLabel);
 
 /** Non-charge transactions other than contractuals, in the period. Click a bar to analyze it. */
 function NonChargeTransactions() {

@@ -37,18 +37,18 @@ export function FacilityProfile() {
         )} />
       {ready && (
         <>
-          <KpiStrip ids={['npsr', 'cash_pct_npsr', 'net_ar_days', 'denial_rate', 'clean_claim_rate', 'dnfb_days', 'cost_to_collect']} />
+          <KpiStrip ids={['npsr', 'cash_pct_npsr', 'gross_ar_days', 'denial_dollar_rate', 'clean_claim_rate', 'dnfb_days', 'dnsp_days']} />
           <div className="row cols-7-5">
             <VsSystem facKey={f.key} />
             <div className="stack">
               <TrendVisual id="net_ar_days" months={18} height={200} compareSel={systemSel} compareLabel="System" title="Net A/R days: hospital vs system" />
-              <TrendVisual id="denial_rate" months={18} height={200} compareSel={systemSel} compareLabel="System" title="Denial rate: hospital vs system" />
+              <TrendVisual id="denial_dollar_rate" months={18} height={200} compareSel={systemSel} compareLabel="System" title="Denial rate ($): hospital vs system" />
             </div>
           </div>
           <div className="row cols-3">
-            <BreakdownVisual id="net_ar" dim="arAge" sortBy="natural" title="Net A/R aging" />
-            <BreakdownVisual id="net_ar" dim="payer" title="Net A/R by payer" top={10} />
-            <BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by category" />
+            <BreakdownVisual id="gross_ar" dim="arAge" sortBy="natural" title="Gross A/R aging" />
+            <BreakdownVisual id="gross_ar" dim="financialClass" title="Gross A/R by payor group" />
+            <BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by reason" />
           </div>
         </>
       )}

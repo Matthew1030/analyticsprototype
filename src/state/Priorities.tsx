@@ -92,7 +92,7 @@ export function PriorityProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback((item: PriorityItem) => setSt((s) => {
     const cur = s.seen[item.id];
-    if (cur && cur.label === item.label && cur.group === item.group) return s;
+    if (cur && cur.label === item.label && cur.group === item.group && !!cur.gap === !!item.gap) return s;
     return { ...s, seen: { ...s.seen, [item.id]: item } };
   }), []);
 
@@ -154,8 +154,8 @@ export function PriorityProvider({ children }: { children: ReactNode }) {
  */
 export function usePriorityItem(item: PriorityItem) {
   const { register, decisions, on, preview } = usePriorities();
-  const { id, kind, label, group, page } = item;
-  useEffect(() => { register({ id, kind, label, group, ...(page ? { page } : {}) }); }, [register, id, kind, label, group, page]);
+  const { id, kind, label, group, page, gap } = item;
+  useEffect(() => { register({ id, kind, label, group, ...(page ? { page } : {}), ...(gap ? { gap } : {}) }); }, [register, id, kind, label, group, page, gap]);
   const e = effectiveTier(item, decisions);
   const cls = [
     on ? `prio-item prio-${e.tier ?? 'unset'}` : '',

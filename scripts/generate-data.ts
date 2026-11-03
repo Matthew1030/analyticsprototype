@@ -32,7 +32,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ACCOUNT_STATUS, AR_AGE, BILLED_STATUS, DENIAL_CATEGORIES, DNFB_AGE, DNFB_HOLDS, EDIT_CATEGORIES,
   FACILITIES, FC_SELF_PAY, FINANCIAL_CLASSES, ORGANIZATION, PATIENT_TYPES, PAYERS, REGIONS,
-  ROOT_CAUSES, SERVICE_LINES, SOURCE_SYSTEMS,
+  ROOT_CAUSES, SERVICE_LINES, SOURCE_SYSTEMS, DNFB_OWNERS, POS_SERVICES, WRITEOFF_REASONS,
 } from './dimensions';
 import {
   monthEndDay, monthIndexOfDay, monthIndexOfKey, monthStartDay, weekday,
@@ -92,8 +92,8 @@ const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
 const sround = (x: number) => Math.floor(x + rnd());
 
 /** Second, independent stream for the KPI inventory columns (see header). */
-const r2 = (() => {
-  const r = mulberry32(cfg.seed + 7919);
+const makeStream = (seed: number) => {
+  const r = mulberry32(seed);
   const chance2 = (p: number) => r() < p;
   const uniform2 = (a: number, b: number) => a + (b - a) * r();
   const normal2 = (mean = 0, sd = 1) => {
@@ -114,7 +114,10 @@ const r2 = (() => {
     randInt: (a: number, b: number) => Math.floor(uniform2(a, b + 1)),
     sround: (x: number) => Math.floor(x + r()),
   };
-})();
+};
+const r2 = makeStream(cfg.seed + 7919);
+/** Third stream for the workbook columns (QHC RCM Dashboard), so the earlier columns keep their values. */
+const r3 = makeStream(cfg.seed + 104729);
 
 // ---------- calendar ----------
 const endMi = monthIndexOfKey(cfg.endMonth);
@@ -290,7 +293,7 @@ for (let day = genStartDay; day <= asOfDay; day++) {
         }
         if (fc === 1) { [3, 4, 5].forEach((k) => { rcMix[k] *= 1.5; }); [6, 7].forEach((k) => { rcMix[k] *= 1.4; }); }
         if (fc === 2 || fc === 3) [0, 1, 2].forEach((k) => { rcMix[k] *= 1.6; });
-        if (fc === 4) [3, 9, 10].forEach((k) => { rcMix[k] *= 1.3; });
+        if (payer >= 6 && payer <= 9) [3, 9, 10].forEach((k) => { rcMix[k] *= 1.3; }); // commercial payers
         if (!inpatient) { rcMix[6] *= 0.1; rcMix[11] *= 0.1; }
         if (pr.maCobSpike && fc === 1) {
           const spike = clamp((p - 0.3) / 0.55, 0, 1);
@@ -330,7 +333,7 @@ for (let day = genStartDay; day <= asOfDay; day++) {
             payAmt = Math.round(net * PAY_RATIO[payer] * uniform(0.985, 1.005));
             closeD = payD;
           } else {
-            woD = denD + (apl ? randInt(90, 210) : r.category === 7 ? randInt(20, 60) : randInt(45, 130));
+            woD = denD + (apl ? randInt(90, 210) : r.category === 11 ? randInt(20, 60) : randInt(45, 130)); // 11 = Timely Filing
             closeD = woD;
           }
         } else {
@@ -437,7 +440,8 @@ for (let i = 0; i < nAcc; i++) {
     if (S >= X.sbd[i]) break;
     const stage = S < X.fbd[i] ? 0 : 1; // 0 = DNFB, 1 = DNSP (billed, not submitted)
     const hold = stage === 0 ? A.hold[i] : 5;
-    const k = `${S}|${A.fac[i]}|${A.svc[i]}|${hold}|${dnfbAgeOf(S - dd)}|${stage}`;
+    // DNFB ages from discharge; DNSP from import into the scrubber (final bill), as in the workbook.
+    const k = `${S}|${A.fac[i]}|${A.svc[i]}|${hold}|${dnfbAgeOf(stage === 0 ? S - dd : S - X.fbd[i])}|${stage}`;
     const row = dnfbMap.get(k) ?? [0, 0];
     row[0] += A.gross[i]; row[1] += 1;
     dnfbMap.set(k, row);
@@ -455,6 +459,15 @@ const FE_COLS = [
   'openOrders24hEod', 'ordersScheduled3Plus', 'scheduledUnder72h', 'preRegDone72', 'finCleared72',
   'ordersDuplicate', 'ordersCancelled', 'ordersLeakage', 'ordersAlreadyScheduled',
   'effortsExhausted', 'medicaidEligible', 'applicationsCompleted',
+  // Workbook columns (third stream): scheduling turnaround and open-order age, PAC deferrals,
+  // completion windows by team, pre-reg outcome, call time, E&E application outcomes, ePars.
+  'scheduleTatSum', 'openOrderAgeSum', 'defFinRisk', 'defAuth', 'defReferral',
+  'preRegDone48', 'finCleared48',
+  'preRegSdDue', 'preRegSdDone', 'preReg1dDue', 'preReg1dDone',
+  'htrSdDue', 'htrSdDone', 'htr1dDue', 'htr1dDone', 'sdcSdDue', 'sdcSdDone', 'sdc1dDue', 'sdc1dDone', 'ipDue', 'ipDone',
+  'preRegClosed', 'preRegRs', 'preRegWn', 'preRegOb',
+  'talkSecs', 'appsApproved', 'appsDenied',
+  'eparsBilled', 'eparsUnbilled', 'epars7Plus', 'epars7PlusCount', 'eparsHim', 'eparsPtAccess', 'eparsOther',
 ] as const;
 const FE: Record<string, number[]> = Object.fromEntries(FE_COLS.map((c) => [c, []]));
 const lastFourWeeks = asOfDay - 27;
@@ -498,7 +511,33 @@ for (const f of FACILITIES) {
       row.ordersScheduled3Plus = r2.sround(scheduled * share3);
       row.scheduledUnder72h = r2.sround(due * clamp(1 - share3 + r2.normal(0.02, 0.015), 0, 0.9));
       row.preRegDone72 = r2.sround(row.preRegDone * clamp(r2.normal(0.86 + 0.04 * p, 0.02), 0.5, 1));
+      // Workbook: schedule turnaround (order to scheduled) and the age of open orders.
+      row.scheduleTatSum = r3.sround(scheduled * clamp(r3.normal(2.4 - 0.6 * p + (pr.schedDrop && day >= lastFourWeeks ? 1.2 : 0), 0.3), 0.3, 8));
+      row.openOrderAgeSum = r3.sround(open * clamp(r3.normal(5.5 - 1.5 * p + (pr.schedDrop && day >= lastFourWeeks ? 2 : 0), 0.5), 1, 20));
+      // DPA I 48 hours out: stricter than 24 hours.
+      row.preRegDone48 = r3.sround(row.preRegDone * clamp(r3.normal(0.93 + 0.02 * p, 0.015), 0.6, 1));
+      // Completion by team for accounts scheduled same day and 1 day out (short-notice work).
+      const team = (share: number, sd: number, d1: number) => {
+        const sdDue = r3.sround(due * share);
+        const d1Due = r3.sround(due * share * 1.4);
+        return [sdDue, r3.sround(sdDue * clamp(r3.normal(sd + 0.05 * p, 0.04), 0.2, 1)), d1Due, r3.sround(d1Due * clamp(r3.normal(d1 + 0.04 * p, 0.03), 0.3, 1))];
+      };
+      [row.preRegSdDue, row.preRegSdDone, row.preReg1dDue, row.preReg1dDone] = team(0.05, 0.62, 0.81);
+      [row.htrSdDue, row.htrSdDone, row.htr1dDue, row.htr1dDone] = team(0.03, 0.55, 0.76);
+      [row.sdcSdDue, row.sdcSdDone, row.sdc1dDue, row.sdc1dDone] = team(0.02, 0.58, 0.79);
+      // Pre-reg outcome of closed accounts: Ready for Service (RS), Workup Needed (WN) or blank, Open Balance (OB/CD).
+      const closedPr = row.preRegDone;
+      const wn = r3.sround(closedPr * clamp(r3.normal(0.09 - 0.03 * p + (f.key === 6 ? 0.05 : 0), 0.015), 0.01, 0.4));
+      const ob = r3.sround(closedPr * clamp(r3.normal(0.06, 0.01), 0.01, 0.3));
+      row.preRegClosed = closedPr;
+      row.preRegWn = wn;
+      row.preRegOb = ob;
+      row.preRegRs = Math.max(0, closedPr - wn - ob);
     }
+    // PAC deferrals: accounts at risk of deferral for financial risk, authorization or referral.
+    row.defFinRisk = r3.poisson(9 * pr.weight * wk * (1.1 - 0.3 * p));
+    row.defAuth = r3.poisson(13 * pr.weight * wk * (pr.slowMa ? 1.35 : 1) * (moy <= 1 ? 1.2 : 1));
+    row.defReferral = r3.poisson(4 * pr.weight * wk);
     // Eligibility: all registrations. Lower at Pine Ridge (registration quality issue).
     const eligRate = f.key === 6 ? 0.9 : 0.965 + 0.01 * p;
     row.eligDue = regs;
@@ -511,6 +550,10 @@ for (const f of FACILITIES) {
     row.finClearDue = sround(regs * 0.45);
     row.finCleared = sround(row.finClearDue * clamp(normal(0.86 + 0.04 * p - (f.key === 6 ? 0.07 : 0), 0.015), 0.6, 1));
     row.finCleared72 = r2.sround(row.finCleared * clamp(r2.normal(0.83 + 0.05 * p - (f.key === 6 ? 0.05 : 0), 0.02), 0.4, 1));
+    // DPA II 48 hours out, and inpatient completion by the prior day.
+    row.finCleared48 = r3.sround(row.finCleared * clamp(r3.normal(0.91 + 0.03 * p - (f.key === 6 ? 0.04 : 0), 0.015), 0.5, 1));
+    row.ipDue = r3.sround(regs * 0.035);
+    row.ipDone = r3.sround(row.ipDue * clamp(r3.normal(0.88 + 0.04 * p, 0.03), 0.5, 1));
     if (pr.hasCalls) {
       const offered = poisson(620 * pr.weight * wk * (moy <= 1 ? 1.15 : 1));
       const abandoned = sround(offered * clamp(normal(moy <= 1 ? 0.06 : 0.035, 0.008), 0.005, 0.15));
@@ -520,6 +563,7 @@ for (const f of FACILITIES) {
       row.callsAbandoned = abandoned;
       row.answerWaitSecs = sround(answered * clamp(normal(moy <= 1 ? 48 : 31, 6), 8, 120));
       row.callsOutbound = r2.poisson(270 * pr.weight * wk);
+      row.talkSecs = r3.sround(answered * clamp(r3.normal(moy <= 1 ? 372 : 336, 25), 120, 900));
     }
     // Central business office (back-end) customer service line, allocated to the hospital it serves.
     const cbo = r2.poisson(240 * pr.weight * wk * (moy <= 2 ? 1.2 : 1));
@@ -537,6 +581,20 @@ for (const f of FACILITIES) {
     row.effortsExhausted = r2.sround((sp - screened) * clamp(r2.normal(0.4, 0.06), 0, 1));
     row.medicaidEligible = r2.sround(screened * clamp(r2.normal(0.38, 0.04), 0.1, 0.8));
     row.applicationsCompleted = r2.sround(row.medicaidEligible * clamp(r2.normal(0.66 + 0.12 * p, 0.05), 0.2, 1));
+    // Application outcomes (workbook: approved, denied, the rest pending).
+    row.appsApproved = r3.sround(row.applicationsCompleted * clamp(r3.normal(0.58 + 0.08 * p, 0.05), 0.1, 0.95));
+    row.appsDenied = Math.min(row.applicationsCompleted - row.appsApproved, r3.sround(row.applicationsCompleted * clamp(r3.normal(0.17, 0.03), 0, 0.5)));
+    // ePars (R1 assigned tasks): open task dollars at end of day, by owner, and the part assigned 7+ days.
+    const eparsTotal = Math.max(0, r3.normal(1_150_000 * pr.weight * (1 + 0.25 * (pr.codingBacklog ? p : 0)), 60_000 * pr.weight));
+    const him = eparsTotal * clamp(r3.normal(0.46 + (pr.codingBacklog ? 0.1 : 0), 0.03), 0.1, 0.8);
+    const pta = eparsTotal * clamp(r3.normal(0.27, 0.03), 0.05, 0.6);
+    row.eparsHim = Math.round(him);
+    row.eparsPtAccess = Math.round(pta);
+    row.eparsOther = Math.round(Math.max(0, eparsTotal - him - pta));
+    row.eparsUnbilled = Math.round(eparsTotal * clamp(r3.normal(0.38, 0.03), 0.1, 0.7));
+    row.eparsBilled = Math.round(eparsTotal - row.eparsUnbilled);
+    row.epars7Plus = Math.round(eparsTotal * clamp(r3.normal(0.34 + (pr.codingBacklog ? 0.12 * p : 0), 0.03), 0.05, 0.9));
+    row.epars7PlusCount = r3.sround(row.epars7Plus / 4200);
     for (const c of FE_COLS) FE[c].push(row[c] ?? -1);
   }
 }
@@ -552,7 +610,7 @@ for (let i = 0; i < nAcc; i++) {
   add(X.payD[i], A.payAmt[i]);
   add(A.dd[i], A.pos[i]);
 }
-const OPS: Record<string, number[]> = { day: [], fac: [], rcmCost: [] };
+const OPS: Record<string, number[]> = { day: [], fac: [], rcmCost: [], adminAdj: [] };
 for (const f of FACILITIES) {
   const pr = PROFILES[f.key];
   // Cost is mostly fixed (staff, vendors), so it does not follow cash month to month.
@@ -564,6 +622,8 @@ for (const f of FACILITIES) {
     OPS.day.push(monthStartDay(mi));
     OPS.fac.push(f.key);
     OPS.rcmCost.push(Math.round(base * drift * uniform(0.95, 1.05)));
+    // Workbook: admin adjustments (small balance and administrative write-offs), monthly.
+    OPS.adminAdj.push(Math.round(Math.max(0, r3.normal(0.0045, 0.0007)) * W * (cashByFacMonth.get(`${f.key}|${mi}`) ?? 0)));
   }
 }
 
@@ -605,6 +665,7 @@ sizes['dims.json'] = write('dims.json', {
   rootCauses: ROOT_CAUSES.map(({ key, name, category, recoverable }) => ({ key, name, category, recoverable })),
   editCategories: EDIT_CATEGORIES, dnfbHolds: DNFB_HOLDS, dnfbAge: DNFB_AGE, arAge: AR_AGE,
   billedStatus: BILLED_STATUS, accountStatus: ACCOUNT_STATUS, sourceSystems: SOURCE_SYSTEMS,
+  dnfbOwners: DNFB_OWNERS, posServices: POS_SERVICES, writeoffReasons: WRITEOFF_REASONS,
 });
 // Planned availability date: Nth business day after each month closes.
 const availability: Record<string, string> = {};

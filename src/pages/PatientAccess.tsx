@@ -15,23 +15,31 @@ import { Band, Bands, TabBox, useGroupStatus, useTab, type TabDef } from '../ui/
 import { Visual } from '../ui/Visual';
 import { weekLabel, weeksEnding } from '../ui/weekly';
 import { BreakdownVisual, KpiStrip, Scorecard, TrendVisual } from '../ui/widgets';
+import { MetricGroups, MetricsByHospital, PosByService } from '../ui/workbook';
 
+// Workbook metrics first (QHC RCM Dashboard: Scheduling, PAC, Call Metrics, POS, Self Pay E&E). Metrics
+// the workbook does not hold stay at the end of each list, marked * and v3+ by default.
 const ACCESS_IDS = [
+  'scheduled_rate', 'orders_received', 'scheduled_volume', 'open_orders', 'open_order_age', 'open_order_days', 'schedule_tat',
+  'deferrals_total', 'deferrals_fin_risk', 'deferrals_auth', 'deferrals_referral',
+  'prereg_rate', 'prereg_rate_48h', 'prereg_same_day', 'prereg_1day', 'fin_clearance_rate', 'fin_clearance_rate_48h', 'ip_prior_day',
+  'prereg_rs_pct', 'prereg_wn_pct', 'prereg_ob_pct',
+  'call_volume_total', 'call_volume', 'calls_outbound', 'call_abandon_rate', 'asa', 'avg_call_time',
+  'pos_collections', 'pos_pct_sp_cash', 'pos_pct_net',
+  'medicaid_in_scope', 'medicaid_screening_rate', 'medicaid_eligible_completion', 'eligible_conversion_rate', 'front_end_denial_rate',
+  // v3+
   'eligibility_rate', 'auth_rate', 'preservice_auth_rate', 'registration_accuracy', 'registration_edits',
-  'call_volume_total', 'call_abandon_rate_all', 'call_abandon_rate', 'cbo_call_abandon_rate', 'asa',
-  'scheduled_rate', 'scheduled_rate_final', 'scheduled_volume', 'open_orders', 'open_orders_24h_pct', 'lead_time_3plus_pct',
-  'prereg_rate', 'prereg_rate_72h', 'fin_clearance_rate', 'fin_clearance_rate_72h', 'scheduled_under_72h_pct',
-  'pos_collections', 'pos_rate', 'pos_yield', 'pos_estimate_accuracy', 'pos_missed_residual_pct',
-  'medicaid_in_scope', 'medicaid_screening_rate', 'medicaid_eligible_completion', 'coverage_found_rate', 'front_end_denial_rate',
+  'scheduled_rate_final', 'open_orders_24h_pct', 'lead_time_3plus_pct', 'prereg_rate_72h', 'fin_clearance_rate_72h', 'scheduled_under_72h_pct',
+  'call_abandon_rate_all', 'cbo_call_abandon_rate', 'pos_rate', 'pos_yield', 'pos_estimate_accuracy', 'pos_missed_residual_pct', 'coverage_found_rate',
 ];
 
 const TABS: { id: string; label: string; kpis: string[] }[] = [
-  { id: 'summary', label: 'Summary', kpis: ['eligibility_rate', 'auth_rate', 'preservice_auth_rate', 'registration_accuracy', 'fin_clearance_rate', 'pos_rate', 'front_end_denial_rate'] },
-  { id: 'scheduling', label: 'Scheduling', kpis: ['scheduled_rate', 'scheduled_rate_final', 'orders_received', 'open_orders', 'open_orders_24h_pct', 'lead_time_3plus_pct', 'schedule_lead_time'] },
-  { id: 'prereg', label: 'Pre-registration and clearance', kpis: ['prereg_rate', 'prereg_rate_72h', 'fin_clearance_rate', 'fin_clearance_rate_72h', 'scheduled_under_72h_pct'] },
-  { id: 'eligibility', label: 'Eligibility and enrollment', kpis: ['eligibility_rate', 'medicaid_in_scope', 'medicaid_screening_rate', 'coverage_found_rate', 'medicaid_eligible_completion'] },
-  { id: 'pos', label: 'POS collections', kpis: ['pos_collections', 'pos_rate', 'pos_yield', 'pos_estimate_accuracy', 'pos_missed_residual_pct', 'pos_pct_net'] },
-  { id: 'contact', label: 'Contact center', kpis: ['call_volume_total', 'call_volume', 'calls_outbound', 'call_abandon_rate_all', 'call_abandon_rate', 'cbo_call_abandon_rate', 'asa'] },
+  { id: 'summary', label: 'Summary', kpis: ['scheduled_rate', 'prereg_rate', 'fin_clearance_rate', 'deferrals_total', 'call_abandon_rate', 'pos_collections', 'medicaid_screening_rate', 'front_end_denial_rate'] },
+  { id: 'scheduling', label: 'Scheduling', kpis: ['scheduled_rate', 'orders_received', 'open_orders', 'open_order_age', 'open_order_days', 'schedule_tat', 'scheduled_rate_final', 'open_orders_24h_pct', 'lead_time_3plus_pct'] },
+  { id: 'prereg', label: 'Pre-registration and clearance', kpis: ['prereg_rate', 'prereg_rate_48h', 'fin_clearance_rate', 'fin_clearance_rate_48h', 'ip_prior_day', 'prereg_rs_pct', 'deferrals_total', 'prereg_rate_72h', 'fin_clearance_rate_72h'] },
+  { id: 'eligibility', label: 'Eligibility and enrollment', kpis: ['medicaid_in_scope', 'sp_not_screened', 'medicaid_screening_rate', 'medicaid_eligible_completion', 'eligible_conversion_rate', 'apps_approved', 'eligibility_rate', 'coverage_found_rate'] },
+  { id: 'pos', label: 'POS collections', kpis: ['pos_collections', 'pos_pct_sp_cash', 'pos_pct_net', 'patient_cash', 'pos_rate', 'pos_yield', 'pos_estimate_accuracy'] },
+  { id: 'contact', label: 'Contact center', kpis: ['call_volume_total', 'call_volume', 'calls_outbound', 'call_abandon_rate', 'asa', 'avg_call_time', 'call_abandon_rate_all', 'cbo_call_abandon_rate'] },
 ];
 const TAB_KPIS = TABS.map((t) => t.kpis);
 
@@ -52,29 +60,31 @@ export function PatientAccess() {
         {tab === 'summary' && (
           <Bands
             trend={[
+              <TrendVisual id="prereg_rate" alt={['fin_clearance_rate', 'scheduled_rate']} months={18} height={220} />,
               <TrendVisual id="front_end_denial_rate" months={18} title="Front-end denial rate trend" height={220} />,
-              <TrendVisual id="registration_accuracy" alt={['eligibility_rate', 'auth_rate']} months={18} height={220} />,
             ]}
             where={[
+              <BreakdownVisual id="prereg_rate" alt={['fin_clearance_rate']} dim="facility" onDrill={drill} />,
+              <MetricsByHospital ids={['deferrals_fin_risk', 'deferrals_auth', 'deferrals_referral']} stacked title="PAC deferrals by hospital" />,
               <BreakdownVisual id="front_end_denial_rate" dim="facility" onDrill={drill} />,
-              <BreakdownVisual id="registration_accuracy" alt={['registration_edits']} dim="facility" onDrill={drill} />,
-              <BreakdownVisual id="preservice_auth_rate" dim="facility" onDrill={drill} />,
             ]}
             why={[
-              <BreakdownVisual id="front_end_denial_rate" dim="payer" title="Front-end denial rate by payer" top={11} />,
-              <BreakdownVisual id="registration_accuracy" dim="patientType" title="Registration accuracy by patient type" />,
+              <BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by reason" subtitle="Front-end reasons: Authorization, Coordination Of Benefits, Eligibility · click to filter" />,
+              <MetricsByHospital ids={['prereg_rs_pct', 'prereg_wn_pct', 'prereg_ob_pct']} stacked title="Pre-reg outcome by hospital" subtitle="Ready for Service (RS), Workup Needed (WN) or blank, Open Balance (OB/CD)" />,
             ]}
             act={<Scorecard ids={ACCESS_IDS} title="Patient access scorecard" groupByArea={false} />}
-            actNote="Detail: every patient access metric" />
+            actNote="Detail: every patient access metric (workbook metrics first, then v3+)" />
         )}
         {tab === 'scheduling' && (
           <Bands
             trend={[
               <WeeklyScheduling />,
-              <TrendVisual id="scheduled_rate" alt={['scheduled_rate_final']} months={18} height={220} />,
+              <TrendVisual id="scheduled_rate" alt={['schedule_tat', 'open_order_age']} months={18} height={220} />,
             ]}
             where={[
-              <BreakdownVisual id="open_orders_24h_pct" alt={['open_orders']} dim="facility" title="Open orders in process > 24 hours by hospital" onDrill={drill} />,
+              <BreakdownVisual id="open_order_age" alt={['open_orders', 'open_order_days']} dim="facility" title="Open orders by hospital" onDrill={drill} />,
+              <BreakdownVisual id="schedule_tat" dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="open_orders_24h_pct" dim="facility" title="Open orders in process > 24 hours by hospital" onDrill={drill} />,
               <BreakdownVisual id="lead_time_3plus_pct" alt={['schedule_lead_time']} dim="facility" onDrill={drill} />,
             ]}
             why={[<OrderOutcomes />]} />
@@ -82,53 +92,76 @@ export function PatientAccess() {
         {tab === 'prereg' && (
           <Bands
             trend={[
-              <TrendVisual id="prereg_rate_72h" alt={['prereg_rate']} months={18} height={220} />,
-              <TrendVisual id="fin_clearance_rate_72h" alt={['fin_clearance_rate']} months={18} height={220} />,
+              <TrendVisual id="prereg_rate" alt={['prereg_rate_48h']} months={18} height={220} />,
+              <TrendVisual id="fin_clearance_rate" alt={['fin_clearance_rate_48h']} months={18} height={220} />,
             ]}
             where={[
-              <BreakdownVisual id="prereg_rate_72h" alt={['prereg_rate']} dim="facility" onDrill={drill} />,
-              <BreakdownVisual id="fin_clearance_rate_72h" alt={['fin_clearance_rate']} dim="facility" onDrill={drill} />,
-              <BreakdownVisual id="scheduled_under_72h_pct" dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="prereg_rate" alt={['prereg_rate_48h']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="fin_clearance_rate" alt={['fin_clearance_rate_48h', 'ip_prior_day']} dim="facility" onDrill={drill} />,
+              <MetricsByHospital ids={['prereg_rs_pct', 'prereg_wn_pct', 'prereg_ob_pct']} stacked title="Pre-reg outcome by hospital" subtitle="Ready for Service (RS), Workup Needed (WN) or blank, Open Balance (OB/CD)" />,
+            ]}
+            why={[
+              <MetricGroups title="Completion by team: same day vs 1 day out" subtitle="Short-notice accounts · workbook Pre Reg, HTR and SDC completion rates"
+                series={['Same day', '1 day out']}
+                groups={[{ label: 'Pre-reg', ids: ['prereg_same_day', 'prereg_1day'] }, { label: 'HTR', ids: ['htr_same_day', 'htr_1day'] }, { label: 'SDC', ids: ['sdc_same_day', 'sdc_1day'] }]} />,
+              <TrendVisual id="deferrals_total" alt={['deferrals_fin_risk', 'deferrals_auth', 'deferrals_referral']} months={18} height={220} />,
+              <BreakdownVisual id="prereg_rate_72h" alt={['fin_clearance_rate_72h', 'scheduled_under_72h_pct']} dim="facility" onDrill={drill} />,
             ]} />
         )}
         {tab === 'eligibility' && (
           <Bands
             trend={[
-              <TrendVisual id="eligibility_rate" months={18} height={220} />,
-              <TrendVisual id="medicaid_screening_rate" alt={['coverage_found_rate', 'medicaid_eligible_completion']} months={18} height={220} />,
+              <TrendVisual id="medicaid_screening_rate" alt={['medicaid_eligible_completion', 'eligible_conversion_rate']} months={18} height={220} />,
+              <ApplicationOutcomes />,
             ]}
             where={[
-              <BreakdownVisual id="eligibility_rate" dim="facility" title="Eligibility rate by hospital" onDrill={drill} />,
-              <BreakdownVisual id="medicaid_screening_rate" alt={['medicaid_in_scope']} dim="facility" onDrill={drill} />,
-              <BreakdownVisual id="medicaid_eligible_completion" alt={['coverage_found_rate']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="medicaid_screening_rate" alt={['medicaid_in_scope', 'sp_not_screened']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="medicaid_eligible_completion" alt={['eligible_conversion_rate']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="eligibility_rate" alt={['coverage_found_rate']} dim="facility" title="Eligibility rate by hospital" onDrill={drill} />,
             ]} />
         )}
         {tab === 'pos' && (
           <Bands
             trend={[
               <TrendVisual id="pos_collections" months={18} height={220} />,
-              <TrendVisual id="pos_yield" alt={['pos_estimate_accuracy']} months={18} height={220} />,
+              <TrendVisual id="pos_pct_sp_cash" alt={['pos_pct_net']} months={18} height={220} />,
             ]}
             where={[
               <BreakdownVisual id="pos_collections" dim="facility" title="POS collections by hospital" onDrill={drill} />,
-              <BreakdownVisual id="pos_yield" alt={['pos_missed_residual_pct']} dim="facility" title="POS yield by hospital" onDrill={drill} />,
-              <BreakdownVisual id="pos_estimate_accuracy" dim="facility" title="Estimate accuracy by hospital" onDrill={drill} />,
+              <BreakdownVisual id="pos_pct_sp_cash" alt={['pos_pct_net']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="pos_yield" alt={['pos_estimate_accuracy', 'pos_missed_residual_pct']} dim="facility" title="POS yield by hospital" onDrill={drill} />,
             ]}
-            why={[<BreakdownVisual id="pos_yield" dim="patientType" title="POS yield by patient type" />]} />
+            why={[<PosByService />]} />
         )}
         {tab === 'contact' && (
           <Bands
             trend={[
-              <TrendVisual id="call_volume_total" alt={['call_abandon_rate_all']} months={18} title="Call volume and abandonment, all lines" height={220} />,
-              <TrendVisual id="asa" months={18} height={220} />,
+              <TrendVisual id="call_volume_total" alt={['call_abandon_rate']} months={18} title="Call volume and abandonment" height={220} />,
+              <TrendVisual id="asa" alt={['avg_call_time']} months={18} height={220} />,
             ]}
             where={[
-              <BreakdownVisual id="call_abandon_rate_all" alt={['call_abandon_rate', 'cbo_call_abandon_rate']} dim="facility" onDrill={drill} />,
-              <BreakdownVisual id="asa" dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="call_abandon_rate" dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="asa" alt={['avg_call_time']} dim="facility" onDrill={drill} />,
+              <BreakdownVisual id="call_abandon_rate_all" alt={['cbo_call_abandon_rate']} dim="facility" onDrill={drill} />,
             ]} />
         )}
       </TabBox>
     </div>
+  );
+}
+
+/** Medicaid application outcomes in the period (workbook: approved, denied, pending). */
+function ApplicationOutcomes() {
+  const { engine, period, sel } = useApp();
+  const ids = ['apps_approved', 'apps_denied', 'apps_pending'];
+  const vals = useMemo(() => ids.map((id) => evaluate(METRIC_BY_ID[id], engine, period, sel).value ?? 0), [engine, period, sel]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <Visual title="Application outcomes" metricId="apps_approved" subtitle={`${period.label} · applications initiated, by outcome`}
+      table={{ columns: ['Outcome', 'Applications'], rows: ids.map((id, i) => [metricLabel(id), fmt(vals[i], 'count')]) }}
+      spec={{ type: 'Column chart', metrics: ids, dimensions: ['Application outcome'] }}>
+      <Chart height={220} ariaLabel="Application outcomes"
+        option={barOption({ labels: ids.map(metricLabel), fmt: (v) => fmt(v, 'count'), labels_on: true, series: [{ name: period.short, data: vals }], colorBy: (i) => SERIES[i] })} />
+    </Visual>
   );
 }
 

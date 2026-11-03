@@ -249,11 +249,25 @@ switches, the metric definition pop-up, Metric Analysis, the Metric catalog and 
 coverage table ("In current dataset" column), and the Metric Dictionary export. Each page has a
 legend under its title.
 
-The lists are in `src/config/datasetGaps.ts`: catalog metrics, client KPI rows that have no catalog
-metric (for example coding accuracy, collector QA scores, total deposits), and views that need a
-missing breakdown (A/R by financial class, DNFB by hold reason). Remove an entry when the data
-becomes available. `tests/datasetGaps.test.ts` checks that each entry points at a real metric,
-KPI row or visual. `docs/dataset-gap-check.md` gives the workbook check for each item.
+Each of these items has **v3+** as its default release in the Prioritize tool, until a facilitator
+rates it. The default shows like a rating inherited from the page, is not stored as a decision,
+and an export writes it as "Yes (default v3+: data not in the current dataset)". A release
+preview of v1 or v2 dims or hides these items, so it shows the dashboard the workbook can fill
+today. The Metric Dictionary and the Metric catalog show the release and the workbook column
+that fills each metric.
+
+The rules are in `src/config/datasetGaps.ts`:
+
+- `WORKBOOK_SOURCE`: the workbook column or formula for each metric the dataset can fill.
+- `METRICS_NOT_IN_DATASET`: every other catalog metric. A test checks that each metric is in
+  exactly one of the two lists.
+- `DIMENSION_METRICS`: the splits the workbook has for each metric. A breakdown on any other
+  dimension (named payer, service line, root cause and so on) is marked.
+- `KPIS_NOT_IN_DATASET` and `VIEWS_NOT_IN_DATASET`: client KPI rows and visuals that need data
+  the workbook does not hold.
+
+Move a metric to `WORKBOOK_SOURCE` when its data becomes available. `docs/dataset-gap-check.md`
+gives the workbook check for each metric.
 
 ## Release prioritization (facilitated session)
 

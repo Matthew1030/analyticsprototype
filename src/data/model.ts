@@ -9,17 +9,25 @@ export interface Dims {
   facilities: { key: number; name: string; short: string; type: string; beds: number; region: number; city: string }[];
   financialClasses: string[];
   payers: { key: number; name: string; fc: number }[];
-  serviceLines: { key: number; name: string; department: string; patientType: string }[];
+  serviceLines: { key: number; name: string; department: string; patientType: string; posService: string }[];
   patientTypes: string[];
-  denialCategories: { key: number; name: string; owner: string }[];
+  /** Initial denial reasons (workbook). `woReason` indexes writeoffReasons. */
+  denialCategories: { key: number; name: string; owner: string; woReason: number }[];
   rootCauses: { key: number; name: string; category: number; recoverable: boolean }[];
   editCategories: { key: number; name: string; owner: string }[];
-  dnfbHolds: { key: number; name: string; owner: string }[];
+  /** `group` indexes dnfbOwners (the workbook's DNFB owner). */
+  dnfbHolds: { key: number; name: string; owner: string; group: number }[];
   dnfbAge: { key: number; name: string; min: number; max: number }[];
   arAge: { key: number; name: string; min: number; max: number }[];
   billedStatus: string[];
   accountStatus: string[];
   sourceSystems: { key: string; name: string; feeds: string; cadence: string }[];
+  /** Workbook DNFB owners: Front End, Mid Cycle, Back End, Other. */
+  dnfbOwners: string[];
+  /** Workbook POS service groups: ED, Inpatient, SDC, Other (serviceLines[].posService). */
+  posServices: string[];
+  /** Workbook denial write-off reasons. */
+  writeoffReasons: string[];
 }
 
 export interface Meta {
@@ -59,8 +67,16 @@ export type FeCol =
   | 'callsOutbound' | 'cboCallsOffered' | 'cboCallsAnswered' | 'cboCallsAbandoned'
   | 'openOrders24hEod' | 'ordersScheduled3Plus' | 'scheduledUnder72h' | 'preRegDone72' | 'finCleared72'
   | 'ordersDuplicate' | 'ordersCancelled' | 'ordersLeakage' | 'ordersAlreadyScheduled'
-  | 'effortsExhausted' | 'medicaidEligible' | 'applicationsCompleted';
-export type OpsCol = 'day' | 'fac' | 'rcmCost';
+  | 'effortsExhausted' | 'medicaidEligible' | 'applicationsCompleted'
+  // Workbook columns (QHC RCM Dashboard).
+  | 'scheduleTatSum' | 'openOrderAgeSum' | 'defFinRisk' | 'defAuth' | 'defReferral'
+  | 'preRegDone48' | 'finCleared48'
+  | 'preRegSdDue' | 'preRegSdDone' | 'preReg1dDue' | 'preReg1dDone'
+  | 'htrSdDue' | 'htrSdDone' | 'htr1dDue' | 'htr1dDone' | 'sdcSdDue' | 'sdcSdDone' | 'sdc1dDue' | 'sdc1dDone' | 'ipDue' | 'ipDone'
+  | 'preRegClosed' | 'preRegRs' | 'preRegWn' | 'preRegOb'
+  | 'talkSecs' | 'appsApproved' | 'appsDenied'
+  | 'eparsBilled' | 'eparsUnbilled' | 'epars7Plus' | 'epars7PlusCount' | 'eparsHim' | 'eparsPtAccess' | 'eparsOther';
+export type OpsCol = 'day' | 'fac' | 'rcmCost' | 'adminAdj';
 
 export interface Dataset {
   dims: Dims;

@@ -9,7 +9,7 @@ import { FRAMEWORK_METRICS } from '../engine/framework';
 import { GRAIN_LABEL, METRIC_BY_ID, METRICS, UNIT_LABEL, type Direction, type MetricDef } from '../engine/metrics';
 import { staticTarget } from '../engine/status';
 import { fmt } from '../format';
-import { notInDataset } from './datasetGaps';
+import { datasetRelease, notInDataset, WORKBOOK_SOURCE } from './datasetGaps';
 import { EXEC_KPIS, MATRIX_KPIS } from '../pages/EnterpriseOverview';
 import { STAGES } from '../pages/RevenueCycle';
 import type { PageId } from '../state/AppState';
@@ -100,6 +100,10 @@ export interface DictionaryRow {
   views: string;
   /** "No *" when the metric is not in the current dataset (datasetGaps.ts). */
   inDataset: string;
+  /** Default release: v3+ when the current dataset cannot fill the metric. */
+  release: string;
+  /** Workbook column or formula that fills the metric. */
+  source: string;
   id: string;
 }
 
@@ -128,6 +132,8 @@ export function dictionaryRows(views: Record<string, PageId[]>): DictionaryRow[]
     recency: m.recency ?? '',
     views: (views[m.id] ?? []).map((p) => VIEW_LABEL[p]).join('; '),
     inDataset: notInDataset(m.id) ? 'No *' : 'Yes',
+    release: datasetRelease(m.id),
+    source: WORKBOOK_SOURCE[m.id] ?? '',
     id: m.id,
   }));
 }
@@ -147,6 +153,8 @@ export const DICTIONARY_COLUMNS: { key: keyof DictionaryRow; label: string }[] =
   { key: 'recency', label: 'Time recency (H/D/W/M/Y)' },
   { key: 'views', label: 'Views' },
   { key: 'inDataset', label: 'In current dataset' },
+  { key: 'release', label: 'Release' },
+  { key: 'source', label: 'Workbook source' },
   { key: 'id', label: 'Catalog ID' },
 ];
 

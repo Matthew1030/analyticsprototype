@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { KPI_COVERAGE, type Coverage, type KpiCoverage } from '../config/kpiCoverage';
 import { kpiItemId } from '../config/priorities';
-import { gapStar, kpiNotInDataset, notInDataset } from '../config/datasetGaps';
+import { datasetRelease, gapStar, kpiNotInDataset, notInDataset, WORKBOOK_SOURCE } from '../config/datasetGaps';
 import type { SelField } from '../engine/engine';
 import { METRIC_BY_ID, METRICS, type MetricDef } from '../engine/metrics';
 import { CONFIG, staticTarget, watchFor } from '../engine/status';
@@ -49,6 +49,8 @@ function Catalog() {
   const cols: GridColumn<MetricDef>[] = [
     { key: 'name', label: 'Metric', value: (m) => m.name, width: 200, render: (m) => <span><b>{m.name}</b><GapMark id={m.id} /><br /><code className="small">{m.id}</code></span>, exportText: (m) => `${m.name}${gapStar(m.id)}` },
     { key: 'inds', label: 'In current dataset', value: (m) => (notInDataset(m.id) ? 'No' : 'Yes'), align: 'left', render: (m) => (notInDataset(m.id) ? <b>No *</b> : 'Yes') },
+    { key: 'rel', label: 'Release', value: (m) => datasetRelease(m.id), align: 'left' },
+    { key: 'wb', label: 'Workbook source', value: (m) => WORKBOOK_SOURCE[m.id] ?? '', align: 'left', render: (m) => <span className="wrap small">{WORKBOOK_SOURCE[m.id] ?? ''}</span> },
     { key: 'area', label: 'RCM area', value: (m) => m.area, align: 'left' },
     { key: 'type', label: 'Type', value: (m) => (m.type === 'balance' ? 'Balance' : 'Flow'), align: 'left' },
     { key: 'unit', label: 'Unit', value: (m) => m.unit, align: 'left' },
@@ -88,6 +90,7 @@ function KpiCoverageTable() {
     { key: 'n', label: '#', value: (r) => r.n, width: 32 },
     { key: 'kpi', label: 'Client KPI', value: (r) => r.kpi, align: 'left', width: 230, render: (r) => <span className="wrap"><b>{r.kpi}</b><GapMark show={kpiNotInDataset(r.dashboard, r.kpi)} /><br /><span className="muted small">{r.dashboard} · {r.stage}</span></span>, exportText: (r) => `${r.kpi}${kpiNotInDataset(r.dashboard, r.kpi) ? ' *' : ''}` },
     { key: 'inds', label: 'In current dataset', value: (r) => (kpiNotInDataset(r.dashboard, r.kpi) ? 'No' : 'Yes'), align: 'left', render: (r) => (kpiNotInDataset(r.dashboard, r.kpi) ? <b>No *</b> : 'Yes') },
+    { key: 'rel', label: 'Release', value: (r) => (kpiNotInDataset(r.dashboard, r.kpi) ? 'v3+' : ''), align: 'left' },
     { key: 'cov', label: 'Coverage', value: (r) => COVERAGE_ORDER.indexOf(r.coverage), align: 'left',
       render: (r) => <span className={`status status-${COVERAGE_CLASS[r.coverage]}`}><span className="status-shape" />{r.coverage}</span>, exportText: (r) => r.coverage },
     { key: 'metrics', label: 'Dashboard metric', value: (r) => r.metrics.map((id) => `${METRIC_BY_ID[id].name}${gapStar(id)}`).join('; '), align: 'left',
@@ -182,12 +185,12 @@ interface Scenario { title: string; question: string; page: PageId; params?: Rec
 
 const SCENARIOS: Scenario[] = [
   {
-    title: 'Why is net A/R increasing?', question: 'Net A/R days rose from about 53 to 60 in six months against a target of 50.', page: 'metric', params: { id: 'net_ar_days' }, filters: {},
-    steps: ['Metric Analysis: trend shows the rise starting in spring 2026.', '“Change by hospital”, set to “vs 6 months earlier”: Williamson Regional rose most. Click its bar to filter.', 'Open A/R: “Aging trend” shows growth in 91–120 and 121–180. Click 121–180.', '“A/R by payer”: Humana Medicare Advantage dominates the bucket. Click it.', '“A/R by account status”: most of it is “Pended, records requested”. Click “View accounts”.'],
+    title: 'Why is net A/R increasing?', question: 'Debit net A/R days rose from about 53 to 60 in six months against the workbook target of 40.', page: 'metric', params: { id: 'net_ar_days' }, filters: {},
+    steps: ['Metric Analysis: trend shows the rise starting in spring 2026.', '“Change by hospital”, set to “vs 6 months earlier”: Williamson Regional rose most. Click its bar to filter.', 'Open A/R: “Aging trend” shows growth in 91–180. Click 91–180.', '“A/R by payor group”: Medicare Managed dominates the bucket. Click it.', '“A/R by account status”: most of it is “Pended, records requested”. Click “View accounts”.'],
   },
   {
-    title: 'Why are denials up at Valley Regional?', question: 'The system denial rate is above the 5% target, highest at Valley Regional.', page: 'denials', filters: {},
-    steps: ['Decomposition tree: Payer → Humana / UHC Medicare Advantage are the largest.', 'Next level Hospital → Valley Regional.', 'Category → Coordination of benefits; root cause → MSP / COB questionnaire.', 'Apply the path as filters, then “View denied claims”.', 'Patient Access page: registration accuracy shows the front-end cause.'],
+    title: 'Why are denials up at Valley Regional?', question: 'Initial denials as a % of gross revenue are above the 5% benchmark, highest at Valley Regional.', page: 'denials', filters: {},
+    steps: ['Decomposition tree: Payor group → Medicare Managed is the largest.', 'Next level Hospital → Valley Regional.', 'Denial reason → Coordination Of Benefits.', 'Apply the path as filters, then “View denied claims”.', 'Patient Access page: registration accuracy shows the front-end cause.'],
   },
   {
     title: 'Is any payer underpaying?', question: 'Payment variance flags payers that pay below expected reimbursement.', page: 'payers', filters: {},

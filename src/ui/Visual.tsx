@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { visualItemId } from '../config/priorities';
 import { useApp } from '../state/AppState';
 import { usePriorities, usePriorityItem } from '../state/Priorities';
-import { VIEWS_NOT_IN_DATASET, notInDataset } from '../config/datasetGaps';
+import { DIMENSION_LABELS_NOT_IN_DATASET, VIEWS_NOT_IN_DATASET, notInDataset } from '../config/datasetGaps';
 import { GapMark, InfoIcon } from './common';
 import { Icon } from './icons';
 import { PriorityPicker } from './Priority';
@@ -44,12 +44,16 @@ interface Props {
 }
 
 export function Visual({ title, pid, subtitle, metricId, info, spec, table, actions, noData, source, className, gap, children }: Props) {
-  const isGap = gap ?? (!!VIEWS_NOT_IN_DATASET[title] || (metricId ? notInDataset(metricId) : !!spec?.metrics?.some(notInDataset)));
+  // A gap: the caller says so (breakdowns check their dimension), the title is a known gap, the
+  // metric (or any metric in the spec, when there is no single metric) is not in the dataset, or the
+  // spec names a dimension the dataset never has.
+  const isGap = !!VIEWS_NOT_IN_DATASET[title] || (gap ?? ((metricId ? notInDataset(metricId) : !!spec?.metrics?.some(notInDataset))
+    || !!spec?.dimensions?.some((d) => DIMENSION_LABELS_NOT_IN_DATASET.has(d))));
   const { sim, specMode, clearAll, toast, sel, route } = useApp();
   const { on: prioOn } = usePriorities();
   const prioName = pid ?? title;
   const prioId = visualItemId(route.page, prioName);
-  const prio = usePriorityItem({ id: prioId, kind: 'visual', label: prioName, group: PAGE_BY_ID[route.page]?.label ?? route.page, page: route.page });
+  const prio = usePriorityItem({ id: prioId, kind: 'visual', label: prioName, group: PAGE_BY_ID[route.page]?.label ?? route.page, page: route.page, ...(isGap ? { gap: true } : {}) });
   const [focus, setFocus] = useState(false);
   const [asTable, setAsTable] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -101,7 +105,7 @@ export function Visual({ title, pid, subtitle, metricId, info, spec, table, acti
             <h3>{title}<GapMark show={isGap} /></h3>
             {subtitle && <div className="visual-sub">{subtitle}</div>}
           </div>
-          {prioOn && <PriorityPicker id={prioId} label={prioName} tier={prio.tier} inherited={prio.inherited} />}
+          {prioOn && <PriorityPicker id={prioId} label={prioName} tier={prio.tier} inherited={prio.inherited} byDefault={prio.byDefault} />}
           <div className="visual-tools no-print">
             {actions}
             {(metricId || info) && <InfoIcon metricId={metricId} text={info} title={title} noMark />}

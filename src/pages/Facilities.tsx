@@ -15,7 +15,8 @@ import { BreakdownVisual } from '../ui/widgets';
 import { FacilityMatrix, overallStatus } from './EnterpriseOverview';
 
 const COMPARE_IDS = ['net_ar_days', 'cash_pct_npsr', 'denial_rate', 'dnfb_days', 'clean_claim_rate'];
-const RANK_IDS = ['net_ar_days', 'cash_pct_npsr', 'denial_rate', 'dnfb_days', 'clean_claim_rate', 'ar_gt90_pct', 'cost_to_collect', 'coding_tat', 'eligibility_rate'];
+// Workbook metrics first; the last three need data the workbook does not hold (v3+).
+const RANK_IDS = ['gross_ar_days', 'cash_pct_npsr', 'denial_dollar_rate', 'dnfb_days', 'dnsp_days', 'clean_claim_rate', 'ar_gt90_pct', 'prereg_rate', 'cost_to_collect', 'coding_tat', 'eligibility_rate'];
 
 interface FRow {
   key: number; name: string; region: string; type: string; beds: number; isRegion?: boolean;

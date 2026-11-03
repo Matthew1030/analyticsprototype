@@ -2,17 +2,12 @@
 // numbers match the Revenue Cycle Overview), each in the standard order: Performance, Trend, Where,
 // Why, Act. Act opens the DNFB worklist filtered to the stage's hold reason.
 
-import { useMemo } from 'react';
 import { useApp } from '../state/AppState';
-import { usd } from '../format';
-import { Chart } from '../ui/Chart';
-import { barOption, SERIES } from '../ui/charts';
-import { snapshotLabel } from '../ui/common';
 import { Icon } from '../ui/icons';
 import { CanvasHeader } from '../ui/Shell';
 import { Band, Bands, TabBox, useGroupStatus, useTab, type TabDef } from '../ui/TabBox';
-import { Visual } from '../ui/Visual';
 import { BreakdownVisual, KpiStrip, TrendVisual } from '../ui/widgets';
+import { DnfbByOwner, WriteoffsByReason } from '../ui/workbook';
 
 interface MidTab { id: string; label: string; num: number; kpis: string[]; hold: number; holdName: string }
 
@@ -21,9 +16,9 @@ const TABS: MidTab[] = [
   { id: 'charge', label: 'Charge Capture', num: 2, hold: 3, holdName: 'charge reconciliation',
     kpis: ['charge_lag', 'late_charge_pct', 'late_charges_dollars', 'missing_charges', 'missed_charge_rate', 'charges_posted'] },
   { id: 'coding', label: 'Coding', num: 3, hold: 1, holdName: 'awaiting coding',
-    kpis: ['coding_tat', 'coding_tat_ip', 'final_coded_volume', 'coding_denial_rate', 'dnfb_coding'] },
+    kpis: ['coding_denial_rate', 'dnfb_mid_cycle_4plus', 'epars_him', 'coding_tat', 'coding_tat_ip', 'final_coded_volume', 'dnfb_coding'] },
   { id: 'cdi', label: 'Clinical Documentation (CDI)', num: 4, hold: 2, holdName: 'physician query',
-    kpis: ['cdi_query_rate', 'documentation_denial_rate', 'dnfb_query'] },
+    kpis: ['documentation_denial_rate', 'denial_writeoffs', 'denial_wo_pct_npsr', 'cdi_query_rate', 'dnfb_query'] },
 ];
 const TAB_KPIS = TABS.map((t) => t.kpis);
 
@@ -80,12 +75,13 @@ function Coding() {
   return (
     <Bands
       trend={[
-        <TrendVisual id="coding_tat" alt={['coding_tat_ip']} months={18} height={220} />,
         <TrendVisual id="coding_denial_rate" months={18} height={220} />,
+        <TrendVisual id="epars_him" alt={['dnfb_mid_cycle_4plus']} months={18} height={220} />,
       ]}
       where={[
-        <BreakdownVisual id="coding_tat" dim="facility" title="Coding turnaround by hospital" onDrill={drill} />,
         <BreakdownVisual id="coding_denial_rate" dim="facility" onDrill={drill} />,
+        <BreakdownVisual id="dnfb_mid_cycle_4plus" alt={['epars_him']} dim="facility" onDrill={drill} />,
+        <BreakdownVisual id="coding_tat" dim="facility" title="Coding turnaround by hospital" onDrill={drill} />,
       ]}
       why={[
         <BreakdownVisual id="coding_tat" dim="patientType" dims={['patientType', 'serviceLine', 'payer']} title="Coding turnaround by type" />,
@@ -103,10 +99,12 @@ function Cdi() {
         <TrendVisual id="cdi_query_rate" months={18} height={220} />,
       ]}
       where={[
-        <BreakdownVisual id="cdi_query_rate" dim="facility" onDrill={drill} />,
         <BreakdownVisual id="documentation_denial_rate" dim="facility" onDrill={drill} />,
+        <BreakdownVisual id="cdi_query_rate" dim="facility" onDrill={drill} />,
       ]}
       why={[
+        <BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by reason" subtitle="Documentation reasons: Lacks Information/Med Records and Medical Necessity · click to filter" />,
+        <WriteoffsByReason />,
         <BreakdownVisual id="documentation_denial_rate" dim="payer" title="Documentation-related denial rate by payer" top={11} />,
         <BreakdownVisual id="cdi_query_rate" dim="serviceLine" dims={['serviceLine', 'patientType']} title="CDI query rate by service line" />,
       ]} />
@@ -119,27 +117,7 @@ function ActBand({ t }: { t: MidTab }) {
   return (
     <>
       <Band type="act" actions={<button type="button" className="btn btn-primary btn-cta" onClick={work}>Work {t.holdName} accounts in the DNFB worklist <Icon name="chevronRight" size={11} /></button>} />
-      <MidCycleHolds />
+      <DnfbByOwner />
     </>
-  );
-}
-
-/** DNFB dollars held by mid-cycle reasons, by hospital (stacked). */
-function MidCycleHolds() {
-  const { engine, period, sel, ds, selectOnly } = useApp();
-  const day = engine.snapshotDayOnOrBefore('dnfb', period.endDay);
-  const holds = [1, 2, 3];
-  const facs = engine.facilitySet(sel);
-  const data = useMemo(() => ds.dims.facilities.filter((f) => !facs || facs.has(f.key)).map((f) => ({
-    f, vals: holds.map((h) => (day === null ? 0 : engine.snapshot('dnfb', 'amount', day, { ...sel, facility: [f.key], dnfbHold: [h] }, { stage: 0 }))),
-  })).sort((a, b) => b.vals.reduce((x, y) => x + y, 0) - a.vals.reduce((x, y) => x + y, 0)), [engine, day, sel, ds, facs]); // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <Visual title="DNFB held by mid-cycle reasons" subtitle={`By hospital at ${snapshotLabel(day)} · click a hospital to filter`}
-      table={{ columns: ['Hospital', ...holds.map((h) => ds.dims.dnfbHolds[h].name)], rows: data.map((d) => [d.f.short, ...d.vals.map((v) => usd(v))]) }}
-      spec={{ type: 'Stacked bar chart (horizontal)', metrics: ['dnfb_coding', 'dnfb_query'], dimensions: ['Hospital', 'DNFB hold reason'], interactions: 'Click filters the hospital' }}>
-      <Chart height={Math.max(200, data.length * 24 + 40)} ariaLabel="DNFB held by mid-cycle reasons by hospital"
-        option={barOption({ labels: data.map((d) => d.f.short), horizontal: true, stacked: true, fmt: usd, series: holds.map((h, i) => ({ name: ds.dims.dnfbHolds[h].name, data: data.map((d) => d.vals[i]), color: SERIES[i] })) })}
-        onClick={(i) => selectOnly('facility', [data[i].f.key])} />
-    </Visual>
   );
 }
