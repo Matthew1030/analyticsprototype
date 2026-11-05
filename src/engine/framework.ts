@@ -32,12 +32,3 @@ export const FRAMEWORK: FrameworkGroup[] = [
 
 export const FRAMEWORK_METRICS: FrameworkMetric[] = FRAMEWORK.flatMap((g) => g.metrics);
 export const FRAMEWORK_BY_ID: Record<string, FrameworkMetric> = Object.fromEntries(FRAMEWORK_METRICS.map((m) => [m.id, m]));
-
-/**
- * The client's former framework codes (P1–P13), replaced by the catalog codes. Kept only to read
- * release priority ratings saved or exported before the change.
- */
-export const LEGACY_FRAMEWORK_CODE: Record<string, string> = {
-  P1: 'gross_ar_days', P2: 'net_to_gross', P4: 'ar_gt90_pct', P5: 'dnfb_days', P6: 'credit_balance_days', P7: 'pos_pct_net',
-  P8: 'cash_pct_npsr', P9: 'bad_debt_pct_gross', P10: 'denial_dollar_rate', P11: 'bad_debt_unrealized_pct', P12: 'avoidable_wo_pct_net', P13: 'avoidable_wo_unrealized_pct',
-};

@@ -7,11 +7,15 @@
 //
 // Sections: Key Performance Indicators · Performance Trends · Performance vs. Target (the full
 // ELT framework, as a summary or as a period table) · Selected Metric Trends (the metrics checked
-// in Performance vs. Target). Every metric drills into Analytics. Metric names are the catalog
-// names (Metric Dictionary): the full name in tables, the approved short name in compact places.
+// in Performance vs. Target). Metric names are the catalog names (Metric Dictionary): the full name
+// in tables, the approved short name in compact places.
+//
+// v1 (src/config/v1.ts): six KPI cards in two rows, no Performance Trends, the same six metrics in
+// Performance vs. Target grouped by revenue-cycle stage. A row click puts the metric on the
+// Selected Metric Trends chart. Only DN-04 opens an analytics page (Denials).
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { effectiveTier, eltItemId, visualItemId } from '../config/priorities';
+import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { V1_DRILL, V1_ELT_GROUPS, V1_ELT_KPIS } from '../config/v1';
 import { shortDayLabel } from '../data/dates';
 import { FIELD_LABEL, type SelField } from '../engine/engine';
 import { FRAMEWORK, FRAMEWORK_BY_ID } from '../engine/framework';
@@ -22,21 +26,23 @@ import { fmt, fmtDelta } from '../format';
 import { metricValue } from '../services/analytics';
 import type { MetricValue } from '../services/contracts';
 import { scopeText, useApp, type PageId } from '../state/AppState';
-import { usePriorities, usePriorityItem } from '../state/Priorities';
 import { Chart } from '../ui/Chart';
 import { eltTrendOption, multiTrendOption, SERIES, type TrendLine } from '../ui/charts';
 import { fmtMetric, GapLegend, GapMark, InfoIcon, metricLabel, PeriodInput, Sparkline, StatusMark } from '../ui/common';
-import { gapStar, notInDataset } from '../config/datasetGaps';
+import { gapStar } from '../config/datasetGaps';
 import { Icon } from '../ui/icons';
-import { PriorityPicker } from '../ui/Priority';
 import { downloadCsv } from '../ui/Visual';
 
 /** Headline KPIs and trend charts (AR-06, AR-07, BL-08, CA-03, DN-04). */
 export const ELT_KPIS = ['gross_ar_days', 'cash_pct_npsr', 'denial_dollar_rate', 'dnfb_days', 'ar_gt90_pct'];
 const ELT_TRENDS = ['gross_ar_days', 'cash_pct_npsr', 'denial_dollar_rate'];
-const ALL_IDS = FRAMEWORK.flatMap((g) => g.metrics.map((m) => m.id));
+/** A table group: name and metrics, each with the client's benchmark where the framework has one. */
+interface Group { name: string; metrics: { id: string; benchmark?: string }[] }
+const FULL_GROUPS: Group[] = FRAMEWORK;
+const V1_GROUPS: Group[] = V1_ELT_GROUPS.map((g) => ({ name: g.name, metrics: g.metrics.map((id) => ({ id, benchmark: FRAMEWORK_BY_ID[id]?.benchmark })) }));
+const ALL_IDS = [...new Set([...FULL_GROUPS, ...V1_GROUPS].flatMap((g) => g.metrics.map((m) => m.id)))];
 /** Metric on the selected-metric trend when the page opens. */
-const DEFAULT_CHOSEN = ['gross_ar_days'];
+const DEFAULT_CHOSEN = { v1: ['denial_dollar_rate'], full: ['gross_ar_days'] };
 /** Units that can share the selected-metric trend (left axis, right axis). */
 const MAX_UNITS = 2;
 
@@ -68,7 +74,10 @@ function row(id: string, v: MetricValue): Row {
 interface Chosen { ids: string[]; color: Record<string, string> }
 
 export function EltSummary() {
-  const { engine, period, compare, sel, go, ds } = useApp();
+  const { engine, period, compare, sel, go, ds, version, toast } = useApp();
+  const v1 = version === 'v1';
+  const groups = v1 ? V1_GROUPS : FULL_GROUPS;
+  const kpis = v1 ? V1_ELT_KPIS : ELT_KPIS;
   const rows = useMemo(() => Object.fromEntries(ALL_IDS.map((id) => [id, row(id, metricValue(engine, id, period, compare, sel, 13))])) as Record<string, Row>,
     [engine, period, compare, sel]);
   const open = (id: string) => (DRILL[id] ? go(DRILL[id], {}, { drill: true }) : go('metric', { id }, { drill: true }));
@@ -80,24 +89,29 @@ export function EltSummary() {
   const grid = useMemo(() => Object.fromEntries(ALL_IDS.map((id) => [id, cols.map((c) => evaluate(METRIC_BY_ID[id], engine, c, sel))])) as Record<string, MetricResult[]>,
     [engine, cols, sel]);
 
-  const [chosen, setChosen] = useState<Chosen>(() => ({ ids: DEFAULT_CHOSEN, color: Object.fromEntries(DEFAULT_CHOSEN.map((id, i) => [id, SERIES[i]])) }));
+  const [chosen, setChosen] = useState<Chosen>(() => ({ ids: DEFAULT_CHOSEN[version], color: Object.fromEntries(DEFAULT_CHOSEN[version].map((id, i) => [id, SERIES[i]])) }));
   const pick = useMetricPicker(chosen, setChosen);
+  // v1 has no metric analysis pages: a row click puts the metric on (or takes it off) the trend chart.
+  const onRow = v1 ? (id: string) => { const why = pick.blocked(id); if (why) toast(why); else pick.toggle(id); } : open;
 
   return (
     <div className="elt">
       <EltHeader />
 
       <Sec id="elt-kpi" title="Key Performance Indicators" meta={period.label}>
-        <div className="elt-kpis">
-          {ELT_KPIS.map((id) => <KpiCard key={id} r={rows[id]} onOpen={() => open(id)} />)}
+        <div className={`elt-kpis ${v1 ? 'elt-kpis-3' : ''}`}>
+          {kpis.map((id) => <KpiCard key={id} r={rows[id]} onOpen={!v1 ? () => open(id) : V1_DRILL[id] ? () => go(V1_DRILL[id], {}, { drill: true }) : undefined}
+            hint={v1 && V1_DRILL[id] ? 'Open Denials ›' : undefined} />)}
         </div>
       </Sec>
 
-      <Sec id="elt-trend" title="Performance Trends" meta={`12 months ending ${monthPeriod(period.endMi).short}`}>
-        <div className="elt-trends">
-          {ELT_TRENDS.map((id) => <TrendCard key={id} r={rows[id]} onOpen={() => go('metric', { id }, { drill: true })} />)}
-        </div>
-      </Sec>
+      {!v1 && (
+        <Sec id="elt-trend" title="Performance Trends" meta={`12 months ending ${monthPeriod(period.endMi).short}`}>
+          <div className="elt-trends">
+            {ELT_TRENDS.map((id) => <TrendCard key={id} r={rows[id]} onOpen={() => go('metric', { id }, { drill: true })} />)}
+          </div>
+        </Sec>
+      )}
 
       <div className="elt-split">
         <Sec id="elt-target" title="Performance vs. Target" meta={view === 'summary' ? period.label : `${TIME_GRAIN_LABEL[grain]} · ${spanText(cols)}`}
@@ -109,13 +123,13 @@ export function EltSummary() {
               </span>
               {view === 'table' && <>
                 <GrainSelect grain={grain} setGrain={setGrain} />
-                <ExportButton cols={cols} grid={grid} grain={grain} />
+                <ExportButton cols={cols} grid={grid} grain={grain} groups={groups} />
               </>}
             </>
           )}>
           {view === 'summary'
-            ? <TargetTable rows={rows} onOpen={open} pick={pick} />
-            : <PeriodTable cols={cols} grid={grid} onOpen={open} pick={pick} />}
+            ? <TargetTable rows={rows} groups={groups} onOpen={onRow} pick={pick} rowAction={v1 ? 'trend' : 'analyze'} />
+            : <PeriodTable cols={cols} grid={grid} groups={groups} onOpen={onRow} pick={pick} rowAction={v1 ? 'trend' : 'analyze'} />}
         </Sec>
         <Sec id="elt-selected" title="Selected Metric Trends" meta={`${TIME_GRAIN_LABEL[grain]} · ${spanText(cols)}`}
           actions={<GrainSelect grain={grain} setGrain={setGrain} />}>
@@ -207,16 +221,12 @@ function EltSlicers() {
   );
 }
 
-/** One ELT section. In prioritization mode it carries a release picker, like a visual. */
+/** One ELT section. */
 function Sec({ id, title, meta, actions, children }: { id: string; title: string; meta?: string; actions?: ReactNode; children: ReactNode }) {
-  const { on } = usePriorities();
-  const itemId = visualItemId('executive', title);
-  const prio = usePriorityItem({ id: itemId, kind: 'visual', label: title, group: 'ELT Summary', page: 'executive' });
   return (
-    <section className={`elt-sec ${prio.cls}`} aria-labelledby={id}>
+    <section className="elt-sec" aria-labelledby={id}>
       <div className="elt-sec-head">
         <h2 id={id}>{title}</h2>
-        {on && <PriorityPicker id={itemId} label={title} tier={prio.tier} inherited={prio.inherited} />}
         {meta && <span className="elt-meta">{meta}</span>}
         {actions && <span className="elt-sec-actions no-print">{actions}</span>}
       </div>
@@ -240,8 +250,14 @@ function Change3({ r }: { r: Row }) {
   );
 }
 
+/** Target, or "No target set" when the client has not set one. */
+function Target({ id, target }: { id: string; target: number | null }) {
+  return target === null ? <span className="muted">No target set</span> : <>{fmtMetric(id, target)}</>;
+}
+
 function Variance({ r }: { r: Row }) {
   const m = METRIC_BY_ID[r.id];
+  if (r.v.target === null) return <span className="muted">–</span>;
   return <span className={`elt-var v-${tone(r.v.status)}`}>{fmtDelta(r.v.variance_to_target, m.unit, m.digits)}</span>;
 }
 
@@ -252,18 +268,20 @@ function Cell({ id, r }: { id: string; r: { value: number | null; noData?: strin
 
 // ---------------------------------------------------------------- KPI cards
 
-function KpiCard({ r, onOpen }: { r: Row; onOpen: () => void }) {
+/** KPI card. With onOpen it opens the metric's analytics page; without it, it is display only. */
+function KpiCard({ r, onOpen, hint }: { r: Row; onOpen?: () => void; hint?: string }) {
   const m = METRIC_BY_ID[r.id];
   const v = r.v;
+  const click = onOpen ? { role: 'button', tabIndex: 0, onClick: onOpen, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter') onOpen(); }, title: `Analyze ${m.name}` } : {};
   return (
-    <div role="button" tabIndex={0} className={`elt-kpi st-${tone(v.status)}`} onClick={onOpen} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(); }} title={`Analyze ${m.name}`}>
-      <div className="elt-kpi-name"><span>{shortLabel(r.id)}</span><span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={r.id} /></span></div>
+    <div className={`elt-kpi st-${tone(v.status)} ${onOpen ? 'elt-kpi-link' : 'elt-kpi-static'}`} {...click}>
+      <div className="elt-kpi-name"><span>{shortLabel(r.id)}</span><span>{hint && <span className="elt-kpi-go">{hint}</span>}<span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={r.id} /></span></span></div>
       <div className="elt-kpi-mid">
         <span className="elt-kpi-value"><Cell id={r.id} r={{ value: v.value, noData: v.no_data_reason }} /></span>
         <Sparkline values={v.trend.slice(-12).map((t) => t.value)} target={v.target} width={88} height={30} />
       </div>
       <dl className="elt-kpi-grid">
-        <div><dt>Target</dt><dd>{fmtMetric(r.id, v.target)}</dd></div>
+        <div><dt>Target</dt><dd><Target id={r.id} target={v.target} /></dd></div>
         <div><dt>Variance to target</dt><dd><Variance r={r} /></dd></div>
         <div><dt>3M change</dt><dd><Change3 r={r} /></dd></div>
       </dl>
@@ -341,8 +359,11 @@ function MetricCheck({ id, pick }: { id: string; pick: Picker }) {
 
 // ---------------------------------------------------------------- performance vs. target: summary
 
-function TargetTable({ rows, onOpen, pick }: { rows: Record<string, Row>; onOpen: (id: string) => void; pick: Picker }) {
-  const { on: prioOn, decisions } = usePriorities();
+/** What a row click does: open the metric's analysis, or put the metric on the trend chart (v1). */
+type RowAction = 'analyze' | 'trend';
+const rowTitle = (id: string, a: RowAction) => (a === 'trend' ? `Show or hide ${METRIC_BY_ID[id].name} on the trend chart` : `Analyze ${METRIC_BY_ID[id].name}`);
+
+function TargetTable({ rows, groups, onOpen, pick, rowAction }: { rows: Record<string, Row>; groups: Group[]; onOpen: (id: string) => void; pick: Picker; rowAction: RowAction }) {
   return (
     <div className="elt-table">
       <table>
@@ -353,21 +374,20 @@ function TargetTable({ rows, onOpen, pick }: { rows: Record<string, Row>; onOpen
           </tr>
         </thead>
         <tbody>
-          {FRAMEWORK.map((g) => [
+          {groups.map((g) => [
             <tr key={g.name} className="elt-group"><td colSpan={8}>{g.name}</td></tr>,
             ...g.metrics.map((f) => {
               const r = rows[f.id];
               return (
-                <tr key={f.id} className="clickable" tabIndex={0} onClick={() => onOpen(f.id)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(f.id); }} title={`Analyze ${METRIC_BY_ID[f.id].name}`}>
-                  <td className="al-left elt-mname"><MetricCheck id={f.id} pick={pick} />{label(f.id)}<span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={f.id} /></span>
-                    {prioOn && <> <PriorityPicker id={eltItemId(f.id)} label={`${f.code} ${METRIC_BY_ID[f.id].name}`} tier={effectiveTier({ id: eltItemId(f.id), kind: 'kpi', gap: notInDataset(f.id) }, decisions).tier} compact /></>}</td>
+                <tr key={f.id} className={`clickable ${rowAction === 'trend' && pick.chosen.ids.includes(f.id) ? 'elt-row-on' : ''}`} tabIndex={0} onClick={() => onOpen(f.id)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(f.id); }} title={rowTitle(f.id, rowAction)}>
+                  <td className="al-left elt-mname"><MetricCheck id={f.id} pick={pick} />{label(f.id)}<span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={f.id} /></span></td>
                   <td><b><Cell id={f.id} r={{ value: r.v.value, noData: r.v.no_data_reason }} /></b></td>
-                  <td className="muted">{fmtMetric(f.id, r.v.target)}</td>
+                  <td className="muted"><Target id={f.id} target={r.v.target} /></td>
                   <td><Variance r={r} /></td>
                   <td className="al-center"><StatusMark status={r.v.status} compact /></td>
                   <td><Change3 r={r} /></td>
                   <td className="al-center"><Sparkline values={r.v.trend.slice(-12).map((t) => t.value)} target={r.v.target} width={72} height={20} /></td>
-                  <td className="al-left muted">{f.benchmark}</td>
+                  <td className="al-left muted">{f.benchmark ?? '–'}</td>
                 </tr>
               );
             }),
@@ -381,7 +401,7 @@ function TargetTable({ rows, onOpen, pick }: { rows: Record<string, Row>; onOpen
 // ---------------------------------------------------------------- performance vs. target: period table
 
 /** One metric per row, one column per period of the chosen time scale. Actual values only. */
-function PeriodTable({ cols, grid, onOpen, pick }: { cols: Period[]; grid: Record<string, MetricResult[]>; onOpen: (id: string) => void; pick: Picker }) {
+function PeriodTable({ cols, grid, groups, onOpen, pick, rowAction }: { cols: Period[]; grid: Record<string, MetricResult[]>; groups: Group[]; onOpen: (id: string) => void; pick: Picker; rowAction: RowAction }) {
   if (!cols.length) return <div className="elt-table elt-none">No periods of this time scale in the data window.</div>;
   return (
     <div className="elt-table elt-ptable">
@@ -393,12 +413,12 @@ function PeriodTable({ cols, grid, onOpen, pick }: { cols: Period[]; grid: Recor
           </tr>
         </thead>
         <tbody>
-          {FRAMEWORK.map((g) => [
+          {groups.map((g) => [
             <tr key={g.name} className="elt-group"><td className="elt-sticky">{g.name}</td><td colSpan={cols.length + 1} /></tr>,
             ...g.metrics.map((f) => (
-              <tr key={f.id} className="clickable" tabIndex={0} onClick={() => onOpen(f.id)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(f.id); }} title={`Analyze ${METRIC_BY_ID[f.id].name}`}>
+              <tr key={f.id} className={`clickable ${rowAction === 'trend' && pick.chosen.ids.includes(f.id) ? 'elt-row-on' : ''}`} tabIndex={0} onClick={() => onOpen(f.id)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(f.id); }} title={rowTitle(f.id, rowAction)}>
                 <td className="al-left elt-mname elt-sticky"><MetricCheck id={f.id} pick={pick} />{label(f.id)}<span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={f.id} /></span></td>
-                <td className="muted">{fmtMetric(f.id, targetOf(grid[f.id]))}</td>
+                <td className="muted"><Target id={f.id} target={targetOf(grid[f.id])} /></td>
                 {grid[f.id].map((r, i) => <td key={cols[i].startDay}><Cell id={f.id} r={r} /></td>)}
               </tr>
             )),
@@ -413,11 +433,11 @@ function PeriodTable({ cols, grid, onOpen, pick }: { cols: Period[]; grid: Recor
 const targetOf = (rs: MetricResult[]) => [...rs].reverse().find((r) => r.target !== null)?.target ?? null;
 
 /** CSV for Excel: the period table as shown (one metric per row), with the filters as context. */
-function ExportButton({ cols, grid, grain }: { cols: Period[]; grid: Record<string, MetricResult[]>; grain: TimeGrain }) {
+function ExportButton({ cols, grid, grain, groups }: { cols: Period[]; grid: Record<string, MetricResult[]>; grain: TimeGrain; groups: Group[] }) {
   const { sel, valueLabel, ds, toast } = useApp();
   const run = () => {
     const columns = ['Group', 'Code', 'Metric', 'Unit', 'Target', ...cols.map((c) => c.label)];
-    const out = FRAMEWORK.flatMap((g) => g.metrics.map((f) => {
+    const out = groups.flatMap((g) => g.metrics.map((f) => {
       const m = METRIC_BY_ID[f.id];
       return [g.name, m.code, m.name, UNIT_LABEL[m.unit], fmtMetric(f.id, targetOf(grid[f.id])), ...grid[f.id].map((r) => (r.value === null ? '' : fmtMetric(f.id, r.value)))];
     }));
@@ -456,13 +476,13 @@ function SelectedTrend({ chosen, cols, grid, grain }: { chosen: Chosen; cols: Pe
       </div>
       {chosen.ids.length === 0 || !cols.length || missing.length === chosen.ids.length
         ? <div className="elt-none">{!cols.length ? 'No periods of this time scale in the data window.'
-          : chosen.ids.length === 0 ? 'Check one or more metrics in Performance vs. Target to show their trend.'
+          : chosen.ids.length === 0 ? 'Click or check one or more metrics in Performance vs. Target to show their trend.'
           : 'No checked metric is calculated at this time scale. Check another metric or choose a longer time scale.'}</div>
         : <Chart height={300} ariaLabel={`${chosen.ids.map((id) => METRIC_BY_ID[id].name).join(', ')}: ${TIME_GRAIN_LABEL[grain].toLowerCase()} trend`} option={option} />}
       {missing.length > 0 && (
         <div className="elt-note">Not calculated at this time scale: {missing.map((id) => metricLabel(id)).join(', ')}. {grid[missing[0]].find((r) => r.noData)?.noData ?? ''}</div>
       )}
-      <div className="elt-note muted">Solid line = actual · dashed line = target · check metrics in Performance vs. Target (two units at most)</div>
+      <div className="elt-note muted">Solid line = actual · dashed line = target · click or check metrics in Performance vs. Target (two units at most)</div>
     </div>
   );
 }

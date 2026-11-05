@@ -123,8 +123,8 @@ function StageTab({ sum, index, onPick }: { sum: Summary; index: number; onPick:
       </div>
       <KpiStrip ids={s.metrics} />
       <div className="row cols-7-5">
-        <TrendVisual id={first} alt={rest} months={18} height={330} pid={`${s.name} stage trend`} />
-        <BreakdownVisual id={first} alt={rest} dim="facility" pid={`${s.name} stage by hospital`}
+        <TrendVisual id={first} alt={rest} months={18} height={330} />
+        <BreakdownVisual id={first} alt={rest} dim="facility"
           onDrill={(k) => go('facility', { id: String(k) }, { drill: true })} />
       </div>
       <div className="stage-foot">

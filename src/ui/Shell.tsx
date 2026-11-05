@@ -11,7 +11,7 @@ import { DIMENSION_LABEL, members } from '../services/analytics';
 import { scopeText, useApp, type Audience, type PageId, type Route, type SimState } from '../state/AppState';
 import { GapLegend, PeriodInput } from './common';
 import { Icon } from './icons';
-import { PriorityToggle } from './Priority';
+import { V1_PAGES, VERSION_LABEL, type Version } from '../config/v1';
 
 /**
  * The three product experiences: See (ELT Summary), Understand (Analytics), Act (Worklists), and
@@ -54,6 +54,12 @@ export function sectionOf(page: PageId): Section {
   return PAGE_BY_ID[page]?.section ?? 'elt';
 }
 
+/** First page of a dashboard. In v1, Analytics has only the Denials page. */
+export function sectionHome(section: Section, version: Version): PageId {
+  const home = SECTIONS.find((x) => x.id === section)!.home;
+  return version === 'v1' && section === 'analytics' ? 'denials' : home;
+}
+
 // ---------------------------------------------------------------- prototype bar
 
 /**
@@ -61,28 +67,41 @@ export function sectionOf(page: PageId): Section {
  * switch the viewer type and simulate states. The design starts with the header below it.
  */
 export function PrototypeBar() {
-  const { audience, setAudience } = useApp();
+  const { audience, setAudience, version, setVersion } = useApp();
   return (
     <div className="proto-bar no-print" role="region" aria-label="Prototype controls (not part of the design)">
       <span className="proto-label" title="Everything in this bar is for the prototype only and is not part of the design.">
         <Icon name="code" size={12} /> Prototype controls<span className="proto-label-note"> · not part of the design</span>
       </span>
+      <span className="proto-field-label" id="proto-ver-label">Version:</span>
+      <div className="seg proto-seg proto-ver" role="radiogroup" aria-labelledby="proto-ver-label">
+        {VERSIONS.map((x) => (
+          <button key={x.v} type="button" role="radio" aria-checked={version === x.v} className={version === x.v ? 'on' : ''}
+            title={x.note} onClick={() => setVersion(x.v)}>{VERSION_LABEL[x.v]}</button>
+        ))}
+      </div>
       <span className="proto-field-label" id="proto-dash-label">Select dashboard:</span>
       <SectionNav />
-      <div className="proto-right">
-        <span className="proto-field-label" id="proto-aud-label">User type:</span>
-        <div className="seg proto-seg" role="radiogroup" aria-labelledby="proto-aud-label">
-          {AUDIENCES.map((a) => (
-            <button key={a.v} type="button" role="radio" aria-checked={audience === a.v} className={audience === a.v ? 'on' : ''}
-              title={a.note} onClick={() => setAudience(a.v)}>{a.label}</button>
-          ))}
+      {version === 'full' && (
+        <div className="proto-right">
+          <span className="proto-field-label" id="proto-aud-label">User type:</span>
+          <div className="seg proto-seg" role="radiogroup" aria-labelledby="proto-aud-label">
+            {AUDIENCES.map((a) => (
+              <button key={a.v} type="button" role="radio" aria-checked={audience === a.v} className={audience === a.v ? 'on' : ''}
+                title={a.note} onClick={() => setAudience(a.v)}>{a.label}</button>
+            ))}
+          </div>
+          <PrototypeMenu />
         </div>
-        <PriorityToggle />
-        <PrototypeMenu />
-      </div>
+      )}
     </div>
   );
 }
+
+const VERSIONS: { v: Version; note: string }[] = [
+  { v: 'v1', note: 'Only what the first release builds: ELT Summary, the Denials page and their filters' },
+  { v: 'full', note: 'The full concept: every planned page, including later releases' },
+];
 
 const AUDIENCES: { v: Audience; label: string; note: string }[] = [
   { v: 'internal', label: 'Internal', note: 'Internal user (prototype: same view as external for now)' },
@@ -128,18 +147,21 @@ const PLANNED: Partial<Record<Section, string>> = { worklists: 'v2' };
 
 /** Top-level dashboards. Each remembers the last page the user had open in it. */
 function SectionNav() {
-  const { route, go } = useApp();
+  const { route, go, version } = useApp();
   const current = sectionOf(route.page);
   const last = useRef<Record<Section, PageId>>({ elt: 'executive', analytics: 'cycle', worklists: 'wl-denials', dictionary: 'dictionary' });
   if (PAGE_BY_ID[route.page]?.nav) last.current[current] = route.page;
+  const v1 = version === 'v1';
+  const sections = v1 ? SECTIONS.filter((x) => x.id !== 'worklists') : SECTIONS;
+  const home = (x: (typeof SECTIONS)[number]) => (v1 ? sectionHome(x.id, version) : current === x.id ? x.home : last.current[x.id]);
   return (
     <nav className="sections" aria-labelledby="proto-dash-label">
-      {SECTIONS.map((x, i) => {
-        const planned = PLANNED[x.id];
+      {sections.map((x, i) => {
+        const planned = v1 ? undefined : PLANNED[x.id];
         return (
           <button key={x.id} type="button" className={`section-btn ${current === x.id ? 'on' : ''} ${planned ? 'planned' : ''} ${x.proto ? 'proto-section' : ''}`} aria-current={current === x.id ? 'page' : undefined}
             disabled={!!planned} title={planned ? `${x.label}: planned for ${planned}` : `${x.verb}: ${x.question}`}
-            onClick={() => go(current === x.id ? x.home : last.current[x.id])}>
+            onClick={() => go(home(x))}>
             {!x.proto && <span className="section-step" aria-hidden="true">{i + 1}</span>}{x.label}{planned && <span className="section-tag"> ({planned})</span>}
             {x.proto && <span className="section-tag"> (prototype only)</span>}
           </button>
@@ -188,11 +210,11 @@ function PrototypeMenu() {
 // ---------------------------------------------------------------- tabs
 
 export function NavTabs() {
-  const { route, go, toast } = useApp();
+  const { route, go, toast, version } = useApp();
   const section = sectionOf(route.page);
   const meta = SECTIONS.find((x) => x.id === section)!;
   const active = PAGE_BY_ID[route.page]?.nav ? route.page : null;
-  const tabs = PAGES.filter((p) => p.nav && p.section === section);
+  const tabs = PAGES.filter((p) => p.nav && p.section === section && (version === 'full' || V1_PAGES.includes(p.id)));
   // The ELT Summary has no sub-pages; its slicers and actions sit in the page header.
   // Prototype-only tools have one page each.
   if (section === 'elt' || meta.proto) return null;
@@ -305,9 +327,11 @@ function AreaSlicer() {
 }
 
 export function FilterPane() {
-  const { period, setPeriodKind, compare, setCompare, clearAll, sel, paneOpen, setPaneOpen, route, areas } = useApp();
+  const { period, setPeriodKind, compare, setCompare, clearAll, sel, paneOpen, setPaneOpen, route, areas, version } = useApp();
   const active = Object.values(sel).reduce((a, v) => a + (v?.length ? 1 : 0), 0) + (areas.length ? 1 : 0);
-  const pageFilters = PAGE_BY_ID[route.page]?.pageFilters ?? [];
+  const v1 = version === 'v1';
+  // v1 filters only on what the client dataset holds: no root causes, no RCM area metric filter.
+  const pageFilters = (PAGE_BY_ID[route.page]?.pageFilters ?? []).filter((f) => !v1 || !V1_HIDDEN_FIELDS.includes(f));
   if (!paneOpen) {
     return (
       <aside className="pane pane-closed no-print" aria-label="Filters (collapsed)">
@@ -353,17 +377,21 @@ export function FilterPane() {
         <section className="pane-sec">
           <h4>Payer</h4>
           <Slicer field="financialClass" />
-          <Slicer field="payer" />
+          {!v1 && <Slicer field="payer" />}
         </section>
-        <section className="pane-sec">
-          <h4>Service</h4>
-          <Slicer field="patientType" />
-          <Slicer field="serviceLine" />
-        </section>
-        <section className="pane-sec">
-          <h4>Metrics</h4>
-          <AreaSlicer />
-        </section>
+        {!v1 && (
+          <section className="pane-sec">
+            <h4>Service</h4>
+            <Slicer field="patientType" />
+            <Slicer field="serviceLine" />
+          </section>
+        )}
+        {!v1 && (
+          <section className="pane-sec">
+            <h4>Metrics</h4>
+            <AreaSlicer />
+          </section>
+        )}
         {pageFilters.length > 0 && (
           <section className="pane-sec pane-page">
             <h4>This page</h4>
@@ -374,6 +402,9 @@ export function FilterPane() {
     </aside>
   );
 }
+
+/** Filters that v1 does not show: the client dataset has no named payers, service lines, patient types or root causes. */
+const V1_HIDDEN_FIELDS: SelField[] = ['payer', 'patientType', 'serviceLine', 'rootCause'];
 
 function pageNote(f: SelField) {
   if (f === 'arAge' || f === 'accountStatus') return 'Applies to A/R balances ($). A/R days and aging shares ignore it.';
@@ -386,14 +417,14 @@ function pageNote(f: SelField) {
 // ---------------------------------------------------------------- canvas header
 
 export function Crumbs({ extra }: { extra?: ReactNode }) {
-  const { route, trail, back, go } = useApp();
+  const { route, trail, back, go, version } = useApp();
   const section = SECTIONS.find((x) => x.id === sectionOf(route.page))!;
   return (
     <nav className="crumbs" aria-label="Breadcrumb">
       {trail.length > 0 && (
         <button type="button" className="crumb-back" onClick={back} title="Back to the previous view"><Icon name="back" size={12} /> Back</button>
       )}
-      {trail.length === 0 && <button type="button" className="crumb" onClick={() => go(section.home)}>{section.label}</button>}
+      {trail.length === 0 && <button type="button" className="crumb" onClick={() => go(sectionHome(section.id, version))}>{section.label}</button>}
       {trail.map((r, i) => (
         <span key={i} className="crumb-item">{i > 0 && <span className="crumb-sep">›</span>}<span className="crumb muted-crumb">{routeLabel(r)}</span></span>
       ))}

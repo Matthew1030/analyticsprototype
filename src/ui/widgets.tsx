@@ -1,7 +1,7 @@
 // Reusable analytical widgets built on the analytics service. Each one reads the global
 // filter context, so every page cross-filters the same way.
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { SelField, Selections } from '../engine/engine';
 import { METRIC_BY_ID, RCM_AREAS, type RcmArea, type Unit } from '../engine/metrics';
 import { comparePeriod, monthPeriod } from '../engine/periods';
@@ -16,9 +16,7 @@ import { Delta, GapMark, InfoIcon, Sparkline, StatusMark } from './common';
 import { Grid, gridExport, type GridColumn, type GridRow } from './Grid';
 import { Icon } from './icons';
 import { Visual, type VisualSpec } from './Visual';
-import { dimensionInDataset, gapStar, notInDataset } from '../config/datasetGaps';
-import { GAP_TIER, inRelease } from '../config/priorities';
-import { usePriorities } from '../state/Priorities';
+import { dimensionInDataset, gapStar } from '../config/datasetGaps';
 
 /** Catalog name with the metric code in front (e.g. "AR-06 · Gross A/R days"). */
 const codeName = (id: string) => `${METRIC_BY_ID[id].code} · ${METRIC_BY_ID[id].name}`;
@@ -68,17 +66,15 @@ function useMeasure(id: string, alt?: string[]): [string, ReactNode] {
 // ---------------------------------------------------------------- KPI card
 
 export function KpiCard({ id, onOpen, selOverride }: { id: string; onOpen?: () => void; selOverride?: Selections }) {
-  const { go, compare, period } = useApp();
+  const { go, compare, period, version } = useApp();
   const m = METRIC_BY_ID[id];
   const v = useMetric(id, 13, selOverride);
   const open = onOpen ?? (() => go('metric', { id }, { drill: true }));
   const fm = f(id);
-  // A metric the current dataset cannot fill is v3+: a release preview before v3 dims or hides it.
-  const { preview } = usePriorities();
-  const out = notInDataset(id) && !inRelease(GAP_TIER, preview);
+  // In v1 the KPI cards on a page do not open Metric Analysis (that page is not in v1).
+  const clickable = version === 'full' || !!onOpen;
   return (
-    <div className={`kpi ${out ? 'prio-out' : ''}`} role="button" tabIndex={0} onClick={open} onKeyDown={(e) => { if (e.key === 'Enter') open(); }}
-      title={`Analyze ${m.name}`}>
+    <div className={`kpi ${clickable ? '' : 'static'}`} {...(clickable ? { role: 'button', tabIndex: 0, onClick: open, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter') open(); }, title: `Analyze ${m.name}` } : {})}>
       <div className="kpi-top">
         <span className="kpi-name">{m.code}<GapMark id={id} /> · {m.short ?? m.name}</span>
         <span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={id} noMark /></span>
@@ -150,8 +146,8 @@ export function Scorecard({ ids, title, groupByArea = true, selOverride, spec, s
 
 // ---------------------------------------------------------------- Trend
 
-export function TrendVisual({ id: idProp, alt, months = 18, title, pid, height = 240, selOverride, compareSel, compareLabel }: {
-  id: string; alt?: string[]; months?: number; title?: string; pid?: string; height?: number; selOverride?: Selections; compareSel?: Selections; compareLabel?: string;
+export function TrendVisual({ id: idProp, alt, months = 18, title, height = 240, selOverride, compareSel, compareLabel }: {
+  id: string; alt?: string[]; months?: number; title?: string; height?: number; selOverride?: Selections; compareSel?: Selections; compareLabel?: string;
 }) {
   const { engine, period, sel, setPeriod } = useApp();
   const [id, measure] = useMeasure(idProp, alt);
@@ -172,7 +168,7 @@ export function TrendVisual({ id: idProp, alt, months = 18, title, pid, height =
   const sIdx = t.findIndex((x) => x.period === `${Math.floor(period.endMi / 12)}-${String((period.endMi % 12) + 1).padStart(2, '0')}`);
   const noData = t.every((x) => x.value === null) ? 'No data for the current filters.' : null;
   return (
-    <Visual title={title ?? `${m.name} trend`} pid={pid ?? title ?? `${METRIC_BY_ID[idProp].name} trend`} metricId={id} noData={noData}
+    <Visual title={title ?? `${m.name} trend`} metricId={id} noData={noData}
       subtitle={`Monthly, ${t.length} months to ${monthPeriod(period.endMi).short} · click a month to set the period`}
       table={{ columns: ['Month', m.name, 'Target', 'Prior year', 'Rolling 3-month'], rows: t.map((x) => [x.label, fm(x.value), fm(x.target), fm(x.prior_year), fm(x.rolling_3)]) }}
       actions={(
@@ -192,8 +188,8 @@ export function TrendVisual({ id: idProp, alt, months = 18, title, pid, height =
 
 // ---------------------------------------------------------------- Breakdown (click to filter)
 
-export function BreakdownVisual({ id: idProp, alt, dim: dimProp, dims, title, pid, height, top, showCompare = true, sortBy = 'value', subtitle, onDrill, spec, filterField }: {
-  id: string; alt?: string[]; dim: DimensionId; dims?: DimensionId[]; title?: string; pid?: string; height?: number; top?: number; showCompare?: boolean;
+export function BreakdownVisual({ id: idProp, alt, dim: dimProp, dims, title, height, top, showCompare = true, sortBy = 'value', subtitle, onDrill, spec, filterField }: {
+  id: string; alt?: string[]; dim: DimensionId; dims?: DimensionId[]; title?: string; height?: number; top?: number; showCompare?: boolean;
   sortBy?: 'value' | 'natural' | 'change'; subtitle?: string; onDrill?: (key: number) => void; spec?: VisualSpec;
   /** Field that a click filters (defaults to the dimension). */
   filterField?: SelField;
@@ -219,7 +215,7 @@ export function BreakdownVisual({ id: idProp, alt, dim: dimProp, dims, title, pi
   const cmpName = compare === 'py' ? 'Prior year' : 'Prior period';
   return (
     <Visual title={title ?? `${m.short ?? m.name} by ${DIMENSION_LABEL[dim].toLowerCase()}`} metricId={id} gap={!dimensionInDataset(dim, id)}
-      pid={pid ?? title ?? `${METRIC_BY_ID[idProp].short ?? METRIC_BY_ID[idProp].name} by ${DIMENSION_LABEL[dimProp].toLowerCase()}`} noData={noData}
+      noData={noData}
       subtitle={subtitle ?? `${period.label} · click to ${mode === 'drill' ? 'drill through' : 'filter'}${more ? ` · top ${top} of ${top! + more}` : ''}`}
       actions={<>{measure}{dims ? (
         <select className="sel-xs" value={dim} onChange={(e) => setDim(e.target.value as DimensionId)} aria-label="Break down by">

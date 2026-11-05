@@ -10,12 +10,14 @@ import { Grid, type GridColumn } from '../ui/Grid';
 import { Icon } from '../ui/icons';
 import { GapLegend } from '../ui/common';
 import { PAGE_BY_ID } from '../ui/Shell';
+import { V1_DENIAL_KPIS, V1_ELT_KPIS, V1_METRICS } from '../config/v1';
 
 const WRAP = new Set<keyof DictionaryRow>(['name', 'definition', 'formula', 'views', 'source']);
 const WIDTH: Partial<Record<keyof DictionaryRow, number>> = { name: 200, definition: 320, formula: 260, views: 220, source: 240 };
 
 export function MetricDictionary() {
-  const { go, toast } = useApp();
+  const { go, toast, version } = useApp();
+  const v1 = version === 'v1';
   const [views, setViews] = useState<Record<string, PageId[]> | null>(null);
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
@@ -23,7 +25,16 @@ export function MetricDictionary() {
 
   useEffect(() => { loadMetricViews().then(setViews).catch((e: Error) => setErr(e.message)); }, []);
 
-  const all = useMemo(() => (views ? dictionaryRows(views) : []), [views]);
+  // v1 lists only the v1 metrics, with the v1 views and release.
+  const all = useMemo(() => {
+    if (!views) return [];
+    const rows = dictionaryRows(views);
+    if (!v1) return rows;
+    return rows.filter((r) => V1_METRICS.includes(r.id)).map((r) => ({
+      ...r, release: 'v1',
+      views: [V1_ELT_KPIS.includes(r.id) && 'ELT Summary', V1_DENIAL_KPIS.includes(r.id) && 'Denials'].filter(Boolean).join('; '),
+    }));
+  }, [views, v1]);
   const list = all.filter((r) => (!area || r.area === area)
     && (!q || `${r.code} ${r.name} ${r.definition} ${r.formula} ${r.id}`.toLowerCase().includes(q.toLowerCase())));
   const cols: GridColumn<DictionaryRow>[] = DICTIONARY_COLUMNS.map((c) => ({
@@ -64,7 +75,7 @@ export function MetricDictionary() {
         <header className="visual-head">
           <div className="visual-titles">
             <h3>Metric dictionary ({list.length === all.length ? `${all.length} metrics` : `${list.length} of ${all.length} metrics`})</h3>
-            <div className="visual-sub">Code = RCM category prefix and number · views use only the metric name or its short name · shortest period = the shortest period type the metric is calculated for · Time recency is not set yet · click a row to analyze the metric</div>
+            <div className="visual-sub">Code = RCM category prefix and number · views use only the metric name or its short name · shortest period = the shortest period type the metric is calculated for · Time recency is not set yet{v1 ? ' · v1 metrics only' : ' · click a row to analyze the metric'}</div>
           </div>
           <div className="visual-tools dict-tools">
             <label className="fld inline">RCM category
@@ -80,7 +91,7 @@ export function MetricDictionary() {
           {err ? <div className="state state-error" role="alert"><Icon name="warn" size={16} /><span><b>The views could not load.</b> {err}</span></div>
             : !views ? <div className="state" role="status">Reading the views from the prototype pages…</div>
             : <Grid caption="Metric dictionary" columns={cols} rows={list.map((r) => ({ id: r.id, data: r }))} dense
-                defaultSort={{ key: 'code', dir: 'asc' }} onRowClick={(r) => go('metric', { id: r.id }, { drill: true })} />}
+                defaultSort={{ key: 'code', dir: 'asc' }} onRowClick={v1 ? undefined : (r) => go('metric', { id: r.id }, { drill: true })} />}
         </div>
       </section>
     </div>

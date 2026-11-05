@@ -28,6 +28,24 @@ npm run dev        # http://localhost:5173
 
 GitHub Pages: `.github/workflows/pages.yml` tests, builds and deploys `dist` on pushes to the branches it lists.
 
+## Versions: v1 and Full concept
+
+The **Version** switch in the prototype controls bar shows one of two scopes. The prototype opens in
+**v1**. Add `?v=full` to the URL (before the `#`) to open the full concept. Give the plain URL to the
+development team: it shows v1 only.
+
+| | v1 (what the first release builds) | Full concept |
+|---|---|---|
+| ELT Summary | Six KPI cards in revenue-cycle order: PA-22, PA-02, CO-04 / BL-01, BL-08, DN-04. No Performance Trends. Performance vs. Target has the same six metrics, grouped by revenue-cycle stage (Patient Access, Coding, Billing, Denials). A row click shows or hides the metric on Selected Metric Trends. Only DN-04 opens an analytics page (Denials). | Everything |
+| Analytics | Denials page only, on one screen: KPI strip (DN-05, DN-04, PA-02, CO-04, CD-02, DN-15, DN-16), denied $ by reason, by payor group and by hospital, and the denial decomposition (hospital, reason, payor group). KPI cards do not drill. | Every page and tab |
+| Worklists | Not shown | Shown (planned for v2) |
+| Filters | Period, compare, region, facility type, hospital, payor group, denial reason. Click a bar to cross-filter. | Every filter, plus payer, service, RCM area, root cause |
+| Metric Dictionary | The 10 v1 metrics | Every metric |
+
+PA-22 has no target in `config/targets.config.json`, so it shows "No target set". The v1 scope is in
+one file, `src/config/v1.ts`; a test (`tests/v1.test.ts`) checks the codes, the order and that every
+v1 metric is in the current dataset (so v1 shows no asterisk).
+
 ## What the product does
 
 The product has three connected experiences, each with its own level of information density:
@@ -214,8 +232,7 @@ area, and the code of a removed metric is not used again.
 | CD | Clinical Documentation | FN | Financial |
 | BL | Billing | | |
 
-The codes replace the client's former ELT framework codes (P1–P13). Release priority ratings saved or
-exported with the old codes still load (`LEGACY_FRAMEWORK_CODE` in `src/engine/framework.ts`).
+The codes replace the client's former ELT framework codes (P1–P13).
 
 **Metric Dictionary** in the prototype controls bar (after Worklists, marked *prototype only*) lists every
 metric: code, name, short name, RCM category, definition, calculation in plain terms (`formula` on the
@@ -226,8 +243,7 @@ appears.
 **One name per metric.** The dictionary name (`name`) and the approved short name (`short`, at most one,
 for compact places such as KPI cards and chart legends) are the only names any view uses for a metric,
 the ELT Summary included. Visual titles such as "Cash % net rev by hospital" are built from the catalog,
-so they follow a measure switch. Tests check table column labels and renamed visuals. Release priority
-ratings saved under a former visual title still load (`LEGACY_VISUAL_TITLE` in `src/config/priorities.ts`).
+so they follow a measure switch. Tests check table column labels.
 The client KPI inventory (`src/config/kpiCoverage.ts`) keeps the client's own KPI names, because it
 records the client sheet.
 
@@ -249,12 +265,8 @@ switches, the metric definition pop-up, Metric Analysis, the Metric catalog and 
 coverage table ("In current dataset" column), and the Metric Dictionary export. Each page has a
 legend under its title.
 
-Each of these items has **v3+** as its default release in the Prioritize tool, until a facilitator
-rates it. The default shows like a rating inherited from the page, is not stored as a decision,
-and an export writes it as "Yes (default v3+: data not in the current dataset)". A release
-preview of v1 or v2 dims or hides these items, so it shows the dashboard the workbook can fill
-today. The Metric Dictionary and the Metric catalog show the release and the workbook column
-that fills each metric.
+These items are planned for v3+ and show only in the Full concept. The Metric Dictionary and the
+Metric catalog show the release and the workbook column that fills each metric.
 
 The rules are in `src/config/datasetGaps.ts`:
 
@@ -268,37 +280,6 @@ The rules are in `src/config/datasetGaps.ts`:
 
 Move a metric to `WORKBOOK_SOURCE` when its data becomes available. `docs/dataset-gap-check.md`
 gives the workbook check for each metric.
-
-## Release prioritization (facilitated session)
-
-A prototype-only tool to decide, live with business leaders, what goes into each release. One person
-(the facilitator) drives the screen. The scale combines release and MoSCoW:
-
-| Choice | Release | MoSCoW |
-|---|---|---|
-| v1 | v1 (MVP) | Must |
-| v2 | v2 | Should |
-| v3+ | v3+ | Could |
-| Won't | Not planned | Won't |
-
-1. Click **Prioritize** in the prototype controls bar. Each visual and each ELT Summary section gets a
-   release picker; unrated items have a dashed outline. A second click on the current choice clears it.
-2. The floating **Release priorities** dock rates **this page**. A visual with no rating of its own takes
-   its page's rating (shown as a pale choice); a rating on the visual overrides it.
-3. KPIs: the ELT framework metrics (ELT Summary › Performance vs. Target) and every row of
-   Definitions › Client KPI coverage get a picker. Product capabilities (drill-through, CSV export,
-   bookmarks, Internal / External views, data states and more) are in **Summary › Capabilities**.
-4. **Preview release** (v1, v1–v2, v1–v3+) dims the visuals outside that release, or hides them with
-   **Hide others**, so leaders see what the release looks like. The preview stays on when Prioritize is off.
-5. **Summary** shows the page rollup (counts per release for each page, KPI group and capability group),
-   every item with a note field, and the file actions. Visual counts include only the visuals opened so
-   far; **Open every page once** lists them all (visuals behind a sub-tab or switch need a manual visit).
-
-Saving: every change is saved in the browser at once, so a page refresh keeps it. The browser warns
-before you close or reload the tab when there are changes that are not exported. Use **Export (JSON)**
-or **Export (CSV)** (opens in Excel) to keep a copy outside the browser, and **Load file…** to load
-either file again, for example on another computer. Load replaces the current decisions. **Reset**
-clears everything back to the start: all unset, except the three worklists and worklist actions (v2).
 
 ## Code structure
 
@@ -317,8 +298,7 @@ src/services/       contracts.ts  response shapes the UI expects from a data ser
                     worklists.ts  worklist items, priority rules, simulated work fields
 src/ui/             Shell, Visual container, Grid (analytical table), charts, widgets
                     (KPI card, scorecard, trend, breakdown, decomposition tree), investigation path
-                    Priority (release prioritization: picker, dock, summary)
-src/config/         priorities.ts  release prioritization model, capability list, export / import formats
+src/config/         v1.ts  the v1 scope (KPIs, groups, pages) for the version switch
                     metricDictionary.ts  metric dictionary rows, views read from the page sources, CSV export
 src/pages/          One file per screen (EltSummary, analytics pages, Worklist)
 tests/              Data, reconciliation, planted-pattern and contract tests

@@ -3,7 +3,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { LEGACY_VISUAL_TITLE, parseCsv } from '../src/config/priorities';
+import { parseCsv } from './csv';
 import {
   DICTIONARY_COLUMNS, dictionaryCsv, dictionaryRows, FILE_PAGE, FILES_WITHOUT_VIEWS, loadMetricViews, metricIdsIn,
 } from '../src/config/metricDictionary';
@@ -91,7 +91,6 @@ describe('metric dictionary export', () => {
 
 describe('one name per metric (terminology)', () => {
   const pagesDir = join(__dirname, '..', 'src', 'pages');
-  const names = new Set(METRICS.flatMap((m) => [m.name, ...(m.short ? [m.short] : [])]));
 
   it('lists the approved short name in the dictionary and its export', () => {
     expect(DICTIONARY_COLUMNS.map((c) => c.key)).toContain('short');
@@ -111,13 +110,6 @@ describe('one name per metric (terminology)', () => {
         // A period qualifier in parentheses may follow, e.g. "(YTD)".
         expect([def.name, def.short], `${f}: column "${m[1]}" for ${m[2]}`).toContain(m[1].replace(/ \((YTD|MTD)\)$/, ''));
       }
-    }
-  });
-
-  it('renames visuals to a metric name or short name ("<metric> by <dimension>")', () => {
-    for (const [, , title] of LEGACY_VISUAL_TITLE) {
-      const lead = title.replace(/ (by|trend|vs) .*$/, '').replace(/ trend$/, '');
-      expect(names.has(lead), title).toBe(true);
     }
   });
 });

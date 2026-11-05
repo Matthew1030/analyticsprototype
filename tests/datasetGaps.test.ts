@@ -4,9 +4,6 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DIMENSION_METRICS, dimensionInDataset, KPIS_NOT_IN_DATASET, METRICS_NOT_IN_DATASET, VIEWS_NOT_IN_DATASET, WORKBOOK_SOURCE } from '../src/config/datasetGaps';
-import {
-  effectiveTier, eltItemId, GAP_DEFAULT_TEXT, GAP_TIER, KPI_ITEMS, pageItemId, parseFile, toCsv, toFile, visualItemId, type PriorityItem,
-} from '../src/config/priorities';
 import { KPI_COVERAGE } from '../src/config/kpiCoverage';
 import { METRIC_BY_ID, METRICS } from '../src/engine/metrics';
 
@@ -42,28 +39,5 @@ describe('full audit of the catalog against the workbook', () => {
     expect(dimensionInDataset('payer', 'cash')).toBe(false);
     expect(dimensionInDataset('financialClass', 'cash')).toBe(true);
     for (const ids of Object.values(DIMENSION_METRICS)) for (const id of ids) expect(WORKBOOK_SOURCE[id], id).toBeDefined();
-  });
-});
-
-describe('default release for data not in the dataset', () => {
-  const item: PriorityItem = { id: visualItemId('denials', 'Appeals by denial category'), kind: 'visual', label: 'Appeals by denial category', group: 'Denials', page: 'denials', gap: true };
-
-  it('is v3+ until someone rates the item, and an own rating wins', () => {
-    expect(effectiveTier(item, {})).toEqual({ tier: GAP_TIER, inherited: true, byDefault: true });
-    expect(GAP_TIER).toBe('v3');
-    expect(effectiveTier(item, { [pageItemId('denials')]: { tier: 'v1', at: '' } }).tier).toBe('v3');
-    expect(effectiveTier(item, { [item.id]: { tier: 'v1', at: '' } })).toEqual({ tier: 'v1', inherited: false });
-  });
-
-  it('marks the ELT and client KPI items that need missing data', () => {
-    expect(KPI_ITEMS.find((k) => k.id === eltItemId('avoidable_wo_pct_net'))?.gap).toBe(true);
-    expect(KPI_ITEMS.find((k) => k.id === eltItemId('gross_ar_days'))?.gap).toBeUndefined();
-  });
-
-  it('exports the default without storing it as a rating', () => {
-    const csv = toCsv([item], {});
-    expect(csv).toContain(GAP_DEFAULT_TEXT);
-    expect(parseFile(csv).decisions).toEqual({});
-    expect(parseFile(JSON.stringify(toFile([item], {}, ''))).decisions).toEqual({});
   });
 });
