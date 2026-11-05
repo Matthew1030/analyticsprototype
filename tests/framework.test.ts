@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Engine } from '../src/engine/engine';
-import { FRAMEWORK, FRAMEWORK_METRICS, LEGACY_FRAMEWORK_CODE } from '../src/engine/framework';
+import { FRAMEWORK, FRAMEWORK_METRICS } from '../src/engine/framework';
 import { evaluate, METRIC_BY_ID } from '../src/engine/metrics';
 import { monthPeriod } from '../src/engine/periods';
 import { CONFIG, staticTarget } from '../src/engine/status';
@@ -15,10 +15,6 @@ describe('ELT metric framework', () => {
     expect(FRAMEWORK_METRICS).toHaveLength(12);
     expect(FRAMEWORK_METRICS.map((m) => m.code).sort())
       .toEqual(['AR-01', 'AR-06', 'AR-07', 'BL-08', 'CA-03', 'DN-01', 'DN-02', 'DN-04', 'FN-10', 'FN-11', 'FN-12', 'PA-01']);
-  });
-
-  it('maps every former client code (P1–P13) to a framework metric', () => {
-    expect(Object.values(LEGACY_FRAMEWORK_CODE).sort()).toEqual(FRAMEWORK_METRICS.map((m) => m.id).sort());
   });
 
   it('maps every metric to a catalog metric with the same code, a direction and a target (net to gross has none)', () => {

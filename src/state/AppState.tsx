@@ -8,6 +8,7 @@ import { Engine, FIELD_LABEL, type SelField, type Selections } from '../engine/e
 import { availablePeriods, makePeriod, quarterOfMonth, type CompareMode, type Period, type PeriodKind } from '../engine/periods';
 import { memberLabel } from '../services/analytics';
 import type { RcmArea } from '../engine/metrics';
+import { V1_PAGES, type Version } from '../config/v1';
 
 export type PageId =
   | 'executive' | 'cycle' | 'ar' | 'denials' | 'cash' | 'access' | 'midcycle' | 'billing' | 'payers' | 'facilities'
@@ -40,6 +41,9 @@ interface AppState {
   specMode: boolean;
   audience: Audience;
   setAudience: (a: Audience) => void;
+  /** Prototype-only release switch: v1 (default) or the full concept. Kept in the URL (?v=full). */
+  version: Version;
+  setVersion: (v: Version) => void;
   /** RCM area filter: limits which metrics appear in scorecards and the catalog. */
   areas: RcmArea[];
   setAreas: (a: RcmArea[]) => void;
@@ -87,6 +91,16 @@ function parseHash(): Route {
   return { page, params };
 }
 
+/** Version from the URL query: "?v=full" shows the full concept; anything else shows v1. */
+function readVersion(): Version {
+  try { return new URLSearchParams(location.search).get('v') === 'full' ? 'full' : 'v1'; } catch { return 'v1'; }
+}
+
+/** In v1, a page that is not in v1 opens the ELT Summary. */
+function allowed(r: Route, v: Version): Route {
+  return v === 'v1' && !V1_PAGES.includes(r.page) ? { page: 'executive', params: {} } : r;
+}
+
 function toHash(r: Route): string {
   const { id, ...rest } = r.params;
   const q = new URLSearchParams(rest).toString();
@@ -105,10 +119,16 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
     if (!k || key === undefined) return null;
     return availablePeriods(k, ds.meta.windowStartMonth, ds.meta.endMonth).find((p) => p.key === key) ?? null;
   };
-  const [sel, setSel] = useState<Selections>(stored.sel ?? {});
+  const [sel, setSel] = useState<Selections>(() => (readVersion() === 'v1' ? { ...stored.sel, payer: [], patientType: [], serviceLine: [], rootCause: [] } : stored.sel ?? {}));
   const [period, setPeriodState] = useState<Period>(validPeriod(stored.kind, stored.key) ?? makePeriod('month', ds.meta.endMonth));
   const [compare, setCompare] = useState<CompareMode>(stored.compare ?? 'prior');
-  const [route, setRoute] = useState<Route>(parseHash);
+  const [version, setVersionState] = useState<Version>(readVersion);
+  const versionRef = useRef(version);
+  versionRef.current = version;
+  const [route, setRouteRaw] = useState<Route>(() => allowed(parseHash(), readVersion()));
+  const setRoute = useCallback((r: Route) => setRouteRaw(allowed(r, versionRef.current)), []);
+  // A link to a page that is not in v1 opened the ELT Summary: show that in the address bar too.
+  useEffect(() => { if (location.hash && location.hash !== toHash(route)) history.replaceState(null, '', toHash(route)); }, [route]);
   const [trail, setTrail] = useState<Route[]>([]);
   const [sim, setSim] = useState<SimState>('normal');
   const [specMode, setSpecMode] = useState(false);
@@ -142,7 +162,22 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
   useEffect(() => {
     const onHash = () => setRoute(parseHash());
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    window.addEventListener('popstate', onHash);
+    return () => { window.removeEventListener('hashchange', onHash); window.removeEventListener('popstate', onHash); };
+  }, [setRoute]);
+
+  const setVersion = useCallback((v: Version) => {
+    setVersionState(v);
+    versionRef.current = v;
+    const url = new URL(location.href);
+    if (v === 'full') url.searchParams.set('v', 'full'); else url.searchParams.delete('v');
+    const next = allowed(routeRef.current, v);
+    url.hash = toHash(next);
+    history.replaceState(null, '', url.toString());
+    setTrail([]);
+    setRouteRaw(next);
+    // v1 has no slicer for these fields, so a value kept from the full concept could not be cleared.
+    if (v === 'v1') { setSel((x) => ({ ...x, payer: [], patientType: [], serviceLine: [], rootCause: [] })); setAreas([]); }
   }, []);
 
   const routeRef = useRef(route);
@@ -151,13 +186,13 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
   trailRef.current = trail;
 
   const go = useCallback((page: PageId, params: Record<string, string> = {}, opts: { drill?: boolean } = {}) => {
-    const next = { page, params };
+    const next = allowed({ page, params }, versionRef.current);
     setTrail(opts.drill ? [...trailRef.current, routeRef.current].slice(-8) : []);
     setRoute(next);
     const h = toHash(next);
     if (location.hash !== h) history.pushState(null, '', h);
     window.scrollTo({ top: 0 });
-  }, []);
+  }, [setRoute]);
 
   const setParams = useCallback((params: Record<string, string>) => {
     const next = { page: routeRef.current.page, params };
@@ -172,7 +207,7 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
     setTrail(t.slice(0, -1));
     setRoute(prev);
     history.pushState(null, '', toHash(prev));
-  }, []);
+  }, [setRoute]);
 
   const toggle = useCallback((field: SelField, key: number) => {
     setSel((s) => {
@@ -209,7 +244,7 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
     (p.endMi > ds.meta.endMonth - ds.meta.preliminaryMonths ? 'Preliminary' : 'Closed') as 'Preliminary' | 'Closed', [ds]);
 
   const value: AppState = {
-    ds, engine, sel, period, compare, route, trail, sim, specMode, audience, setAudience, paneOpen, areas, setAreas,
+    ds, engine, sel, period, compare, route, trail, sim, specMode, audience, setAudience, version, setVersion, paneOpen, areas, setAreas,
     go, setParams, back, setPeriod, setPeriodKind, setCompare, toggle, selectOnly, clearField, clearAll,
     setSim, setSpecMode, setPaneOpen, toast, toasts, valueLabel, periodStatus, workEdits, editWork,
   };

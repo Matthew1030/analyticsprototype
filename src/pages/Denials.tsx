@@ -1,6 +1,9 @@
 // Denials Analytics: which payers, hospitals, categories and root causes drive denials.
 // Drill path: Total denials -> payer -> hospital -> category -> root cause -> denied claims.
 // Standard stage-page order: Performance, Trend, Where, Why, Act.
+//
+// v1 (src/config/v1.ts) is one screen: the KPI strip, then denied $ by reason, by payor group and
+// by hospital, and the denial decomposition. Every bar cross-filters the page.
 
 import { useMemo } from 'react';
 import type { Selections } from '../engine/engine';
@@ -20,11 +23,41 @@ import { Band, Bands } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { BreakdownVisual, DecompositionTree, KpiStrip, TrendVisual, useMetric } from '../ui/widgets';
 import { AgeBucketsVisual, WriteoffsByReason } from '../ui/workbook';
+import { V1_DENIAL_KPIS } from '../config/v1';
 
 /** Reason colors follow the reason (fixed order), never its rank: the 12 workbook denial reasons. */
 export const CATEGORY_COLORS = [...SERIES, '#0f7b8a', '#b5651d', '#7a7f87', '#9aa2ae'];
 
 export function Denials() {
+  const { version } = useApp();
+  return version === 'v1' ? <DenialsV1 /> : <DenialsFull />;
+}
+
+/** v1: KPIs, then where the denied dollars are (reason, payor group, hospital) and the decomposition. */
+function DenialsV1() {
+  return (
+    <div className="page denials-v1">
+      <CanvasHeader question="Which denial reasons, payor groups and hospitals drive denied dollars?" />
+      <KpiStrip ids={V1_DENIAL_KPIS} />
+      <div className="dv1-grid">
+        <div className="dv1-reason">
+          <BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by reason" showCompare={false} height={392} />
+        </div>
+        <div className="dv1-payor">
+          <BreakdownVisual id="denial_dollars" alt={['denial_dollar_rate']} dim="financialClass" title="Denied $ by payor group" showCompare={false} height={190} />
+        </div>
+        <div className="dv1-hosp">
+          <BreakdownVisual id="denial_dollars" alt={['denial_dollar_rate']} dim="facility" title="Denied $ by hospital" showCompare={false} height={190} />
+        </div>
+        <div className="dv1-decomp">
+          <DecompositionTree id="denial_dollars" title="Denial decomposition" dims={['facility', 'denialCategory', 'financialClass']} initial={['facility', 'denialCategory']} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DenialsFull() {
   const { go, sel } = useApp();
   const startSel = useMemo(() => ({ ...sel, facility: [], payer: [], denialCategory: [], rootCause: [] }), [sel]);
   const rate = useMetric('denial_dollar_rate', 0, startSel);

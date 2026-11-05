@@ -17,6 +17,9 @@ export function GapMark({ id, show }: { id?: string | null; show?: boolean }) {
 
 /** Legend for the asterisk, shown under each page title. */
 export function GapLegend() {
+  // v1 holds only metrics the current dataset has, so it needs no asterisk legend.
+  const { version } = useApp();
+  if (version === 'v1') return null;
   return <p className="gap-legend"><span className="gap-mark" aria-hidden="true">*</span> {GAP_NOTE}</p>;
 }
 
