@@ -37,7 +37,6 @@ export const PAGES: PageMeta[] = [
   { id: 'denials', section: 'analytics', label: 'Denials', title: 'Denials Analytics', question: 'Which payers, hospitals and root causes drive denials?', nav: true, pageFilters: ['denialCategory', 'rootCause'] },
   { id: 'ar', section: 'analytics', label: 'A/R', title: 'A/R Analytics', question: 'Where is A/R accumulating, and why?', nav: true, pageFilters: ['arAge', 'accountStatus'] },
   { id: 'cash', section: 'analytics', label: 'Cash', title: 'Cash and Collections', question: 'Are we on track to hit the cash goal?', nav: true },
-  { id: 'cash-ar', section: 'analytics', label: 'Cash + A/R', title: 'Cash and A/R', question: 'Are we collecting cash on time, and is A/R aging?', nav: true },
   { id: 'payers', section: 'analytics', label: 'Payers', title: 'Payer Performance', question: 'Which payor groups pay slowly or deny more, and which payers underpay?', nav: true },
   { id: 'facilities', section: 'analytics', label: 'Facilities', title: 'Facility Comparison', question: 'How do our hospitals compare, and which need attention?', nav: true },
   { id: 'definitions', section: 'analytics', label: 'Definitions', title: 'Metric Definitions and Data', question: 'What does each measure mean, and how current is the data?', nav: true },
@@ -62,7 +61,7 @@ export function sectionHome(section: Section, version: Version): PageId {
 }
 
 /** Pages a version shows in the page tabs. */
-const inVersion = (id: PageId, v: Version) => (isV1(v) ? V1_SCOPE[v].pages.includes(id) : id !== 'cash-ar');
+const inVersion = (id: PageId, v: Version) => (isV1(v) ? V1_SCOPE[v].pages.includes(id) : true);
 
 // ---------------------------------------------------------------- prototype bar
 
@@ -104,7 +103,7 @@ export function PrototypeBar() {
 
 const VERSIONS: { v: Version; note: string }[] = [
   { v: 'v1', note: 'v1 option A: ELT Summary with six KPIs and the Denials page' },
-  { v: 'v1b', note: 'v1 option B (simple, lovable, complete): 16 critical metrics, ELT Summary and three deep dives (Denials, Cash + A/R, Patient Access)' },
+  { v: 'v1b', note: 'v1 option B (simple, lovable, complete): the ELT Summary only, with Daily, Weekly and Monthly tabs. No analytics views' },
   { v: 'full', note: 'The full concept: every planned page, including later releases' },
 ];
 
@@ -157,7 +156,8 @@ function SectionNav() {
   const last = useRef<Record<Section, PageId>>({ elt: 'executive', analytics: 'cycle', worklists: 'wl-denials', dictionary: 'dictionary' });
   if (PAGE_BY_ID[route.page]?.nav) last.current[current] = route.page;
   const v1 = isV1(version);
-  const sections = v1 ? SECTIONS.filter((x) => x.id !== 'worklists') : SECTIONS;
+  // In v1 a dashboard shows only when the option has its home page (v1 (B) has no Analytics).
+  const sections = v1 ? SECTIONS.filter((x) => x.id !== 'worklists' && V1_SCOPE[version].pages.includes(sectionHome(x.id, version))) : SECTIONS;
   const home = (x: (typeof SECTIONS)[number]) => (v1 ? sectionHome(x.id, version) : current === x.id ? x.home : last.current[x.id]);
   return (
     <nav className="sections" aria-labelledby="proto-dash-label">

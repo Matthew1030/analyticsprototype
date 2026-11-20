@@ -16,7 +16,6 @@ import { Delta, GapMark, InfoIcon, Sparkline, StatusMark } from './common';
 import { Grid, gridExport, type GridColumn, type GridRow } from './Grid';
 import { Icon } from './icons';
 import { Visual, type VisualSpec } from './Visual';
-import { ChartFillContext } from './visualContext';
 import { dimensionInDataset, gapStar } from '../config/datasetGaps';
 
 /** Catalog name with the metric code in front (e.g. "AR-06 · Gross A/R days"). */
@@ -67,13 +66,8 @@ function useMeasure(id: string, alt?: string[]): [string, ReactNode] {
 // ---------------------------------------------------------------- KPI card
 
 /** Status class of a KPI card: the card edge and tint show good or bad at a glance. */
-const stClass = (s: string | null) => (s === 'On target' ? 'st-ok' : s === 'Watch' ? 'st-watch' : s ? 'st-off' : 'st-none');
-
-/**
- * KPI card. size "hero" is a large card for a view's critical metrics; "small" is a compact module
- * (value, target, status, change; no sparkline). Both get a status-colored edge.
- */
-export function KpiCard({ id, onOpen, selOverride, size }: { id: string; onOpen?: () => void; selOverride?: Selections; size?: 'hero' | 'small' }) {
+/** KPI card: value, sparkline, target and change. */
+export function KpiCard({ id, onOpen, selOverride }: { id: string; onOpen?: () => void; selOverride?: Selections }) {
   const { go, compare, period, version } = useApp();
   const m = METRIC_BY_ID[id];
   const v = useMetric(id, 13, selOverride);
@@ -82,7 +76,7 @@ export function KpiCard({ id, onOpen, selOverride, size }: { id: string; onOpen?
   // In v1 the KPI cards on a page do not open Metric Analysis (that page is not in v1).
   const clickable = version === 'full' || !!onOpen;
   return (
-    <div className={`kpi ${clickable ? '' : 'static'} ${size ? `kpi-${size} ${stClass(v.status)}` : ''}`} {...(clickable ? { role: 'button', tabIndex: 0, onClick: open, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter') open(); }, title: `Analyze ${m.name}` } : {})}>
+    <div className={`kpi ${clickable ? '' : 'static'}`} {...(clickable ? { role: 'button', tabIndex: 0, onClick: open, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter') open(); }, title: `Analyze ${m.name}` } : {})}>
       <div className="kpi-top">
         <span className="kpi-name">{m.code}<GapMark id={id} /> · {m.short ?? m.name}</span>
         <span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={id} noMark /></span>
@@ -91,7 +85,7 @@ export function KpiCard({ id, onOpen, selOverride, size }: { id: string; onOpen?
         <>
           <div className="kpi-mid">
             <span className="kpi-value">{fm(v.value)}</span>
-            {size !== 'small' && <Sparkline values={v.trend.map((t) => t.value)} target={m.target ? null : v.target} width={size === 'hero' ? 140 : 78} height={size === 'hero' ? 40 : 24} />}
+            <Sparkline values={v.trend.map((t) => t.value)} target={m.target ? null : v.target} width={78} height={24} />
           </div>
           <div className="kpi-row">
             {v.target !== null ? (
@@ -104,21 +98,6 @@ export function KpiCard({ id, onOpen, selOverride, size }: { id: string; onOpen?
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-/** Charts area of a one-screen view: takes the free height of the screen; the charts fill it. */
-export function FillGrid({ className, children }: { className: string; children: ReactNode }) {
-  return <ChartFillContext.Provider value><div className={`v1b-grid ${className}`}>{children}</div></ChartFillContext.Provider>;
-}
-
-/** A view's KPIs in one row: the critical (hero) KPIs first and wide, then the small modules. */
-export function KpiHeroRow({ hero, modules }: { hero: string[]; modules: string[] }) {
-  return (
-    <div className="kpi-hero-row">
-      <div className="kpi-heroes" style={{ gridTemplateColumns: `repeat(${hero.length}, minmax(0, 1fr))` }}>{hero.map((id) => <KpiCard key={id} id={id} size="hero" />)}</div>
-      <div className="kpi-modules" style={{ gridTemplateColumns: `repeat(${Math.min(modules.length, 2)}, minmax(0, 1fr))` }}>{modules.map((id) => <KpiCard key={id} id={id} size="small" />)}</div>
     </div>
   );
 }

@@ -34,19 +34,21 @@ The **Version** switch in the prototype controls bar shows one of three scopes. 
 **v1 (B)**. Add `?v=a` to the URL (before the `#`) to open v1 (A), or `?v=full` to open the full
 concept. The plain URL shows v1 (B).
 
-v1 (B) is the simple, lovable, complete (SLC) proposal: the 16 critical metrics only. Each view fits
-one screen with no vertical scroll (Qlik practice), checked at 1440×900 and 1366×768. On each deep
-dive, the two critical metrics are large hero KPIs at the top, and the other metrics are small
-modules beside them. The card edge and tint show the status (green on target, amber watch, red off
-target, grey no target). All visuals are KPI objects, bar charts, line charts and tables.
+v1 (B) is the simple, lovable, complete (SLC) proposal: the ELT Summary only, with no analytics
+views. An ELT user opens it and sees overall RCM performance with no set-up. Daily, Weekly and
+Monthly tabs each hold six headline KPI cards; the tab sets the period type for the whole page. A
+metric that the data holds only by month (A/R) or by week (DNFB) shows its latest snapshot with an
+"As of <date>" label. The card edge and tint show the status (green on target, amber watch, red
+off target, grey no target). Performance vs. Target is the detail view: Summary or Table (by day,
+week, month, quarter or year), with CSV export.
 
 | | v1 (A) | v1 (B) (default) | Full concept |
 |---|---|---|---|
-| ELT Summary | Six KPI cards in revenue-cycle order: PA-22, PA-02, CO-04 / BL-01, BL-08, DN-04. No Performance Trends. Performance vs. Target has the same six metrics, grouped by revenue-cycle stage (Patient Access, Coding, Billing, Denials). A row click shows or hides the metric on Selected Metric Trends. Only DN-04 opens an analytics page (Denials). | Six KPI cards: FN-01, CA-01, CA-03 / AR-05, AR-07, DN-04. Each card opens its deep dive. Performance vs. Target has all 16 metrics by RCM area, in three tabs (Financial, Cash and A/R · Billing and Denials · Mid-cycle and Patient Access). A row click shows or hides the metric on Selected Metric Trends. BL-01 and BL-08 are on the ELT Summary only. | Everything |
-| Analytics | Denials page only, on one screen: KPI strip (DN-05, DN-04, PA-02, CO-04, CD-02, DN-15, DN-16), denied $ by reason, by payor group and by hospital, and the denial decomposition (hospital, reason, payor group). KPI cards do not drill. | Three one-screen deep dives. **Denials**: hero DN-04, DN-05; modules DN-16, PA-02, CO-04, CD-02; denied $ by reason, payor group and hospital. **Cash + A/R**: hero CA-01, AR-05; modules FN-01, CA-03, AR-07; cash vs. goal, net A/R days trend, A/R > 90 days by hospital, cash by payor group. **Patient Access**: hero PA-02, PA-08; modules PA-22, PA-58; front-end denial rate, financial clearance rate and POS collections by hospital. | Every page and tab |
+| ELT Summary | Six KPI cards in revenue-cycle order: PA-22, PA-02, CO-04 / BL-01, BL-08, DN-04. No Performance Trends. Performance vs. Target has the same six metrics, grouped by revenue-cycle stage (Patient Access, Coding, Billing, Denials). A row click shows or hides the metric on Selected Metric Trends. Only DN-04 opens an analytics page (Denials). | Three KPI tabs, six cards each. **Daily**: DNFB $ and days (EHR: BL-07, BL-08; scrubber: BL-10, BL-09), CA-01, denial worklist (open denied $ and count), two placeholders (metric to be confirmed), DN-04. **Weekly**: BL-08 with BL-07, CA-01, AR-05 with AR-04, AR-07, DN-04, BL-01. **Monthly**: FN-01, CA-01, CA-03, AR-05, AR-07, DN-04. KPI cards do not drill. Performance vs. Target in four tabs: Financial / Cash / AR · Denials · Billing / Mid-Cycle · Patient Access. A row click shows or hides the metric on Selected Metric Trends. | Everything |
+| Analytics | Denials page only, on one screen: KPI strip (DN-05, DN-04, PA-02, CO-04, CD-02, DN-15, DN-16), denied $ by reason, by payor group and by hospital, and the denial decomposition (hospital, reason, payor group). KPI cards do not drill. | Not shown (removed in this revision) | Every page and tab |
 | Worklists | Not shown | Not shown | Shown (planned for v2) |
-| Filters | Period, compare, region, facility type, hospital, payor group, denial reason. Click a bar to cross-filter. | The same as v1 (A) | Every filter, plus payer, service, RCM area, root cause |
-| Metric Dictionary | The 10 v1 (A) metrics | The 16 v1 (B) metrics | Every metric |
+| Filters | Period, compare, region, facility type, hospital, payor group, denial reason. Click a bar to cross-filter. | Period and hospital (ELT Summary bar). The KPI tab sets the period type. | Every filter, plus payer, service, RCM area, root cause |
+| Metric Dictionary | The 10 v1 (A) metrics | The v1 (B) metrics (Performance vs. Target) | Every metric |
 
 FN-01, DN-05, PA-22 and PA-58 have no target in `config/targets.config.json`, so they show "No
 target" and a grey edge. The scope of both v1 options is in one file, `src/config/v1.ts`; a test

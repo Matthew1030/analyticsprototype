@@ -1,7 +1,7 @@
 import * as echarts from 'echarts';
 import type { EChartsOption } from 'echarts';
 import { useContext, useEffect, useRef } from 'react';
-import { ChartFillContext, VisualContext } from './visualContext';
+import { VisualContext } from './visualContext';
 
 interface Props {
   option: EChartsOption;
@@ -11,14 +11,13 @@ interface Props {
   ariaLabel: string;
 }
 
-/** ECharts host. Grows to fill the visual in focus mode, and on one-screen pages. */
+/** ECharts host. Grows to fill the visual in focus mode. */
 export function Chart({ option, height = 240, onClick, ariaLabel }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const inst = useRef<echarts.ECharts | null>(null);
   const clickRef = useRef(onClick);
   clickRef.current = onClick;
   const { focus } = useContext(VisualContext);
-  const fill = useContext(ChartFillContext);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -44,8 +43,8 @@ export function Chart({ option, height = 240, onClick, ariaLabel }: Props) {
       ref={ref}
       role="img"
       aria-label={ariaLabel}
-      className={`chart ${onClick ? 'clickable' : ''} ${fill && !focus ? 'chart-fill' : ''}`}
-      style={{ height: focus ? 'calc(100vh - 170px)' : fill ? undefined : height }}
+      className={`chart ${onClick ? 'clickable' : ''}`}
+      style={{ height: focus ? 'calc(100vh - 170px)' : height }}
     />
   );
 }

@@ -1,8 +1,10 @@
 // Release scope (prototype only). The version selector in the prototype bar shows one of two v1
 // options, or the full concept with every planned page:
 // - v1 (A): the first v1 proposal (six ELT KPIs, one Denials page).
-// - v1 (B): the simple, lovable, complete (SLC) proposal: 16 critical metrics on the ELT Summary,
-//   and three one-screen deep dives (Denials, Cash + A/R, Patient Access). This is the default.
+// - v1 (B): the simple, lovable, complete (SLC) proposal: the ELT Summary only, with Daily,
+//   Weekly and Monthly tabs of six headline KPIs each, and Performance vs. Target in four tabs
+//   (Financial / Cash / AR, Denials, Billing / Mid-Cycle, Patient Access). No analytics views.
+//   This is the default.
 // This file is the one place that says what each v1 option holds.
 
 import type { PageId } from '../state/AppState';
@@ -59,65 +61,97 @@ export const V1_METRICS = [...new Set([...V1_ELT_KPIS, ...V1_DENIAL_KPIS])];
 
 // ---------------------------------------------------------------- v1 (B)
 
-/** The 16 critical metrics of v1 (B), in the order of the team's list. */
-export const V1B_METRICS = [
-  'npsr', // FN-01
-  'cash', // CA-01
-  'cash_pct_npsr', // CA-03
-  'net_ar_days', // AR-05
-  'ar_gt90_pct', // AR-07
-  'clean_claim_rate', // BL-01
-  'dnfb_days', // BL-08
-  'denial_dollar_rate', // DN-04
-  'denial_dollars', // DN-05
-  'denial_wo_pct_npsr', // DN-16
-  'documentation_denial_rate', // CD-02
-  'coding_denial_rate', // CO-04
-  'front_end_denial_rate', // PA-02
-  'fin_clearance_rate', // PA-08
-  'pos_collections', // PA-22
-  'pos_pct_sp_cash', // PA-58
+/**
+ * One ELT KPI card. A string is one metric. 'pair' shows a second metric under the first (e.g.
+ * A/R days with A/R $). 'dnfb-split' shows DNFB in the EHR (not final billed) and in the
+ * scrubber (billed, not submitted), in $ and days. 'denial-worklist' shows the open denials
+ * worklist ($ and count). 'placeholder' is a card kept for a metric not yet chosen.
+ */
+export type KpiSpec =
+  | string
+  | { kind: 'pair'; id: string; secondary: string }
+  | { kind: 'dnfb-split' }
+  | { kind: 'denial-worklist' }
+  | { kind: 'placeholder' };
+
+export type Cadence = 'day' | 'week' | 'month';
+
+/** ELT Summary tabs (Daily, Weekly, Monthly), each with six headline KPI cards, two rows of three. */
+export const V1B_ELT_CADENCES: Record<Cadence, { label: string; kpis: KpiSpec[] }> = {
+  day: {
+    label: 'Daily',
+    kpis: [
+      { kind: 'dnfb-split' }, // BL-07 / BL-08 (EHR), BL-10 / BL-09 (scrubber)
+      'cash', // CA-01
+      { kind: 'denial-worklist' },
+      { kind: 'placeholder' },
+      { kind: 'placeholder' },
+      'denial_dollar_rate', // DN-04
+    ],
+  },
+  week: {
+    label: 'Weekly',
+    kpis: [
+      { kind: 'pair', id: 'dnfb_days', secondary: 'dnfb_dollars' }, // BL-08 / BL-07 (days first: it has the target)
+      'cash', // CA-01
+      { kind: 'pair', id: 'net_ar_days', secondary: 'net_ar' }, // AR-05 / AR-04
+      'ar_gt90_pct', // AR-07
+      'denial_dollar_rate', // DN-04
+      'clean_claim_rate', // BL-01
+    ],
+  },
+  month: {
+    label: 'Monthly',
+    kpis: ['npsr', 'cash', 'cash_pct_npsr', 'net_ar_days', 'ar_gt90_pct', 'denial_dollar_rate'],
+  },
+};
+export const CADENCES: Cadence[] = ['day', 'week', 'month'];
+
+/** DNFB split card: the EHR stage (not final billed) and the scrubber stage (billed, not submitted). */
+export const DNFB_SPLIT = [
+  { label: 'EHR', dollars: 'dnfb_dollars', days: 'dnfb_days' }, // BL-07, BL-08
+  { label: 'Scrubber', dollars: 'dnsp_dollars', days: 'dnsp_days' }, // BL-10, BL-09
 ];
 
-/** ELT Summary KPI cards: the outcome metrics, two rows of three. */
-export const V1B_ELT_KPIS = ['npsr', 'cash', 'cash_pct_npsr', 'net_ar_days', 'ar_gt90_pct', 'denial_dollar_rate'];
+/** The catalog metrics that a KPI card shows. */
+export function kpiMetrics(k: KpiSpec): string[] {
+  if (typeof k === 'string') return [k];
+  if (k.kind === 'pair') return [k.id, k.secondary];
+  if (k.kind === 'dnfb-split') return DNFB_SPLIT.flatMap((s) => [s.dollars, s.days]);
+  return [];
+}
 
-/** Performance vs. Target: all 16 metrics, by RCM area. */
+/** Performance vs. Target: the v1 (B) metrics by RCM area. */
 export const V1B_ELT_GROUPS: { name: string; metrics: string[] }[] = [
   { name: 'Financial', metrics: ['npsr'] },
   { name: 'Cash', metrics: ['cash', 'cash_pct_npsr'] },
-  { name: 'A/R', metrics: ['net_ar_days', 'ar_gt90_pct'] },
-  { name: 'Billing', metrics: ['clean_claim_rate', 'dnfb_days'] },
+  { name: 'A/R', metrics: ['net_ar_days', 'net_ar', 'ar_gt90_pct'] },
   { name: 'Denials', metrics: ['denial_dollar_rate', 'denial_dollars', 'denial_wo_pct_npsr'] },
+  { name: 'Billing', metrics: ['clean_claim_rate', 'dnfb_dollars', 'dnfb_days', 'dnsp_dollars', 'dnsp_days'] },
   { name: 'Mid-cycle', metrics: ['documentation_denial_rate', 'coding_denial_rate'] },
   { name: 'Patient Access', metrics: ['front_end_denial_rate', 'fin_clearance_rate', 'pos_collections', 'pos_pct_sp_cash'] },
 ];
 
-/** Performance vs. Target tabs (the 16 rows do not fit one screen): the group names in each tab. */
+/** Performance vs. Target tabs: the group names in each tab. Denials has a tab of its own. */
 export const V1B_ELT_TABS: { id: string; label: string; groups: string[] }[] = [
-  { id: 'cash-ar', label: 'Financial, Cash and A/R', groups: ['Financial', 'Cash', 'A/R'] },
-  { id: 'billing-denials', label: 'Billing and Denials', groups: ['Billing', 'Denials'] },
-  { id: 'mid-access', label: 'Mid-cycle and Patient Access', groups: ['Mid-cycle', 'Patient Access'] },
+  { id: 'cash-ar', label: 'Financial / Cash / AR', groups: ['Financial', 'Cash', 'A/R'] },
+  { id: 'denials', label: 'Denials', groups: ['Denials'] },
+  { id: 'billing-mid', label: 'Billing / Mid-Cycle', groups: ['Billing', 'Mid-cycle'] },
+  { id: 'access', label: 'Patient Access', groups: ['Patient Access'] },
 ];
 
-/** ELT KPI cards that open a deep dive. */
-export const V1B_DRILL: Record<string, PageId> = {
-  npsr: 'cash-ar', cash: 'cash-ar', cash_pct_npsr: 'cash-ar', net_ar_days: 'cash-ar', ar_gt90_pct: 'cash-ar', denial_dollar_rate: 'denials',
-};
+/** Every metric that v1 (B) shows: the Performance vs. Target metrics (the KPI cards use a subset). */
+export const V1B_METRICS = V1B_ELT_GROUPS.flatMap((g) => g.metrics);
 
-/** Deep dives: the critical (hero) KPIs at the top, then the other KPIs as small modules. */
-export const V1B_VIEWS: Record<'denials' | 'cash-ar' | 'access', { label: string; hero: string[]; modules: string[] }> = {
-  denials: { label: 'Denials', hero: ['denial_dollar_rate', 'denial_dollars'], modules: ['denial_wo_pct_npsr', 'front_end_denial_rate', 'coding_denial_rate', 'documentation_denial_rate'] },
-  'cash-ar': { label: 'Cash + A/R', hero: ['cash', 'net_ar_days'], modules: ['npsr', 'cash_pct_npsr', 'ar_gt90_pct'] },
-  access: { label: 'Patient Access', hero: ['front_end_denial_rate', 'fin_clearance_rate'], modules: ['pos_collections', 'pos_pct_sp_cash'] },
-};
-
-export const V1B_PAGES: PageId[] = ['executive', 'denials', 'cash-ar', 'access', 'dictionary'];
+/** v1 (B) has the ELT Summary only (and the prototype Metric Dictionary). No analytics views. */
+export const V1B_PAGES: PageId[] = ['executive', 'dictionary'];
 
 // ---------------------------------------------------------------- scope by version
 
 export interface V1Scope {
+  /** KPI cards. v1 (B) has one set per cadence tab instead (cadences). */
   eltKpis: string[];
+  cadences?: Record<Cadence, { label: string; kpis: KpiSpec[] }>;
   eltGroups: { name: string; metrics: string[] }[];
   /** Performance vs. Target tabs, when the table does not fit one screen. */
   eltTabs?: { id: string; label: string; groups: string[] }[];
@@ -134,7 +168,8 @@ export const V1_SCOPE: Record<V1Version, V1Scope> = {
     views: (id) => [V1_ELT_KPIS.includes(id) && 'ELT Summary', V1_DENIAL_KPIS.includes(id) && 'Denials'].filter((x): x is string => !!x),
   },
   v1b: {
-    eltKpis: V1B_ELT_KPIS, eltGroups: V1B_ELT_GROUPS, eltTabs: V1B_ELT_TABS, drill: V1B_DRILL, pages: V1B_PAGES, metrics: V1B_METRICS,
-    views: (id) => ['ELT Summary', ...Object.values(V1B_VIEWS).filter((v) => [...v.hero, ...v.modules].includes(id)).map((v) => v.label)],
+    eltKpis: V1B_ELT_CADENCES.month.kpis.flatMap(kpiMetrics), cadences: V1B_ELT_CADENCES, eltGroups: V1B_ELT_GROUPS, eltTabs: V1B_ELT_TABS,
+    drill: {}, pages: V1B_PAGES, metrics: V1B_METRICS,
+    views: () => ['ELT Summary'],
   },
 };

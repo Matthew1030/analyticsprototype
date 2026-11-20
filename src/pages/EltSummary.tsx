@@ -13,17 +13,23 @@
 // v1 (src/config/v1.ts): six KPI cards in two rows, no Performance Trends, the option's metrics in
 // Performance vs. Target grouped by stage. A row click puts the metric on the Selected Metric
 // Trends chart. Only the KPI cards in the option's drill list open an analytics page.
+//
+// v1 (B): the ELT Summary is the only dashboard. Daily, Weekly and Monthly tabs each hold six
+// headline KPI cards; the tab sets the period type, so Performance vs. Target and the trend follow
+// it. A metric that is calculated only by week or by month (DNFB, A/R) shows its latest snapshot,
+// labeled "As of <date>". The KPI cards do not drill through.
 
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { isV1, V1_SCOPE, type V1Version } from '../config/v1';
+import { CADENCES, DNFB_SPLIT, isV1, kpiMetrics, V1_SCOPE, type Cadence, type KpiSpec, type V1Version } from '../config/v1';
 import { shortDayLabel } from '../data/dates';
 import { FIELD_LABEL, type SelField } from '../engine/engine';
 import { FRAMEWORK, FRAMEWORK_BY_ID } from '../engine/framework';
-import { evaluate, METRIC_BY_ID, UNIT_LABEL, type MetricResult, type Unit } from '../engine/metrics';
-import { grainColumns, grainOf, longDayLabel, monthPeriod, PERIOD_KIND_LABEL, TIME_GRAIN_LABEL, type Period, type PeriodKind, type TimeGrain } from '../engine/periods';
-import { changeOf, type Status } from '../engine/status';
+import { evaluate, METRIC_BY_ID, UNIT_LABEL, validFor, type MetricResult, type Unit } from '../engine/metrics';
+import { grainColumns, grainOf, latestSnapshotPeriod, longDayLabel, monthPeriod, PERIOD_KIND_LABEL, shiftPeriod, TIME_GRAIN_LABEL, trailing, type Period, type PeriodKind, type TimeGrain } from '../engine/periods';
+import { changeOf, statusOf, type Status } from '../engine/status';
 import { fmt, fmtDelta } from '../format';
 import { metricValue } from '../services/analytics';
+import { worklist } from '../services/worklists';
 import type { MetricValue } from '../services/contracts';
 import { scopeText, useApp, type PageId } from '../state/AppState';
 import { Chart } from '../ui/Chart';
@@ -45,7 +51,7 @@ const toGroups = (v: V1Version): Group[] => V1_SCOPE[v].eltGroups.map((g) => ({ 
 const V1_GROUPS: Record<V1Version, Group[]> = { v1: toGroups('v1'), v1b: toGroups('v1b') };
 const ALL_IDS = [...new Set([...FULL_GROUPS, ...V1_GROUPS.v1, ...V1_GROUPS.v1b].flatMap((g) => g.metrics.map((m) => m.id)))];
 /** Metric on the selected-metric trend when the page opens. */
-const DEFAULT_CHOSEN = { v1: ['denial_dollar_rate'], v1b: ['cash_pct_npsr'], full: ['gross_ar_days'] };
+const DEFAULT_CHOSEN = { v1: ['denial_dollar_rate'], v1b: ['denial_dollar_rate'], full: ['gross_ar_days'] };
 /** Units that can share the selected-metric trend (left axis, right axis). */
 const MAX_UNITS = 2;
 
@@ -58,7 +64,8 @@ const DRILL: Record<string, PageId> = {
 /** A change smaller than this (per unit) is shown as flat. */
 const FLAT = { days: 0.3, pct: 0.0005, usd: 0, count: 0, ratio: 0.01, sec: 1 } as const;
 
-interface Row { id: string; v: MetricValue; d3: number | null }
+/** asOf: the snapshot period shown when the metric is not calculated for the selected period (v1 (B)). */
+interface Row { id: string; v: MetricValue; d3: number | null; asOf?: Period }
 
 /** Code and full catalog name (tables). */
 const label = (id: string) => <><span className="elt-code">{FRAMEWORK_BY_ID[id]?.code ?? METRIC_BY_ID[id].code}</span>{METRIC_BY_ID[id].name}</>;
@@ -89,8 +96,10 @@ export function EltSummary() {
   const tabs: TabDef[] = (tabDefs ?? [{ id: 'all', label: '', groups: [] }]).map((t, i) => ({ id: t.id, label: t.label, status: tabDefs ? tabStatus[i] : undefined }));
   const [tab, openTab] = useTab(tabs);
   const shown = tabDefs ? groups.filter((g) => tabDefs.find((t) => t.id === tab)!.groups.includes(g.name)) : groups;
-  const rows = useMemo(() => Object.fromEntries(ALL_IDS.map((id) => [id, row(id, metricValue(engine, id, period, compare, sel, 13))])) as Record<string, Row>,
-    [engine, period, compare, sel]);
+  const rows = useMemo(() => Object.fromEntries(ALL_IDS.map((id) => {
+    const asOf = version === 'v1b' ? snapshotFor(id, period) : undefined;
+    return [id, { ...row(id, metricValue(engine, id, asOf ?? period, compare, sel, 13)), asOf }];
+  })) as Record<string, Row>, [engine, period, compare, sel, version]);
   const open = (id: string) => (DRILL[id] ? go(DRILL[id], {}, { drill: true }) : go('metric', { id }, { drill: true }));
 
   const [view, setView] = useState<'summary' | 'table'>('summary');
@@ -109,12 +118,14 @@ export function EltSummary() {
     <div className="elt">
       <EltHeader />
 
-      <Sec id="elt-kpi" title="Key Performance Indicators" meta={period.label}>
-        <div className={`elt-kpis ${v1 ? 'elt-kpis-3' : ''}`}>
-          {kpis.map((id) => <KpiCard key={id} r={rows[id]} onOpen={!v1 ? () => open(id) : v1Drill[id] ? () => go(v1Drill[id], {}, { drill: true }) : undefined}
-            hint={v1Drill[id] ? `Open ${PAGE_BY_ID[v1Drill[id]].label} ›` : undefined} />)}
-        </div>
-      </Sec>
+      {version === 'v1b' ? <CadenceKpis /> : (
+        <Sec id="elt-kpi" title="Key Performance Indicators" meta={period.label}>
+          <div className={`elt-kpis ${v1 ? 'elt-kpis-3' : ''}`}>
+            {kpis.map((id) => <KpiCard key={id} r={rows[id]} onOpen={!v1 ? () => open(id) : v1Drill[id] ? () => go(v1Drill[id], {}, { drill: true }) : undefined}
+              hint={v1Drill[id] ? `Open ${PAGE_BY_ID[v1Drill[id]].label} ›` : undefined} />)}
+          </div>
+        </Sec>
+      )}
 
       {!v1 && (
         <Sec id="elt-trend" title="Performance Trends" meta={`12 months ending ${monthPeriod(period.endMi).short}`}>
@@ -191,7 +202,7 @@ function EltHeader() {
 }
 
 function EltSlicers() {
-  const { ds, period, setPeriodKind, sel, selectOnly, clearField, valueLabel, toast } = useApp();
+  const { ds, period, setPeriodKind, sel, selectOnly, clearField, valueLabel, toast, version } = useApp();
   const scope = sel.facility?.length === 1 ? `f${sel.facility[0]}` : sel.region?.length === 1 && !sel.facility?.length ? `r${sel.region[0]}` : sel.facility?.length || sel.region?.length ? 'custom' : 'all';
   const setScope = (v: string) => {
     clearField('facility');
@@ -208,11 +219,13 @@ function EltSlicers() {
           <button type="button" className="icon-btn xs" aria-label="Clear additional filters" onClick={() => other.forEach(clearField)}><Icon name="close" size={9} /></button>
         </span>
       )}
-      <label className="elt-slicer"><span>Period type</span>
-        <select value={period.kind} onChange={(e) => setPeriodKind(e.target.value as PeriodKind)}>
-          {(Object.keys(PERIOD_KIND_LABEL) as PeriodKind[]).map((k) => <option key={k} value={k}>{PERIOD_KIND_LABEL[k]}</option>)}
-        </select>
-      </label>
+      {version !== 'v1b' && (
+        <label className="elt-slicer"><span>Period type</span>
+          <select value={period.kind} onChange={(e) => setPeriodKind(e.target.value as PeriodKind)}>
+            {(Object.keys(PERIOD_KIND_LABEL) as PeriodKind[]).map((k) => <option key={k} value={k}>{PERIOD_KIND_LABEL[k]}</option>)}
+          </select>
+        </label>
+      )}
       <label className="elt-slicer"><span>Period</span>
         <PeriodInput />
       </label>
@@ -299,6 +312,192 @@ function KpiCard({ r, onOpen, hint }: { r: Row; onOpen?: () => void; hint?: stri
         <div><dt>Variance to target</dt><dd><Variance r={r} /></dd></div>
         <div><dt>3M change</dt><dd><Change3 r={r} /></dd></div>
       </dl>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- v1 (B): cadence tabs and KPI cards
+
+/**
+ * The snapshot period for a metric that is not calculated for the selected period (A/R by month,
+ * DNFB by week): the latest one on or before the period end. Undefined when no fallback is needed.
+ */
+function snapshotFor(id: string, p: Period): Period | undefined {
+  const m = METRIC_BY_ID[id];
+  if (!m.finest || !p.grain || validFor(m, p.grain)) return undefined;
+  return latestSnapshotPeriod(m.finest, p.endDay);
+}
+
+/** Number of points on a KPI card sparkline, by period type. */
+const SPARK_POINTS: Record<Cadence, number> = { day: 14, week: 13, month: 12 };
+
+/** One metric on a v1 (B) KPI card: value and status for the period, change and a short trend. */
+interface CardValue {
+  id: string; value: number | null; target: number | null; status: Status; noData?: string;
+  change: number | null; changeLabel: string; spark: (number | null)[]; asOf?: Period;
+}
+
+/**
+ * Value of a metric on a card. Change: Daily compares with the same day last week (days of the
+ * week differ too much to compare with the day before), Weekly with the prior week, Monthly with
+ * three months earlier. A snapshot shown "as of" compares with its own prior period.
+ */
+function cardValue(id: string, p: Period, engine: ReturnType<typeof useApp>['engine'], sel: ReturnType<typeof useApp>['sel']): CardValue {
+  const m = METRIC_BY_ID[id];
+  const asOf = snapshotFor(id, p);
+  const at = asOf ?? p;
+  const kind = at.kind as Cadence;
+  const cur = evaluate(m, engine, at, sel);
+  const back = kind === 'day' ? 7 : kind === 'week' || asOf ? 1 : 3;
+  const prev = evaluate(m, engine, shiftPeriod(at, back), sel).value;
+  const changeLabel = kind === 'day' ? 'vs. same day last week' : kind === 'week' ? 'vs. prior week' : asOf ? 'vs. prior month' : '3M change';
+  return {
+    id, value: cur.value, target: cur.target, status: statusOf(cur.value, cur.target, m.direction, cur.watch), noData: cur.noData,
+    change: cur.value !== null && prev !== null ? cur.value - prev : null, changeLabel,
+    spark: trailing(at, SPARK_POINTS[kind]).map((x) => evaluate(m, engine, x, sel).value), asOf,
+  };
+}
+
+/** Daily, Weekly and Monthly tabs. The tab sets the period type for the whole page. */
+function CadenceKpis() {
+  const { engine, period, sel, setPeriodKind, version } = useApp();
+  const cadences = isV1(version) ? V1_SCOPE[version].cadences : undefined;
+  const cadence: Cadence = (CADENCES as string[]).includes(period.kind) ? period.kind as Cadence : 'month';
+  // A period type with no tab (quarter, year to date, rolling 12 months) opens the Monthly tab.
+  useEffect(() => { if (cadence !== period.kind) setPeriodKind('month'); }, [cadence, period.kind, setPeriodKind]);
+  const values = useMemo(() => {
+    const ids = [...new Set((cadences?.[cadence].kpis ?? []).flatMap(kpiMetrics))];
+    return Object.fromEntries(ids.map((id) => [id, cardValue(id, period, engine, sel)])) as Record<string, CardValue>;
+  }, [cadences, cadence, period, engine, sel]);
+  if (!cadences) return null;
+  const tabs: TabDef[] = CADENCES.map((c) => ({ id: c, label: cadences[c].label }));
+  return (
+    <section className="elt-sec" aria-labelledby="elt-kpi">
+      <div className="elt-sec-head">
+        <h2 id="elt-kpi">Key Performance Indicators</h2>
+        <span className="elt-meta">{period.label}</span>
+      </div>
+      <TabBox id="elt-cadence" tabs={tabs} current={cadence} onOpen={(id) => setPeriodKind(id as Cadence)} label="Key Performance Indicators by period">
+        <div className="elt-kpis elt-kpis-3">
+          {cadences[cadence].kpis.map((k, i) => <SpecCard key={`${cadence}-${i}`} k={k} values={values} />)}
+        </div>
+      </TabBox>
+    </section>
+  );
+}
+
+function SpecCard({ k, values }: { k: KpiSpec; values: Record<string, CardValue> }) {
+  if (typeof k === 'string') return <MetricCard c={values[k]} />;
+  if (k.kind === 'pair') return <MetricCard c={values[k.id]} secondary={values[k.secondary]} />;
+  if (k.kind === 'dnfb-split') return <DnfbSplitCard values={values} />;
+  if (k.kind === 'denial-worklist') return <DenialWorklistCard />;
+  return <PlaceholderCard />;
+}
+
+const AsOf = ({ p }: { p?: Period }) => (p ? <span className="elt-asof" title={`Calculated by ${p.kind}: latest snapshot`}>As of {longDayLabel(p.endDay)}</span> : null);
+
+/** Change, colored by whether the metric's direction makes it favorable. */
+function ChangeCell({ c }: { c: CardValue }) {
+  const m = METRIC_BY_ID[c.id];
+  if (c.change === null) return <span className="muted">–</span>;
+  const flat = Math.abs(c.change) <= FLAT[m.unit];
+  const kind = flat ? null : changeOf(c.change, 0, m.direction);
+  return (
+    <span className={`elt-chg ${kind === 'Favorable' ? 'fav' : kind === 'Unfavorable' ? 'unfav' : ''}`}>
+      <span aria-hidden="true">{flat ? '▶' : c.change > 0 ? '▲' : '▼'}</span> {fmtDelta(c.change, m.unit, m.digits)}
+    </span>
+  );
+}
+
+/** KPI card for one metric, with an optional second metric under the value (e.g. A/R $ under A/R days). */
+function MetricCard({ c, secondary }: { c: CardValue; secondary?: CardValue }) {
+  const m = METRIC_BY_ID[c.id];
+  return (
+    <div className={`elt-kpi elt-kpi-static st-${tone(c.status)}`}>
+      <div className="elt-kpi-name">
+        <span>{shortLabel(c.id)}{secondary && <> / {metricLabel(secondary.id)}</>}</span>
+        <span><AsOf p={c.asOf} /><InfoIcon metricId={c.id} /></span>
+      </div>
+      <div className="elt-kpi-mid">
+        <span className="elt-kpi-value"><Cell id={c.id} r={{ value: c.value, noData: c.noData }} />
+          {secondary && <span className="elt-kpi-sec">{metricLabel(secondary.id)} <b><Cell id={secondary.id} r={{ value: secondary.value, noData: secondary.noData }} /></b></span>}
+        </span>
+        <Sparkline values={c.spark} target={c.target} width={88} height={30} />
+      </div>
+      <dl className="elt-kpi-grid">
+        <div><dt>Target</dt><dd><Target id={c.id} target={c.target} /></dd></div>
+        <div><dt>Variance to target</dt><dd>{c.target === null || c.value === null ? <span className="muted">–</span>
+          : <span className={`elt-var v-${tone(c.status)}`}>{fmtDelta(c.value - c.target, m.unit, m.digits)}</span>}</dd></div>
+        <div><dt>{c.changeLabel}</dt><dd><ChangeCell c={c} /></dd></div>
+      </dl>
+    </div>
+  );
+}
+
+/** DNFB in the EHR (not final billed) and in the scrubber (billed, not submitted): $ and days. */
+function DnfbSplitCard({ values }: { values: Record<string, CardValue> }) {
+  const parts = DNFB_SPLIT.map((x) => ({ ...x, d: values[x.dollars], t: values[x.days] }));
+  const total = parts.every((x) => x.d.value !== null) ? parts.reduce((a, x) => a + (x.d.value ?? 0), 0) : null;
+  const worst = parts.map((x) => x.t.status).find((st) => st === 'Off target') ?? parts.map((x) => x.t.status).find((st) => st === 'Watch') ?? parts[0].t.status;
+  return (
+    <div className={`elt-kpi elt-kpi-static st-${tone(worst)}`}>
+      <div className="elt-kpi-name">
+        <span><span className="elt-code">BL-07</span>DNFB ($ and days)</span>
+        <span><AsOf p={parts[0].d.asOf} /><InfoIcon metricId="dnfb_dollars" /></span>
+      </div>
+      <div className="elt-kpi-mid">
+        <span className="elt-kpi-value">{total === null ? <span className="muted">–</span> : fmtMetric('dnfb_dollars', total)}<span className="elt-kpi-sec">Total, EHR and scrubber</span></span>
+      </div>
+      <table className="elt-split-tbl">
+        <thead><tr><th className="al-left">Stage</th><th>$</th><th>Days</th><th>Target</th><th className="al-center">Status</th></tr></thead>
+        <tbody>
+          {parts.map((x) => (
+            <tr key={x.label} title={`${METRIC_BY_ID[x.dollars].name}; ${METRIC_BY_ID[x.days].name}`}>
+              <td className="al-left">{x.label}</td>
+              <td><Cell id={x.dollars} r={{ value: x.d.value, noData: x.d.noData }} /></td>
+              <td><b><Cell id={x.days} r={{ value: x.t.value, noData: x.t.noData }} /></b></td>
+              <td className="muted"><Target id={x.days} target={x.t.target} /></td>
+              <td className="al-center"><StatusMark status={x.t.status} compact /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Open items in the denials worklist on the period's last day: denied $ and count. No target. */
+function DenialWorklistCard() {
+  const { engine, period, sel, ds } = useApp();
+  const day = Math.min(period.endDay, ds.meta.asOfDay);
+  const { amount, count } = useMemo(() => {
+    const items = worklist(engine, { kind: 'denials', day }, sel);
+    return { amount: items.reduce((a, x) => a + x.amount, 0), count: items.length };
+  }, [engine, day, sel]);
+  return (
+    <div className="elt-kpi elt-kpi-static st-none">
+      <div className="elt-kpi-name">
+        <span>Denial worklist</span>
+        <span><span className="elt-asof">As of {longDayLabel(day)}</span></span>
+      </div>
+      <div className="elt-kpi-mid">
+        <span className="elt-kpi-value">{fmt(amount, 'usd')}<span className="elt-kpi-sec">Open denied claims <b>{fmt(count, 'count')}</b></span></span>
+      </div>
+      <dl className="elt-kpi-grid">
+        <div><dt>Open denied $</dt><dd>{fmt(amount, 'usd')}</dd></div>
+        <div><dt>Open items</dt><dd>{fmt(count, 'count')}</dd></div>
+        <div><dt>Target</dt><dd><span className="muted">No target set</span></dd></div>
+      </dl>
+    </div>
+  );
+}
+
+/** A card kept for a daily KPI that is not chosen yet. */
+function PlaceholderCard() {
+  return (
+    <div className="elt-kpi elt-kpi-static elt-kpi-placeholder" aria-label="Placeholder: metric to be confirmed">
+      <div className="elt-kpi-name"><span>Placeholder</span></div>
+      <div className="elt-kpi-mid"><span className="elt-kpi-value muted">Metric to be confirmed</span></div>
     </div>
   );
 }
@@ -395,7 +594,7 @@ function TargetTable({ rows, groups, onOpen, pick, rowAction }: { rows: Record<s
               return (
                 <tr key={f.id} className={`clickable ${rowAction === 'trend' && pick.chosen.ids.includes(f.id) ? 'elt-row-on' : ''}`} tabIndex={0} onClick={() => onOpen(f.id)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(f.id); }} title={rowTitle(f.id, rowAction)}>
                   <td className="al-left elt-mname"><MetricCheck id={f.id} pick={pick} />{label(f.id)}<span onClick={(e) => e.stopPropagation()}><InfoIcon metricId={f.id} /></span></td>
-                  <td><b><Cell id={f.id} r={{ value: r.v.value, noData: r.v.no_data_reason }} /></b></td>
+                  <td><b><Cell id={f.id} r={{ value: r.v.value, noData: r.v.no_data_reason }} /></b>{r.asOf && <span className="elt-asof" title={`Calculated by ${r.asOf.kind}: latest snapshot`}>as of {shortDayLabel(r.asOf.endDay)}</span>}</td>
                   <td className="muted"><Target id={f.id} target={r.v.target} /></td>
                   <td><Variance r={r} /></td>
                   <td className="al-center"><StatusMark status={r.v.status} compact /></td>

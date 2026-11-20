@@ -745,32 +745,7 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
 }
 
 /* ---------- v1 (B): one screen per view. Hero KPIs, small modules, then compact charts. ---------- */
-.kpi-hero-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 10px; }
-.kpi-heroes, .kpi-modules { display: grid; gap: 10px; }
-.kpi-hero, .kpi-small { border-left: 5px solid var(--line-2); }
-.kpi-hero { padding: 10px 14px; align-content: center; }
-.kpi-hero .kpi-name { font-size: 13px; }
-.kpi-hero .kpi-value { font-size: 34px; }
-.kpi-hero .kpi-row { font-size: 12.5px; }
-.kpi-small .kpi-value { font-size: 18px; }
-.kpi-hero.st-ok, .kpi-small.st-ok { border-left-color: var(--ok); background: var(--ok-bg); }
-.kpi-hero.st-watch, .kpi-small.st-watch { border-left-color: #d08a12; background: var(--watch-bg); }
-.kpi-hero.st-off, .kpi-small.st-off { border-left-color: var(--off); background: var(--off-bg); }
-.v1b-grid { display: grid; gap: 10px; min-height: 0; }
-.v1b-grid > *, .v1b-stack > * { min-width: 0; min-height: 0; }
-.v1b-stack { display: grid; gap: 10px; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); min-width: 0; min-height: 0; }
-.v1b-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.v1b-cash { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
-/* The view fills the canvas; the charts area takes the free height and each chart fills its visual. */
-.page.v1b { height: 100%; grid-template-rows: auto auto minmax(0, 1fr); }
-.v1b .visual { height: 100%; }
-.chart.chart-fill { height: 100%; min-height: 110px; }
 .canvas-head-compact h1 { margin-bottom: 0; }
-@media (max-width: 1100px) {
-  .kpi-hero-row, .v1b-3, .v1b-cash { grid-template-columns: minmax(0, 1fr); }
-  .page.v1b { height: auto; grid-template-rows: none; }
-  .chart.chart-fill { min-height: 260px; }
-}
 /* ELT Summary in v1 (B): KPI cards tinted by status; Performance vs. Target in tabs. */
 .app-v1b .elt-kpi.st-ok { background: var(--ok-bg); }
 .app-v1b .elt-kpi.st-watch { background: var(--watch-bg); }
@@ -787,6 +762,18 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
 .app-v1b .elt-table td { padding: 4px 8px; }
 .app-v1b .elt-table tr.elt-group td { padding: 3px 10px; }
 .app-v1b .elt-multi .elt-note.muted { display: none; }
-@media (max-width: 600px) {
-  .kpi-heroes, .kpi-modules { grid-template-columns: minmax(0, 1fr) !important; }
-}
+
+/* v1 (B) ELT Summary: Daily / Weekly / Monthly KPI tabs. Cards do not drill through. */
+.app-v1b #elt-cadence-panel { padding: 8px; background: var(--surface-3); }
+.elt-kpi.elt-kpi-static { cursor: default; }
+.elt-kpi.elt-kpi-static:hover { border-color: var(--line); box-shadow: none; }
+.elt-asof { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; background: var(--surface-3); color: var(--muted); font-size: 10.5px; font-weight: 500; white-space: nowrap; }
+.elt-kpi-value .elt-kpi-sec { display: block; font-size: 11.5px; font-weight: 500; letter-spacing: 0; color: var(--ink-2); margin-top: 2px; }
+.elt-kpi-value .elt-kpi-sec b { font-weight: 700; color: var(--ink); }
+.elt-split-tbl { width: 100%; border-collapse: collapse; font-size: 12px; border-top: 1px solid #eef0f3; }
+.elt-split-tbl th { font-size: 10.5px; font-weight: 500; color: var(--muted); text-align: right; padding: 3px 4px 1px; }
+.elt-split-tbl td { text-align: right; padding: 2px 4px; white-space: nowrap; }
+.elt-split-tbl .al-left { text-align: left; }
+.elt-split-tbl .al-center { text-align: center; }
+.elt-kpi.elt-kpi-placeholder { border-style: dashed; border-top: 1px dashed var(--line-2); background: var(--surface-2); align-content: center; justify-items: start; }
+.elt-kpi-placeholder .elt-kpi-value { font-size: 15px; font-weight: 500; }

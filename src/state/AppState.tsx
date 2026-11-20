@@ -11,7 +11,7 @@ import type { RcmArea } from '../engine/metrics';
 import { isV1, V1_SCOPE, VERSION_QUERY, type Version } from '../config/v1';
 
 export type PageId =
-  | 'executive' | 'cycle' | 'ar' | 'denials' | 'cash' | 'cash-ar' | 'access' | 'midcycle' | 'billing' | 'payers' | 'facilities'
+  | 'executive' | 'cycle' | 'ar' | 'denials' | 'cash' | 'access' | 'midcycle' | 'billing' | 'payers' | 'facilities'
   | 'definitions' | 'metric' | 'facility' | 'accounts'
   | 'wl-denials' | 'wl-ar' | 'wl-dnfb'
   | 'dictionary';
@@ -99,9 +99,9 @@ function readVersion(): Version {
   } catch { return 'v1b'; }
 }
 
-/** In a v1 option, a page that is not in that option opens the ELT Summary. The full concept has no Cash + A/R page. */
+/** In a v1 option, a page that is not in that option opens the ELT Summary. */
 function allowed(r: Route, v: Version): Route {
-  const ok = isV1(v) ? V1_SCOPE[v].pages.includes(r.page) : r.page !== 'cash-ar';
+  const ok = !isV1(v) || V1_SCOPE[v].pages.includes(r.page);
   return ok ? r : { page: 'executive', params: {} };
 }
 

@@ -6,7 +6,7 @@ import { Engine } from '../src/engine/engine';
 import { FRAMEWORK_METRICS } from '../src/engine/framework';
 import { evaluate, METRIC_BY_ID, METRICS } from '../src/engine/metrics';
 import {
-  availablePeriods, comparePeriod, dayPeriod, grainColumns, grainOf, makePeriod, monthPeriod, monthsEarlier, priorYearPeriod, weekPeriod,
+  availablePeriods, comparePeriod, dayPeriod, grainColumns, grainOf, latestSnapshotPeriod, makePeriod, monthPeriod, monthsEarlier, priorYearPeriod, weekPeriod,
 } from '../src/engine/periods';
 import { loadDataset } from './loadDataset';
 
@@ -124,6 +124,22 @@ describe('time grain columns (ELT period table)', () => {
   it('gives every framework metric a value for each month column', () => {
     for (const p of grainColumns('month', month, ds.meta.windowStartMonth).slice(-3)) {
       for (const f of FRAMEWORK_METRICS) expect(evaluate(METRIC_BY_ID[f.id], e, p, {}).value, `${f.id} ${isoDay(p.endDay)}`).not.toBeNull();
+    }
+  });
+});
+
+describe('latest snapshot period', () => {
+  const sep30 = monthEndDay(2026 * 12 + 8);
+  it('gives the last month that ends on or before the day', () => {
+    expect(latestSnapshotPeriod('month', sep30).label).toBe(monthPeriod(2026 * 12 + 8).label);
+    expect(latestSnapshotPeriod('month', sep30 - 1).label).toBe(monthPeriod(2026 * 12 + 7).label);
+  });
+  it('gives the week that ends on the last Saturday on or before the day', () => {
+    for (let d = sep30 - 6; d <= sep30; d++) {
+      const p = latestSnapshotPeriod('week', d);
+      expect(weekday(p.endDay)).toBe(6);
+      expect(p.endDay).toBeLessThanOrEqual(d);
+      expect(d - p.endDay).toBeLessThan(7);
     }
   });
 });

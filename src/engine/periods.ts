@@ -85,6 +85,22 @@ export function makePeriod(kind: PeriodKind, key: number): Period {
   }
 }
 
+/**
+ * The latest snapshot period on or before a day, for metrics that are calculated only by week or
+ * by month: the week that ends on the last Saturday on or before the day, or the last month that
+ * ends on or before it. Used to show the latest value "as of" that date on a shorter period.
+ */
+export function latestSnapshotPeriod(finest: 'week' | 'month', endDay: number): Period {
+  if (finest === 'week') {
+    let sat = weekEndingDay(endDay);
+    if (sat > endDay) sat -= 7;
+    return weekPeriod(sat);
+  }
+  let mi = monthIndexOfDay(endDay);
+  if (monthEndDay(mi) > endDay) mi -= 1;
+  return monthPeriod(mi);
+}
+
 export function quarterOfMonth(mi: number): number {
   return Math.floor(mi / 12) * 4 + Math.floor((mi % 12) / 3);
 }
