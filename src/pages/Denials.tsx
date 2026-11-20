@@ -2,8 +2,9 @@
 // Drill path: Total denials -> payer -> hospital -> category -> root cause -> denied claims.
 // Standard stage-page order: Performance, Trend, Where, Why, Act.
 //
-// v1 (src/config/v1.ts) is one screen: the KPI strip, then denied $ by reason, by payor group and
-// by hospital, and the denial decomposition. Every bar cross-filters the page.
+// v1 (A) (src/config/v1.ts) is one screen: the KPI strip, then denied $ by reason, by payor group
+// and by hospital, and the denial decomposition. v1 (B) is one screen: two hero KPIs and four small
+// modules, then denied $ by reason, payor group and hospital. Every bar cross-filters the page.
 
 import { useMemo } from 'react';
 import type { Selections } from '../engine/engine';
@@ -21,16 +22,32 @@ import { InvestigationPath } from '../ui/InvestigationPath';
 import { CanvasHeader } from '../ui/Shell';
 import { Band, Bands } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
-import { BreakdownVisual, DecompositionTree, KpiStrip, TrendVisual, useMetric } from '../ui/widgets';
+import { BreakdownVisual, DecompositionTree, FillGrid, KpiHeroRow, KpiStrip, TrendVisual, useMetric } from '../ui/widgets';
 import { AgeBucketsVisual, WriteoffsByReason } from '../ui/workbook';
-import { V1_DENIAL_KPIS } from '../config/v1';
+import { V1_DENIAL_KPIS, V1B_VIEWS } from '../config/v1';
 
 /** Reason colors follow the reason (fixed order), never its rank: the 12 workbook denial reasons. */
 export const CATEGORY_COLORS = [...SERIES, '#0f7b8a', '#b5651d', '#7a7f87', '#9aa2ae'];
 
 export function Denials() {
   const { version } = useApp();
-  return version === 'v1' ? <DenialsV1 /> : <DenialsFull />;
+  return version === 'v1' ? <DenialsV1 /> : version === 'v1b' ? <DenialsV1B /> : <DenialsFull />;
+}
+
+/** v1 (B): hero KPIs, then denied $ by reason, payor group and hospital (full-height columns). */
+function DenialsV1B() {
+  const v = V1B_VIEWS.denials;
+  return (
+    <div className="page v1b">
+      <CanvasHeader compact />
+      <KpiHeroRow hero={v.hero} modules={v.modules} />
+      <FillGrid className="v1b-3">
+        <BreakdownVisual id="denial_dollars" dim="denialCategory" title="Denied $ by reason" showCompare={false} />
+        <BreakdownVisual id="denial_dollars" alt={['denial_dollar_rate']} dim="financialClass" title="Denied $ by payor group" showCompare={false} />
+        <BreakdownVisual id="denial_dollars" alt={['denial_dollar_rate']} dim="facility" title="Denied $ by hospital" showCompare={false} />
+      </FillGrid>
+    </div>
+  );
 }
 
 /** v1: KPIs, then where the denied dollars are (reason, payor group, hospital) and the decomposition. */

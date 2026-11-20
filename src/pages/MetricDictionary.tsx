@@ -10,14 +10,14 @@ import { Grid, type GridColumn } from '../ui/Grid';
 import { Icon } from '../ui/icons';
 import { GapLegend } from '../ui/common';
 import { PAGE_BY_ID } from '../ui/Shell';
-import { V1_DENIAL_KPIS, V1_ELT_KPIS, V1_METRICS } from '../config/v1';
+import { isV1, V1_SCOPE } from '../config/v1';
 
 const WRAP = new Set<keyof DictionaryRow>(['name', 'definition', 'formula', 'views', 'source']);
 const WIDTH: Partial<Record<keyof DictionaryRow, number>> = { name: 200, definition: 320, formula: 260, views: 220, source: 240 };
 
 export function MetricDictionary() {
   const { go, toast, version } = useApp();
-  const v1 = version === 'v1';
+  const v1 = isV1(version);
   const [views, setViews] = useState<Record<string, PageId[]> | null>(null);
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
@@ -29,12 +29,10 @@ export function MetricDictionary() {
   const all = useMemo(() => {
     if (!views) return [];
     const rows = dictionaryRows(views);
-    if (!v1) return rows;
-    return rows.filter((r) => V1_METRICS.includes(r.id)).map((r) => ({
-      ...r, release: 'v1',
-      views: [V1_ELT_KPIS.includes(r.id) && 'ELT Summary', V1_DENIAL_KPIS.includes(r.id) && 'Denials'].filter(Boolean).join('; '),
-    }));
-  }, [views, v1]);
+    if (!isV1(version)) return rows;
+    const scope = V1_SCOPE[version];
+    return rows.filter((r) => scope.metrics.includes(r.id)).map((r) => ({ ...r, release: 'v1', views: scope.views(r.id).join('; ') }));
+  }, [views, version]);
   const list = all.filter((r) => (!area || r.area === area)
     && (!q || `${r.code} ${r.name} ${r.definition} ${r.formula} ${r.id}`.toLowerCase().includes(q.toLowerCase())));
   const cols: GridColumn<DictionaryRow>[] = DICTIONARY_COLUMNS.map((c) => ({

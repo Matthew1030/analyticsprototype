@@ -20,8 +20,8 @@ export const FILE_PAGE: Record<string, PageId> = {
   BillingDnfb: 'billing', Denials: 'denials', ArAnalytics: 'ar', Cash: 'cash', Payers: 'payers', Facilities: 'facilities',
   FacilityProfile: 'facility', AccountDetail: 'accounts',
 };
-/** Page source files with no metric views of their own. */
-export const FILES_WITHOUT_VIEWS = ['Definitions', 'MetricAnalysis', 'MetricDictionary', 'Worklist'];
+/** Page source files with no metric views of their own. CashAr is in v1 (B) only; its views come from src/config/v1.ts. */
+export const FILES_WITHOUT_VIEWS = ['CashAr', 'Definitions', 'MetricAnalysis', 'MetricDictionary', 'Worklist'];
 
 /** Views in display order, with drill-through pages marked. */
 export const VIEW_ORDER: { page: PageId; label: string }[] = [

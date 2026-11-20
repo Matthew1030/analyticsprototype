@@ -8,10 +8,10 @@ import { Engine, FIELD_LABEL, type SelField, type Selections } from '../engine/e
 import { availablePeriods, makePeriod, quarterOfMonth, type CompareMode, type Period, type PeriodKind } from '../engine/periods';
 import { memberLabel } from '../services/analytics';
 import type { RcmArea } from '../engine/metrics';
-import { V1_PAGES, type Version } from '../config/v1';
+import { isV1, V1_SCOPE, VERSION_QUERY, type Version } from '../config/v1';
 
 export type PageId =
-  | 'executive' | 'cycle' | 'ar' | 'denials' | 'cash' | 'access' | 'midcycle' | 'billing' | 'payers' | 'facilities'
+  | 'executive' | 'cycle' | 'ar' | 'denials' | 'cash' | 'cash-ar' | 'access' | 'midcycle' | 'billing' | 'payers' | 'facilities'
   | 'definitions' | 'metric' | 'facility' | 'accounts'
   | 'wl-denials' | 'wl-ar' | 'wl-dnfb'
   | 'dictionary';
@@ -41,7 +41,7 @@ interface AppState {
   specMode: boolean;
   audience: Audience;
   setAudience: (a: Audience) => void;
-  /** Prototype-only release switch: v1 (default) or the full concept. Kept in the URL (?v=full). */
+  /** Prototype-only release switch: v1 (A), v1 (B) (default) or the full concept. Kept in the URL (?v=a, ?v=full). */
   version: Version;
   setVersion: (v: Version) => void;
   /** RCM area filter: limits which metrics appear in scorecards and the catalog. */
@@ -91,14 +91,18 @@ function parseHash(): Route {
   return { page, params };
 }
 
-/** Version from the URL query: "?v=full" shows the full concept; anything else shows v1. */
+/** Version from the URL query: "?v=full" is the full concept, "?v=a" is v1 (A); anything else is v1 (B). */
 function readVersion(): Version {
-  try { return new URLSearchParams(location.search).get('v') === 'full' ? 'full' : 'v1'; } catch { return 'v1'; }
+  try {
+    const q = new URLSearchParams(location.search).get('v');
+    return q === VERSION_QUERY.full ? 'full' : q === VERSION_QUERY.v1 ? 'v1' : 'v1b';
+  } catch { return 'v1b'; }
 }
 
-/** In v1, a page that is not in v1 opens the ELT Summary. */
+/** In a v1 option, a page that is not in that option opens the ELT Summary. The full concept has no Cash + A/R page. */
 function allowed(r: Route, v: Version): Route {
-  return v === 'v1' && !V1_PAGES.includes(r.page) ? { page: 'executive', params: {} } : r;
+  const ok = isV1(v) ? V1_SCOPE[v].pages.includes(r.page) : r.page !== 'cash-ar';
+  return ok ? r : { page: 'executive', params: {} };
 }
 
 function toHash(r: Route): string {
@@ -119,7 +123,7 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
     if (!k || key === undefined) return null;
     return availablePeriods(k, ds.meta.windowStartMonth, ds.meta.endMonth).find((p) => p.key === key) ?? null;
   };
-  const [sel, setSel] = useState<Selections>(() => (readVersion() === 'v1' ? { ...stored.sel, payer: [], patientType: [], serviceLine: [], rootCause: [] } : stored.sel ?? {}));
+  const [sel, setSel] = useState<Selections>(() => (isV1(readVersion()) ? { ...stored.sel, payer: [], patientType: [], serviceLine: [], rootCause: [] } : stored.sel ?? {}));
   const [period, setPeriodState] = useState<Period>(validPeriod(stored.kind, stored.key) ?? makePeriod('month', ds.meta.endMonth));
   const [compare, setCompare] = useState<CompareMode>(stored.compare ?? 'prior');
   const [version, setVersionState] = useState<Version>(readVersion);
@@ -170,14 +174,15 @@ export function AppProvider({ ds, children }: { ds: Dataset; children: ReactNode
     setVersionState(v);
     versionRef.current = v;
     const url = new URL(location.href);
-    if (v === 'full') url.searchParams.set('v', 'full'); else url.searchParams.delete('v');
+    const q = VERSION_QUERY[v];
+    if (q) url.searchParams.set('v', q); else url.searchParams.delete('v');
     const next = allowed(routeRef.current, v);
     url.hash = toHash(next);
     history.replaceState(null, '', url.toString());
     setTrail([]);
     setRouteRaw(next);
     // v1 has no slicer for these fields, so a value kept from the full concept could not be cleared.
-    if (v === 'v1') { setSel((x) => ({ ...x, payer: [], patientType: [], serviceLine: [], rootCause: [] })); setAreas([]); }
+    if (isV1(v)) { setSel((x) => ({ ...x, payer: [], patientType: [], serviceLine: [], rootCause: [] })); setAreas([]); }
   }, []);
 
   const routeRef = useRef(route);

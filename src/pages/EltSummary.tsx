@@ -10,12 +10,12 @@
 // in Performance vs. Target). Metric names are the catalog names (Metric Dictionary): the full name
 // in tables, the approved short name in compact places.
 //
-// v1 (src/config/v1.ts): six KPI cards in two rows, no Performance Trends, the same six metrics in
-// Performance vs. Target grouped by revenue-cycle stage. A row click puts the metric on the
-// Selected Metric Trends chart. Only DN-04 opens an analytics page (Denials).
+// v1 (src/config/v1.ts): six KPI cards in two rows, no Performance Trends, the option's metrics in
+// Performance vs. Target grouped by stage. A row click puts the metric on the Selected Metric
+// Trends chart. Only the KPI cards in the option's drill list open an analytics page.
 
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { V1_DRILL, V1_ELT_GROUPS, V1_ELT_KPIS } from '../config/v1';
+import { isV1, V1_SCOPE, type V1Version } from '../config/v1';
 import { shortDayLabel } from '../data/dates';
 import { FIELD_LABEL, type SelField } from '../engine/engine';
 import { FRAMEWORK, FRAMEWORK_BY_ID } from '../engine/framework';
@@ -31,6 +31,8 @@ import { eltTrendOption, multiTrendOption, SERIES, type TrendLine } from '../ui/
 import { fmtMetric, GapLegend, GapMark, InfoIcon, metricLabel, PeriodInput, Sparkline, StatusMark } from '../ui/common';
 import { gapStar } from '../config/datasetGaps';
 import { Icon } from '../ui/icons';
+import { PAGE_BY_ID } from '../ui/Shell';
+import { TabBox, useGroupStatus, useTab, type TabDef } from '../ui/TabBox';
 import { downloadCsv } from '../ui/Visual';
 
 /** Headline KPIs and trend charts (AR-06, AR-07, BL-08, CA-03, DN-04). */
@@ -39,10 +41,11 @@ const ELT_TRENDS = ['gross_ar_days', 'cash_pct_npsr', 'denial_dollar_rate'];
 /** A table group: name and metrics, each with the client's benchmark where the framework has one. */
 interface Group { name: string; metrics: { id: string; benchmark?: string }[] }
 const FULL_GROUPS: Group[] = FRAMEWORK;
-const V1_GROUPS: Group[] = V1_ELT_GROUPS.map((g) => ({ name: g.name, metrics: g.metrics.map((id) => ({ id, benchmark: FRAMEWORK_BY_ID[id]?.benchmark })) }));
-const ALL_IDS = [...new Set([...FULL_GROUPS, ...V1_GROUPS].flatMap((g) => g.metrics.map((m) => m.id)))];
+const toGroups = (v: V1Version): Group[] => V1_SCOPE[v].eltGroups.map((g) => ({ name: g.name, metrics: g.metrics.map((id) => ({ id, benchmark: FRAMEWORK_BY_ID[id]?.benchmark })) }));
+const V1_GROUPS: Record<V1Version, Group[]> = { v1: toGroups('v1'), v1b: toGroups('v1b') };
+const ALL_IDS = [...new Set([...FULL_GROUPS, ...V1_GROUPS.v1, ...V1_GROUPS.v1b].flatMap((g) => g.metrics.map((m) => m.id)))];
 /** Metric on the selected-metric trend when the page opens. */
-const DEFAULT_CHOSEN = { v1: ['denial_dollar_rate'], full: ['gross_ar_days'] };
+const DEFAULT_CHOSEN = { v1: ['denial_dollar_rate'], v1b: ['cash_pct_npsr'], full: ['gross_ar_days'] };
 /** Units that can share the selected-metric trend (left axis, right axis). */
 const MAX_UNITS = 2;
 
@@ -75,9 +78,17 @@ interface Chosen { ids: string[]; color: Record<string, string> }
 
 export function EltSummary() {
   const { engine, period, compare, sel, go, ds, version, toast } = useApp();
-  const v1 = version === 'v1';
-  const groups = v1 ? V1_GROUPS : FULL_GROUPS;
-  const kpis = v1 ? V1_ELT_KPIS : ELT_KPIS;
+  const v1 = isV1(version);
+  const groups = isV1(version) ? V1_GROUPS[version] : FULL_GROUPS;
+  const kpis = isV1(version) ? V1_SCOPE[version].eltKpis : ELT_KPIS;
+  const v1Drill = isV1(version) ? V1_SCOPE[version].drill : {};
+  // v1 (B): Performance vs. Target in tabs, so that the page fits one screen.
+  const tabDefs = isV1(version) ? V1_SCOPE[version].eltTabs : undefined;
+  const tabGroups = useMemo(() => (tabDefs ?? []).map((t) => groups.filter((g) => t.groups.includes(g.name)).flatMap((g) => g.metrics.map((m) => m.id))), [tabDefs, groups]);
+  const tabStatus = useGroupStatus(tabGroups);
+  const tabs: TabDef[] = (tabDefs ?? [{ id: 'all', label: '', groups: [] }]).map((t, i) => ({ id: t.id, label: t.label, status: tabDefs ? tabStatus[i] : undefined }));
+  const [tab, openTab] = useTab(tabs);
+  const shown = tabDefs ? groups.filter((g) => tabDefs.find((t) => t.id === tab)!.groups.includes(g.name)) : groups;
   const rows = useMemo(() => Object.fromEntries(ALL_IDS.map((id) => [id, row(id, metricValue(engine, id, period, compare, sel, 13))])) as Record<string, Row>,
     [engine, period, compare, sel]);
   const open = (id: string) => (DRILL[id] ? go(DRILL[id], {}, { drill: true }) : go('metric', { id }, { drill: true }));
@@ -100,8 +111,8 @@ export function EltSummary() {
 
       <Sec id="elt-kpi" title="Key Performance Indicators" meta={period.label}>
         <div className={`elt-kpis ${v1 ? 'elt-kpis-3' : ''}`}>
-          {kpis.map((id) => <KpiCard key={id} r={rows[id]} onOpen={!v1 ? () => open(id) : V1_DRILL[id] ? () => go(V1_DRILL[id], {}, { drill: true }) : undefined}
-            hint={v1 && V1_DRILL[id] ? 'Open Denials ›' : undefined} />)}
+          {kpis.map((id) => <KpiCard key={id} r={rows[id]} onOpen={!v1 ? () => open(id) : v1Drill[id] ? () => go(v1Drill[id], {}, { drill: true }) : undefined}
+            hint={v1Drill[id] ? `Open ${PAGE_BY_ID[v1Drill[id]].label} ›` : undefined} />)}
         </div>
       </Sec>
 
@@ -127,13 +138,16 @@ export function EltSummary() {
               </>}
             </>
           )}>
-          {view === 'summary'
-            ? <TargetTable rows={rows} groups={groups} onOpen={onRow} pick={pick} rowAction={v1 ? 'trend' : 'analyze'} />
-            : <PeriodTable cols={cols} grid={grid} groups={groups} onOpen={onRow} pick={pick} rowAction={v1 ? 'trend' : 'analyze'} />}
+          {(() => {
+            const table = view === 'summary'
+              ? <TargetTable rows={rows} groups={shown} onOpen={onRow} pick={pick} rowAction={v1 ? 'trend' : 'analyze'} />
+              : <PeriodTable cols={cols} grid={grid} groups={shown} onOpen={onRow} pick={pick} rowAction={v1 ? 'trend' : 'analyze'} />;
+            return tabDefs ? <TabBox id="elt-pvt" tabs={tabs} current={tab} onOpen={openTab} label="Performance vs. Target areas">{table}</TabBox> : table;
+          })()}
         </Sec>
         <Sec id="elt-selected" title="Selected Metric Trends" meta={`${TIME_GRAIN_LABEL[grain]} · ${spanText(cols)}`}
           actions={<GrainSelect grain={grain} setGrain={setGrain} />}>
-          <SelectedTrend chosen={chosen} cols={cols} grid={grid} grain={grain} />
+          <SelectedTrend chosen={chosen} cols={cols} grid={grid} grain={grain} height={version === 'v1b' ? 236 : 300} />
         </Sec>
       </div>
     </div>
@@ -456,7 +470,7 @@ function ExportButton({ cols, grid, grain, groups }: { cols: Period[]; grid: Rec
 const AXIS_DIGITS: Partial<Record<Unit, number>> = { pct: 1, days: 0, ratio: 2 };
 
 /** Lines for the metrics checked in Performance vs. Target. A second unit goes on the right axis. */
-function SelectedTrend({ chosen, cols, grid, grain }: { chosen: Chosen; cols: Period[]; grid: Record<string, MetricResult[]>; grain: TimeGrain }) {
+function SelectedTrend({ chosen, cols, grid, grain, height }: { chosen: Chosen; cols: Period[]; grid: Record<string, MetricResult[]>; grain: TimeGrain; height: number }) {
   const [showTargets, setShowTargets] = useState(true);
   const units = [...new Set(chosen.ids.map((id) => METRIC_BY_ID[id].unit))];
   const lines: TrendLine[] = chosen.ids.map((id) => ({
@@ -478,7 +492,7 @@ function SelectedTrend({ chosen, cols, grid, grain }: { chosen: Chosen; cols: Pe
         ? <div className="elt-none">{!cols.length ? 'No periods of this time scale in the data window.'
           : chosen.ids.length === 0 ? 'Click or check one or more metrics in Performance vs. Target to show their trend.'
           : 'No checked metric is calculated at this time scale. Check another metric or choose a longer time scale.'}</div>
-        : <Chart height={300} ariaLabel={`${chosen.ids.map((id) => METRIC_BY_ID[id].name).join(', ')}: ${TIME_GRAIN_LABEL[grain].toLowerCase()} trend`} option={option} />}
+        : <Chart height={height} ariaLabel={`${chosen.ids.map((id) => METRIC_BY_ID[id].name).join(', ')}: ${TIME_GRAIN_LABEL[grain].toLowerCase()} trend`} option={option} />}
       {missing.length > 0 && (
         <div className="elt-note">Not calculated at this time scale: {missing.map((id) => metricLabel(id)).join(', ')}. {grid[missing[0]].find((r) => r.noData)?.noData ?? ''}</div>
       )}
