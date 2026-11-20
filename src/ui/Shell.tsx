@@ -11,7 +11,7 @@ import { DIMENSION_LABEL, members } from '../services/analytics';
 import { scopeText, useApp, type Audience, type PageId, type Route, type SimState } from '../state/AppState';
 import { GapLegend, PeriodInput } from './common';
 import { Icon } from './icons';
-import { V1_PAGES, VERSION_LABEL, type Version } from '../config/v1';
+import { isV1, V1_SCOPE, VERSION_LABEL, type Version } from '../config/v1';
 
 /**
  * The three product experiences: See (ELT Summary), Understand (Analytics), Act (Worklists), and
@@ -37,6 +37,7 @@ export const PAGES: PageMeta[] = [
   { id: 'denials', section: 'analytics', label: 'Denials', title: 'Denials Analytics', question: 'Which payers, hospitals and root causes drive denials?', nav: true, pageFilters: ['denialCategory', 'rootCause'] },
   { id: 'ar', section: 'analytics', label: 'A/R', title: 'A/R Analytics', question: 'Where is A/R accumulating, and why?', nav: true, pageFilters: ['arAge', 'accountStatus'] },
   { id: 'cash', section: 'analytics', label: 'Cash', title: 'Cash and Collections', question: 'Are we on track to hit the cash goal?', nav: true },
+  { id: 'cash-ar', section: 'analytics', label: 'Cash + A/R', title: 'Cash and A/R', question: 'Are we collecting cash on time, and is A/R aging?', nav: true },
   { id: 'payers', section: 'analytics', label: 'Payers', title: 'Payer Performance', question: 'Which payor groups pay slowly or deny more, and which payers underpay?', nav: true },
   { id: 'facilities', section: 'analytics', label: 'Facilities', title: 'Facility Comparison', question: 'How do our hospitals compare, and which need attention?', nav: true },
   { id: 'definitions', section: 'analytics', label: 'Definitions', title: 'Metric Definitions and Data', question: 'What does each measure mean, and how current is the data?', nav: true },
@@ -54,11 +55,14 @@ export function sectionOf(page: PageId): Section {
   return PAGE_BY_ID[page]?.section ?? 'elt';
 }
 
-/** First page of a dashboard. In v1, Analytics has only the Denials page. */
+/** First page of a dashboard. In v1, Analytics opens on the Denials page. */
 export function sectionHome(section: Section, version: Version): PageId {
   const home = SECTIONS.find((x) => x.id === section)!.home;
-  return version === 'v1' && section === 'analytics' ? 'denials' : home;
+  return isV1(version) && section === 'analytics' ? 'denials' : home;
 }
+
+/** Pages a version shows in the page tabs. */
+const inVersion = (id: PageId, v: Version) => (isV1(v) ? V1_SCOPE[v].pages.includes(id) : id !== 'cash-ar');
 
 // ---------------------------------------------------------------- prototype bar
 
@@ -99,7 +103,8 @@ export function PrototypeBar() {
 }
 
 const VERSIONS: { v: Version; note: string }[] = [
-  { v: 'v1', note: 'Only what the first release builds: ELT Summary, the Denials page and their filters' },
+  { v: 'v1', note: 'v1 option A: ELT Summary with six KPIs and the Denials page' },
+  { v: 'v1b', note: 'v1 option B (simple, lovable, complete): 16 critical metrics, ELT Summary and three deep dives (Denials, Cash + A/R, Patient Access)' },
   { v: 'full', note: 'The full concept: every planned page, including later releases' },
 ];
 
@@ -151,7 +156,7 @@ function SectionNav() {
   const current = sectionOf(route.page);
   const last = useRef<Record<Section, PageId>>({ elt: 'executive', analytics: 'cycle', worklists: 'wl-denials', dictionary: 'dictionary' });
   if (PAGE_BY_ID[route.page]?.nav) last.current[current] = route.page;
-  const v1 = version === 'v1';
+  const v1 = isV1(version);
   const sections = v1 ? SECTIONS.filter((x) => x.id !== 'worklists') : SECTIONS;
   const home = (x: (typeof SECTIONS)[number]) => (v1 ? sectionHome(x.id, version) : current === x.id ? x.home : last.current[x.id]);
   return (
@@ -214,7 +219,7 @@ export function NavTabs() {
   const section = sectionOf(route.page);
   const meta = SECTIONS.find((x) => x.id === section)!;
   const active = PAGE_BY_ID[route.page]?.nav ? route.page : null;
-  const tabs = PAGES.filter((p) => p.nav && p.section === section && (version === 'full' || V1_PAGES.includes(p.id)));
+  const tabs = PAGES.filter((p) => p.nav && p.section === section && inVersion(p.id, version));
   // The ELT Summary has no sub-pages; its slicers and actions sit in the page header.
   // Prototype-only tools have one page each.
   if (section === 'elt' || meta.proto) return null;
@@ -329,7 +334,7 @@ function AreaSlicer() {
 export function FilterPane() {
   const { period, setPeriodKind, compare, setCompare, clearAll, sel, paneOpen, setPaneOpen, route, areas, version } = useApp();
   const active = Object.values(sel).reduce((a, v) => a + (v?.length ? 1 : 0), 0) + (areas.length ? 1 : 0);
-  const v1 = version === 'v1';
+  const v1 = isV1(version);
   // v1 filters only on what the client dataset holds: no root causes, no RCM area metric filter.
   const pageFilters = (PAGE_BY_ID[route.page]?.pageFilters ?? []).filter((f) => !v1 || !V1_HIDDEN_FIELDS.includes(f));
   if (!paneOpen) {
@@ -434,16 +439,17 @@ export function Crumbs({ extra }: { extra?: ReactNode }) {
   );
 }
 
-export function CanvasHeader({ title, question, crumbs, right }: { title?: string; question?: string; crumbs?: ReactNode; right?: ReactNode }) {
+/** Page header. compact: breadcrumb, title and applied filters only (no question line). */
+export function CanvasHeader({ title, question, crumbs, right, compact }: { title?: string; question?: string; crumbs?: ReactNode; right?: ReactNode; compact?: boolean }) {
   const { route } = useApp();
   const meta = PAGE_BY_ID[route.page] ?? PAGE_BY_ID.executive;
   return (
-    <div className="canvas-head">
+    <div className={`canvas-head ${compact ? 'canvas-head-compact' : ''}`}>
       <div className="canvas-title-row">
         <div>
           <Crumbs extra={crumbs} />
           <h1>{title ?? meta.title}</h1>
-          <p className="question">{question ?? meta.question}</p>
+          {!compact && <p className="question">{question ?? meta.question}</p>}
           <GapLegend />
         </div>
         {right && <div className="canvas-right">{right}</div>}

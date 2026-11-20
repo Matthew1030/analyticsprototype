@@ -743,3 +743,50 @@ code, .mono { font-family: var(--mono); font-size: 11px; }
 @media (max-width: 1100px) {
   .dv1-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "reason" "payor" "hosp" "decomp"; }
 }
+
+/* ---------- v1 (B): one screen per view. Hero KPIs, small modules, then compact charts. ---------- */
+.kpi-hero-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 10px; }
+.kpi-heroes, .kpi-modules { display: grid; gap: 10px; }
+.kpi-hero, .kpi-small { border-left: 5px solid var(--line-2); }
+.kpi-hero { padding: 10px 14px; align-content: center; }
+.kpi-hero .kpi-name { font-size: 13px; }
+.kpi-hero .kpi-value { font-size: 34px; }
+.kpi-hero .kpi-row { font-size: 12.5px; }
+.kpi-small .kpi-value { font-size: 18px; }
+.kpi-hero.st-ok, .kpi-small.st-ok { border-left-color: var(--ok); background: var(--ok-bg); }
+.kpi-hero.st-watch, .kpi-small.st-watch { border-left-color: #d08a12; background: var(--watch-bg); }
+.kpi-hero.st-off, .kpi-small.st-off { border-left-color: var(--off); background: var(--off-bg); }
+.v1b-grid { display: grid; gap: 10px; min-height: 0; }
+.v1b-grid > *, .v1b-stack > * { min-width: 0; min-height: 0; }
+.v1b-stack { display: grid; gap: 10px; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); min-width: 0; min-height: 0; }
+.v1b-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.v1b-cash { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
+/* The view fills the canvas; the charts area takes the free height and each chart fills its visual. */
+.page.v1b { height: 100%; grid-template-rows: auto auto minmax(0, 1fr); }
+.v1b .visual { height: 100%; }
+.chart.chart-fill { height: 100%; min-height: 110px; }
+.canvas-head-compact h1 { margin-bottom: 0; }
+@media (max-width: 1100px) {
+  .kpi-hero-row, .v1b-3, .v1b-cash { grid-template-columns: minmax(0, 1fr); }
+  .page.v1b { height: auto; grid-template-rows: none; }
+  .chart.chart-fill { min-height: 260px; }
+}
+/* ELT Summary in v1 (B): KPI cards tinted by status; Performance vs. Target in tabs. */
+.app-v1b .elt-kpi.st-ok { background: var(--ok-bg); }
+.app-v1b .elt-kpi.st-watch { background: var(--watch-bg); }
+.app-v1b .elt-kpi.st-off { background: var(--off-bg); }
+.app-v1b .tabbox-panel .elt-table { border: none; }
+.app-v1b .tabbox-panel { padding: 0; background: var(--surface); }
+/* v1 (B) ELT Summary fits one screen: tighter spacing. */
+.app-v1b.app-elt .canvas { padding: 12px 24px 10px; }
+.app-v1b .elt { gap: 12px; }
+.app-v1b .elt-head { padding-bottom: 8px; }
+.app-v1b .elt-kpis { gap: 8px; }
+.app-v1b .elt-kpi { gap: 3px; padding: 7px 12px; }
+.app-v1b .elt-kpi-grid { padding-top: 4px; }
+.app-v1b .elt-table td { padding: 4px 8px; }
+.app-v1b .elt-table tr.elt-group td { padding: 3px 10px; }
+.app-v1b .elt-multi .elt-note.muted { display: none; }
+@media (max-width: 600px) {
+  .kpi-heroes, .kpi-modules { grid-template-columns: minmax(0, 1fr) !important; }
+}

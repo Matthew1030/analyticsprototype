@@ -93,7 +93,7 @@ export function barOption(o: {
     legend: multi ? { top: 0, left: 0, itemWidth: 10, itemHeight: 10, textStyle: { color: INK.secondary, fontSize: 11 }, icon: 'rect' } : undefined,
     tooltip: { ...tooltipBase, trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(42,120,214,0.06)' } }, valueFormatter: (v) => (v == null ? '–' : o.fmt(v as number)) },
     xAxis: o.horizontal ? valueAxis(o.axisFmt ?? o.fmt, { splitNumber: 3, axisLabel: { show: !showLabels, color: INK.muted, fontSize: 10, formatter: (v: number) => (o.axisFmt ?? o.fmt)(v) } }) : catAxis(o.labels, { axisLabel: { color: INK.secondary, fontSize: 10, interval: 0, rotate: o.labels.length > 9 ? 30 : 0 } }),
-    yAxis: o.horizontal ? catAxis(o.labels, { inverse: true, axisLabel: { color: INK.secondary, fontSize: 11, width: 170, overflow: 'truncate' } }) : valueAxis(o.axisFmt ?? o.fmt),
+    yAxis: o.horizontal ? catAxis(o.labels, { inverse: true, axisLabel: { color: INK.secondary, fontSize: 11, width: 170, overflow: 'truncate', interval: 0 } }) : valueAxis(o.axisFmt ?? o.fmt),
     series,
   } as EChartsOption;
 }

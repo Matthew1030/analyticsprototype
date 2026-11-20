@@ -4,6 +4,7 @@ import { AccountDetail } from './pages/AccountDetail';
 import { ArAnalytics } from './pages/ArAnalytics';
 import { BillingDnfb } from './pages/BillingDnfb';
 import { Cash } from './pages/Cash';
+import { CashAr } from './pages/CashAr';
 import { Definitions } from './pages/Definitions';
 import { Denials } from './pages/Denials';
 import { EltSummary } from './pages/EltSummary';
@@ -92,6 +93,7 @@ function Page() {
     case 'ar': return <ArAnalytics />;
     case 'denials': return <Denials />;
     case 'cash': return <Cash />;
+    case 'cash-ar': return <CashAr />;
     case 'access': return <PatientAccess />;
     case 'midcycle': return <MidCycle />;
     case 'billing': return <BillingDnfb />;

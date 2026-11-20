@@ -14,7 +14,8 @@ import { CanvasHeader } from '../ui/Shell';
 import { Band, Bands, TabBox, useGroupStatus, useTab, type TabDef } from '../ui/TabBox';
 import { Visual } from '../ui/Visual';
 import { weekLabel, weeksEnding } from '../ui/weekly';
-import { BreakdownVisual, KpiStrip, Scorecard, TrendVisual } from '../ui/widgets';
+import { BreakdownVisual, FillGrid, KpiHeroRow, KpiStrip, Scorecard, TrendVisual } from '../ui/widgets';
+import { V1B_VIEWS } from '../config/v1';
 import { MetricGroups, MetricsByHospital, PosByService } from '../ui/workbook';
 
 // Workbook metrics first (QHC RCM Dashboard: Scheduling, PAC, Call Metrics, POS, Self Pay E&E). Metrics
@@ -43,7 +44,28 @@ const TABS: { id: string; label: string; kpis: string[] }[] = [
 ];
 const TAB_KPIS = TABS.map((t) => t.kpis);
 
+/** v1 (B): hero KPIs, then the three KPIs by hospital. Every bar cross-filters the page. */
+function PatientAccessV1B() {
+  const v = V1B_VIEWS.access;
+  return (
+    <div className="page v1b">
+      <CanvasHeader compact />
+      <KpiHeroRow hero={v.hero} modules={v.modules} />
+      <FillGrid className="v1b-3">
+        <BreakdownVisual id="front_end_denial_rate" dim="facility" title="Front-end denial rate by hospital" showCompare={false} />
+        <BreakdownVisual id="fin_clearance_rate" dim="facility" title="Financial clearance rate by hospital" showCompare={false} />
+        <BreakdownVisual id="pos_collections" alt={['pos_pct_sp_cash']} dim="facility" title="POS collections by hospital" showCompare={false} />
+      </FillGrid>
+    </div>
+  );
+}
+
 export function PatientAccess() {
+  const { version } = useApp();
+  return version === 'v1b' ? <PatientAccessV1B /> : <PatientAccessFull />;
+}
+
+function PatientAccessFull() {
   const status = useGroupStatus(TAB_KPIS);
   const tabs: TabDef[] = TABS.map((t, i) => ({ id: t.id, label: t.label, status: status[i], home: i === 0 }));
   const [tab, open] = useTab(tabs);
